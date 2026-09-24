@@ -1,0 +1,25 @@
+# Build output
+/nieuwsdashboard
+/.ndb-build
+*.exe
+*.test
+*.out
+
+# Optional cache snapshot (cache.snapshot_path)
+*.json.gz
+
+# Local secrets and overrides
+.env
+*.local.yaml
+
+# Editors and OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Local configuration: copy config.yaml.default to config.yaml
+/config.yaml
+
+# Project brief (kept locally)
+/SPEC.md

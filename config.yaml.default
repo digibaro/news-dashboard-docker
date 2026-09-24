@@ -1,0 +1,263 @@
+# Nieuwsdashboard configuration: template.
+# Copy it first and edit the copy:  cp config.yaml.default config.yaml
+# config.yaml is not in git (.gitignore); keep your own settings and keys there.
+# Adding a news source = adding one entry under `sources:`; no code changes needed.
+# Changes are picked up on SIGHUP (systemctl reload) or automatically within 60 s.
+# Environment variables override: NDB_LISTEN, NDB_BASE_PATH, NDB_LOG_LEVEL,
+# NDB_USER_AGENT, NDB_SNAPSHOT_PATH, ABUSECH_AUTH_KEY (config path: NDB_CONFIG).
+
+server:
+  listen: "127.0.0.1:8080"        # Docker: "0.0.0.0:8080" (set via NDB_LISTEN)
+  base_path: "/"                  # e.g. "/nieuws/" when served in a subfolder
+  trusted_proxies: ["127.0.0.1", "::1"]  # X-Forwarded-For is only honoured from these
+  log_level: info                 # debug | info | warn | error
+  metrics: false                  # true = Prometheus metrics at /metrics (or NDB_METRICS=true)
+
+fetch:
+  # SANS ISC requires a User-Agent with contact info: CHANGE THIS to your own site and e-mail
+  # (or set NDB_USER_AGENT).
+  user_agent: "Nieuwsdashboard/1.0 (+https://example.nl; contact@example.nl)"
+  default_interval: 10m
+  timeout: 10s
+  max_concurrent: 6
+
+cache:
+  max_items_per_source: 50
+  max_age: 72h
+  snapshot_path: ""               # empty = zero disk writes; e.g. /var/lib/nieuwsdashboard/cache.json.gz
+
+features:
+  allow_custom_feeds: false
+  show_images: true               # include feed images (https only); each visitor still opts in under Instellingen
+  proxy_images: true              # serve them through /api/img (in-memory, max 50 MB): browsers never contact publishers
+  geolocation: true               # ip-api.com lookups (free tier: non-commercial use only)
+
+keys:                             # all optional; env vars override
+  abusech_auth_key: ""            # optional, free key from https://auth.abuse.ch/ (or ABUSECH_AUTH_KEY)
+
+weather:
+  # region (province) is matched against MeteoAlarm warning areas; country picks the warning feed.
+  location: { name: "Utrecht", lat: 52.09, lon: 5.12, region: "Utrecht", country: NL }
+  interval: 15m                   # forecast cache per location; rain radar refreshes every 5 min
+  units: metric
+  meteoalarm:                     # KNMI / KMI warnings via MeteoAlarm (CC BY 4.0)
+    nl: "https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-netherlands"
+    be: "https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-belgium"
+
+threats:
+  enabled: true
+  interval: 15m                   # SANS ISC asks clients to cache; do not go below 15m
+  daily_interval: 1h              # ISC 30-day summary
+  cisa_kev: false                 # "Actief misbruikte kwetsbaarheden" (CISA KEV, ~1.5 MB JSON per hour)
+
+# Extra feeds verified with -check-feeds on 2026-09-24: cert-eu, cisa, cisa-ics, bsi-wid, msrc.
+# Security advisories. format: ncsc (parses [kans/schade]) or rss (any RSS/Atom, keyword severity).
+advisories:
+  - { id: ncsc, name: "NCSC-NL", format: ncsc, url: "https://advisories.ncsc.nl/rss/advisories", homepage: "https://advisories.ncsc.nl", interval: 15m }
+  - { id: cert-eu, name: "CERT-EU", format: rss, url: "https://cert.europa.eu/publications/security-advisories-rss", homepage: "https://cert.europa.eu", enabled: false }
+  - { id: cisa, name: "CISA advisories", format: rss, url: "https://www.cisa.gov/cybersecurity-advisories/all.xml", homepage: "https://www.cisa.gov/news-events/cybersecurity-advisories", enabled: false }
+  - { id: cisa-ics, name: "CISA ICS advisories", format: rss, url: "https://www.cisa.gov/cybersecurity-advisories/ics-advisories.xml", homepage: "https://www.cisa.gov/news-events/cybersecurity-advisories", enabled: false }
+  # TODO: ccb.belgium.be returns HTTP 403 (bot protection) for the feed and homepage; re-check later.
+  - { id: ccb, name: "CCB / Safeonweb (BE)", format: rss, url: "https://ccb.belgium.be/advisories/rss", homepage: "https://ccb.belgium.be/advisories", enabled: false }
+  - { id: bsi-wid, name: "BSI CERT-Bund WID (DE)", format: rss, url: "https://wid.cert-bund.de/content/public/securityAdvisory/rss", homepage: "https://wid.cert-bund.de", enabled: false }
+  # TODO: z-cert.nl returns HTTP 403 for /feed/ and the homepage; no feed URL could be verified.
+  - { id: z-cert, name: "Z-CERT (zorg)", format: rss, url: "https://www.z-cert.nl/feed/", homepage: "https://www.z-cert.nl", enabled: false }
+  - { id: msrc, name: "Microsoft MSRC", format: rss, url: "https://api.msrc.microsoft.com/update-guide/rss", homepage: "https://msrc.microsoft.com/update-guide", enabled: false }
+
+# short: label on the category chips (defaults to name)
+# Top bar. NCTV has no feed: only the sentence "… niveau N op een schaal van 5" is read from
+# its page (a deliberate, narrow exception); if the wording changes the badge shows "onbekend".
+# The KNMI code comes from the MeteoAlarm NL feed above (KNMI's own RSS has not been updated since 2023).
+alerts:
+  nctv: { enabled: true, url: "https://www.nctv.nl/onderwerpen/d/dtn", interval: 6h }
+  knmi: true
+
+# Traffic panel: NDW open data (Rijkswaterstaat, provinces, municipalities). ANWB has no public API.
+# Road names come from NDW's VILD location table, fetched with range requests (~400 KB) and kept in memory.
+traffic:
+  enabled: true
+  interval: 5m
+  url: "https://opendata.ndw.nu/actueel_beeld.xml.gz"
+  vild_base: "https://opendata.ndw.nu/"
+
+# Alarmeringen panel: P2000 alerts per city from Zwaailicht.nl (Atom feeds, refreshed every minute,
+# house numbers left out). city is the default; visitors can choose their own under Instellingen.
+# Slugs are lowercase with hyphens (den-haag, alphen-aan-den-rijn). Not for emergencies: call 112.
+alarms:
+  enabled: true
+  city: utrecht
+  base: "https://zwaailicht.nl/feed/meldingen/"
+  interval: 2m
+  counts:                         # top bar: alerts per service in the last hour for this area
+    enabled: true
+    label: "Den Haag"
+    cities: [den-haag]            # one or more city slugs; for the Haaglanden region e.g.
+                                  # [den-haag, rijswijk, delft, zoetermeer, leidschendam, ...]
+    interval: 3m
+
+# Storingen panel: status pages. format: statuspage (Atlassian Statuspage summary.json; also works for
+# e.g. GitHub, Atlassian, Zoom), rss (incidents of the last 24 h), m365 (Microsoft 365 public status page).
+# TODO: Dutch grid operators (Stedin, Enexis, Liander) publish outages only as web pages or internal
+# app APIs, no feed or open API (checked 2026-09-24), so they are not included.
+outages:
+  enabled: true
+  interval: 10m
+  providers:
+    - { id: azure,      name: "Microsoft Azure", format: rss,        url: "https://azure.status.microsoft/en-us/status/feed/", homepage: "https://azure.status.microsoft/" }
+    - { id: m365,       name: "Microsoft 365",   format: m365,       url: "https://status.cloud.microsoft/api/posts/m365Consumer", homepage: "https://status.cloud.microsoft/" }
+    - { id: aws,        name: "AWS",             format: rss,        url: "https://status.aws.amazon.com/rss/all.rss", homepage: "https://health.aws.amazon.com/health/status" }
+    - { id: cloudflare, name: "Cloudflare",      format: statuspage, url: "https://www.cloudflarestatus.com/api/v2/summary.json", homepage: "https://www.cloudflarestatus.com/" }
+
+# Refresh: how often an open browser tab asks this server for new data (per panel, 1m..24h).
+# This does not change how often the server fetches from the sources: that is set per source
+# (interval, default fetch.default_interval) and per panel above (weather.interval, threats.interval, ...).
+# Tabs in the background do not refresh at all; they catch up when they become visible.
+refresh:
+  news: 5m          # news stream (sources are fetched every 10-15 min, so faster gives nothing new)
+  alerts: 3m        # top bar: NCTV, KNMI code, P2000 counts
+  weather: 15m      # Open-Meteo updates hourly; rain radar/warnings follow the server cache
+  traffic: 5m       # NDW
+  alarms: 2m        # P2000 alarms in your place
+  threats: 15m
+  advisories: 30m
+  outages: 10m
+  ap: 30m
+  health: 30m
+
+# name_en / short_en / description_en: shown when the interface is set to English.
+categories:
+  - { id: nl,      name: "Nederland · algemeen",     short: "Nederland", name_en: "Netherlands · general", short_en: "Netherlands" }
+  - { id: regio,   name: "Regionaal",                short: "Regio", name_en: "Regional", short_en: "Regional" }
+  - { id: tech,    name: "Tech, privacy & security", short: "Tech", name_en: "Tech, privacy & security" }
+  - { id: finance, name: "Financiën & economie",     short: "Economie", name_en: "Finance & economy", short_en: "Economy" }
+  - { id: sport,   name: "Sport" }
+  - { id: world,   name: "Internationaal", name_en: "International" }
+  - { id: be,      name: "België", name_en: "Belgium" }
+
+# Presets offered on the first visit and under Instellingen → Bronnen.
+# region: true picks the regional broadcaster(s) whose `region` matches the visitor's weather province.
+presets:
+  - { id: kort,    name: "Snel overzicht",  description: "Het belangrijkste nieuws van NOS en NU.nl", name_en: "Quick overview", description_en: "The main news from NOS and NU.nl", sources: [nos-algemeen, nu-algemeen] }
+  - { id: nl,      name: "Nederland",       description: "Binnenland, politiek en de landelijke kranten", name_en: "Netherlands", description_en: "Domestic news, politics and the national papers", sources: [nos-binnenland, nos-politiek, volkskrant, nrc, trouw] }
+  - { id: regio,   name: "Mijn regio",      description: "De regionale omroep bij je weerlocatie", name_en: "My region", description_en: "The regional broadcaster for your weather location", region: true }
+  - { id: tech,    name: "Tech & security", description: "Tweakers, Security.NL, Bits of Freedom en meer", description_en: "Tweakers, Security.NL, Bits of Freedom and more", sources: [tweakers, security-nl, nos-tech, bits-of-freedom, bleepingcomputer, the-record] }
+  - { id: finance, name: "Economie",        description: "Economie en financiële markten", name_en: "Economy", description_en: "Economy and financial markets", sources: [nos-economie, nu-economie, telegraaf-dft, bbc-business] }
+  - { id: sport,   name: "Sport",           description: "Voetbal, wielrennen en ander sportnieuws", description_en: "Football, cycling and other sports news", sources: [nos-sport, nos-voetbal, nu-sport, wielerflits] }
+  - { id: world,   name: "Internationaal",  description: "Wereldnieuws van BBC, The Guardian en DW", name_en: "International", description_en: "World news from BBC, The Guardian and DW", sources: [nos-buitenland, bbc-world, guardian-world, dw] }
+  - { id: be,      name: "België",          description: "VRT NWS, HLN, De Tijd en Sporza", name_en: "Belgium", description_en: "VRT NWS, HLN, De Tijd and Sporza", sources: [vrt-nws, hln, tijd, sporza] }
+
+# Per source: id, name, category, url, homepage, default_enabled
+# optional: interval (e.g. 30m), max_age (overrides cache.max_age), type (rss|atom|rdf|json, default auto),
+#           lang (stories are only grouped within one language), region (province, for the "Mijn regio" preset),
+#           enabled (default true)
+# Adding a source: add a line below, check it with  nieuwsdashboard -check-feeds -only <id>,
+# then reload (systemctl reload nieuwsdashboard, docker compose restart, or wait up to 60 s).
+# A new category also needs an entry under categories:.
+sources:
+  # --- Nederland · algemeen ---
+  - { id: nos-algemeen,   name: "NOS Algemeen",   category: nl, url: "https://feeds.nos.nl/nosnieuwsalgemeen",   homepage: "https://nos.nl", lang: nl, default_enabled: true }
+  - { id: nos-binnenland, name: "NOS Binnenland", category: nl, url: "https://feeds.nos.nl/nosnieuwsbinnenland", homepage: "https://nos.nl", lang: nl, default_enabled: true }
+  - { id: nos-buitenland, name: "NOS Buitenland", category: nl, url: "https://feeds.nos.nl/nosnieuwsbuitenland", homepage: "https://nos.nl", lang: nl, default_enabled: true }
+  - { id: nos-politiek,   name: "NOS Politiek",   category: nl, url: "https://feeds.nos.nl/nosnieuwspolitiek",   homepage: "https://nos.nl", lang: nl }
+  - { id: nos-economie,   name: "NOS Economie",   category: nl, url: "https://feeds.nos.nl/nosnieuwseconomie",   homepage: "https://nos.nl", lang: nl }
+  - { id: nu-algemeen,    name: "NU.nl Algemeen", category: nl, url: "https://www.nu.nl/rss/Algemeen",   homepage: "https://www.nu.nl", lang: nl, default_enabled: true }
+  - { id: nu-binnenland,  name: "NU.nl Binnenland", category: nl, url: "https://www.nu.nl/rss/Binnenland", homepage: "https://www.nu.nl", lang: nl }
+  - { id: nu-economie,    name: "NU.nl Economie", category: nl, url: "https://www.nu.nl/rss/Economie",   homepage: "https://www.nu.nl", lang: nl }
+  - { id: rtl-nieuws,     name: "RTL Nieuws",     category: nl, url: "https://www.rtlnieuws.nl/rss.xml", homepage: "https://www.rtlnieuws.nl", lang: nl }
+  - { id: volkskrant,     name: "de Volkskrant",  category: nl, url: "https://www.volkskrant.nl/voorpagina/rss.xml", homepage: "https://www.volkskrant.nl", lang: nl }
+  - { id: nrc,            name: "NRC",            category: nl, url: "https://www.nrc.nl/rss/",          homepage: "https://www.nrc.nl", lang: nl }
+  - { id: trouw,          name: "Trouw",          category: nl, url: "https://www.trouw.nl/voorpagina/rss.xml", homepage: "https://www.trouw.nl", lang: nl }
+  - { id: ad,             name: "AD",             category: nl, url: "https://www.ad.nl/home/rss.xml",   homepage: "https://www.ad.nl", lang: nl }
+  - { id: parool,         name: "Het Parool",     category: nl, url: "https://www.parool.nl/voorpagina/rss.xml", homepage: "https://www.parool.nl", lang: nl }
+  - { id: telegraaf,      name: "De Telegraaf",   category: nl, url: "https://www.telegraaf.nl/rss",     homepage: "https://www.telegraaf.nl", lang: nl }
+  - { id: metro,          name: "Metro",          category: nl, url: "https://www.metronieuws.nl/feed/", homepage: "https://www.metronieuws.nl", lang: nl }
+  # RIVM: used by the Gezondheid panel (health alerts only); also selectable as a news source.
+  - { id: rivm,           name: "RIVM",           category: nl, url: "https://www.rivm.nl/nieuws/rss.xml", homepage: "https://www.rivm.nl", lang: nl, interval: 30m, max_age: 1440h }
+  - { id: nd,             name: "Nederlands Dagblad", category: nl, url: "https://www.nd.nl/rss",        homepage: "https://www.nd.nl", lang: nl }
+
+  # --- Regionaal ---
+  - { id: omroep-brabant, name: "Omroep Brabant", category: regio, url: "https://www.omroepbrabant.nl/rss", homepage: "https://www.omroepbrabant.nl", lang: nl, region: "Noord-Brabant" }
+  - { id: rtv-noord,      name: "RTV Noord",      category: regio, url: "https://www.rtvnoord.nl/rss/index.xml", homepage: "https://www.rtvnoord.nl", lang: nl, region: "Groningen" }
+  - { id: rtv-oost,       name: "RTV Oost",       category: regio, url: "https://www.rtvoost.nl/rss/index.xml", homepage: "https://www.rtvoost.nl", lang: nl, region: "Overijssel" }
+  - { id: rtv-utrecht,    name: "RTV Utrecht",    category: regio, url: "https://www.rtvutrecht.nl/rss/index.xml", homepage: "https://www.rtvutrecht.nl", lang: nl, region: "Utrecht" }
+  - { id: omroep-gld,     name: "Omroep Gelderland", category: regio, url: "https://www.gld.nl/rss/index.xml", homepage: "https://www.gld.nl", lang: nl, region: "Gelderland" }
+  - { id: omroep-west,    name: "Omroep West",    category: regio, url: "https://www.omroepwest.nl/rss/index.xml", homepage: "https://www.omroepwest.nl", lang: nl, region: "Zuid-Holland" }
+  - { id: omroep-zeeland, name: "Omroep Zeeland", category: regio, url: "https://www.omroepzeeland.nl/rss/index.xml", homepage: "https://www.omroepzeeland.nl", lang: nl, region: "Zeeland" }
+  - { id: rijnmond,       name: "Rijnmond",       category: regio, url: "https://www.rijnmond.nl/rss/index.xml", homepage: "https://www.rijnmond.nl", lang: nl, region: "Zuid-Holland" }
+  - { id: rtv-drenthe,    name: "RTV Drenthe",    category: regio, url: "https://www.rtvdrenthe.nl/rss/index.xml", homepage: "https://www.rtvdrenthe.nl", lang: nl, region: "Drenthe" }
+  - { id: omrop-fryslan, name: "Omrop Fryslân", category: regio, url: "https://www.omropfryslan.nl/rss/index.xml", homepage: "https://www.omropfryslan.nl", lang: nl, region: "Friesland" }
+  # TODO: NH Nieuws serves an HTML page at /rss; no working feed found (checked 2026-09-24).
+  - { id: nh-nieuws, name: "NH Nieuws", category: regio, url: "https://www.nhnieuws.nl/rss", homepage: "https://www.nhnieuws.nl", lang: nl, region: "Noord-Holland", enabled: false }
+  # TODO: Omroep Flevoland: /rss, /feed and /rss/index.xml all return 404 (checked 2026-09-24).
+  - { id: omroep-flevoland, name: "Omroep Flevoland", category: regio, url: "https://www.omroepflevoland.nl/rss", homepage: "https://www.omroepflevoland.nl", lang: nl, region: "Flevoland", enabled: false }
+  - { id: l1,             name: "L1 Limburg",     category: regio, url: "https://l1nieuws.nl/rss/index.xml", homepage: "https://l1nieuws.nl", lang: nl, region: "Limburg" }
+
+  # --- Tech, privacy & security ---
+  - { id: tweakers,       name: "Tweakers",       category: tech, url: "https://tweakers.net/feeds/mixed.xml", homepage: "https://tweakers.net", lang: nl, default_enabled: true }
+  - { id: security-nl,    name: "Security.NL",    category: tech, url: "https://www.security.nl/rss/headlines.xml", homepage: "https://www.security.nl", lang: nl, default_enabled: true }
+  - { id: hacker-news,    name: "Hacker News",    category: tech, url: "https://hnrss.org/frontpage", homepage: "https://news.ycombinator.com", lang: en }
+  - { id: ars-technica,   name: "Ars Technica",   category: tech, url: "https://feeds.arstechnica.com/arstechnica/index", homepage: "https://arstechnica.com", lang: en }
+  - { id: bleepingcomputer, name: "BleepingComputer", category: tech, url: "https://www.bleepingcomputer.com/feed/", homepage: "https://www.bleepingcomputer.com", lang: en }
+  - { id: krebs,          name: "Krebs on Security", category: tech, url: "https://krebsonsecurity.com/feed/", homepage: "https://krebsonsecurity.com", lang: en }
+  - { id: the-verge,      name: "The Verge",      category: tech, url: "https://www.theverge.com/rss/index.xml", homepage: "https://www.theverge.com", lang: en }
+  - { id: nos-tech,       name: "NOS Tech",       category: tech, url: "https://feeds.nos.nl/nosnieuwstech", homepage: "https://nos.nl", lang: nl }
+  - { id: nu-tech,        name: "NU.nl Tech",     category: tech, url: "https://www.nu.nl/rss/Tech", homepage: "https://www.nu.nl", lang: nl }
+  - { id: bits-of-freedom, name: "Bits of Freedom", category: tech, url: "https://www.bitsoffreedom.nl/feed/", homepage: "https://www.bitsoffreedom.nl", lang: nl }
+  - { id: iculture,       name: "iCulture",       category: tech, url: "https://www.iculture.nl/feed/", homepage: "https://www.iculture.nl", lang: nl }
+  - { id: androidworld,   name: "AndroidWorld",   category: tech, url: "https://androidworld.nl/feed/", homepage: "https://androidworld.nl", lang: nl }
+  - { id: androidplanet,  name: "Android Planet", category: tech, url: "https://www.androidplanet.nl/feed/", homepage: "https://www.androidplanet.nl", lang: nl }
+  # TODO: techzine.nl returns HTTP 403 (bot protection) for every feed path, also /rss; re-check later.
+  - { id: techzine,       name: "Techzine",       category: tech, url: "https://www.techzine.nl/feed/", homepage: "https://www.techzine.nl", lang: nl, enabled: false }
+  - { id: the-record,     name: "The Record",     category: tech, url: "https://therecord.media/feed", homepage: "https://therecord.media", lang: en }
+  - { id: securityweek,   name: "SecurityWeek",   category: tech, url: "https://www.securityweek.com/feed/", homepage: "https://www.securityweek.com", lang: en }
+  - { id: thehackernews,  name: "The Hacker News", category: tech, url: "https://feeds.feedburner.com/TheHackersNews", homepage: "https://thehackernews.com", lang: en }
+  # Extra security sources (SPEC §8.1): disabled by default. divd and hibp verified working 2026-09-24.
+  # TODO: the Fraudehelpdesk WordPress feed is reachable but contains no items (checked 2026-09-24).
+  - { id: fraudehelpdesk, name: "Fraudehelpdesk", category: tech, url: "https://www.fraudehelpdesk.nl/feed/", homepage: "https://www.fraudehelpdesk.nl", lang: nl, enabled: false }
+  # TODO: Digital Trust Center feed parses, but its newest item is from 2025-12-16 (stale).
+  - { id: dtc, name: "Digital Trust Center", category: tech, url: "https://www.digitaltrustcenter.nl/rss.xml", homepage: "https://www.digitaltrustcenter.nl", lang: nl, enabled: false }
+  - { id: divd, name: "DIVD CSIRT", category: tech, url: "https://csirt.divd.nl/feed.xml", homepage: "https://csirt.divd.nl", lang: en, enabled: false }
+  - { id: hibp, name: "Have I Been Pwned · nieuwe datalekken", category: tech, url: "https://feeds.feedburner.com/HaveIBeenPwnedLatestBreaches", homepage: "https://haveibeenpwned.com", lang: en, interval: 1h, enabled: false }
+  - { id: ap,             name: "Autoriteit Persoonsgegevens", category: tech, url: "https://www.autoriteitpersoonsgegevens.nl/rss", homepage: "https://www.autoriteitpersoonsgegevens.nl", lang: nl, interval: 30m, max_age: 1440h }
+
+  # --- Financiën & economie ---
+  - { id: yahoo-finance,  name: "Yahoo Finance",  category: finance, url: "https://finance.yahoo.com/news/rssindex", homepage: "https://finance.yahoo.com", lang: en }
+  # TODO: Yahoo ticker headline feed for ^AEX is stale (last item May 2026); no working AEX-specific feed found.
+  - { id: yahoo-aex,      name: "Yahoo Finance · AEX", category: finance, url: "https://feeds.finance.yahoo.com/rss/2.0/headline?s=^AEX&region=US&lang=en-US", homepage: "https://finance.yahoo.com", lang: en, enabled: false }
+  - { id: forbes,         name: "Forbes",         category: finance, url: "https://www.forbes.com/business/feed/", homepage: "https://www.forbes.com", lang: en }
+  - { id: cnbc-finance,   name: "CNBC · Finance", category: finance, url: "https://www.cnbc.com/id/10000664/device/rss/rss.html", homepage: "https://www.cnbc.com", lang: en }
+  - { id: bbc-business,   name: "BBC · Business", category: finance, url: "https://feeds.bbci.co.uk/news/business/rss.xml", homepage: "https://www.bbc.com/news/business", lang: en }
+  - { id: guardian-business, name: "The Guardian · Business", category: finance, url: "https://www.theguardian.com/uk/business/rss", homepage: "https://www.theguardian.com/uk/business", lang: en }
+  - { id: economist-finance, name: "The Economist · Finance", category: finance, url: "https://www.economist.com/finance-and-economics/rss.xml", homepage: "https://www.economist.com", lang: en }
+  - { id: telegraaf-dft,  name: "Telegraaf DFT",  category: finance, url: "https://www.telegraaf.nl/financieel/rss", homepage: "https://www.telegraaf.nl/financieel", lang: nl }
+
+  # --- Sport ---
+  - { id: nos-sport,      name: "NOS Sport",      category: sport, url: "https://feeds.nos.nl/nossportalgemeen", homepage: "https://nos.nl/sport", lang: nl, default_enabled: true }
+  - { id: nos-voetbal,    name: "NOS Voetbal",    category: sport, url: "https://feeds.nos.nl/nosvoetbal", homepage: "https://nos.nl/sport", lang: nl }
+  - { id: nos-wielrennen, name: "NOS Wielrennen", category: sport, url: "https://feeds.nos.nl/nossportwielrennen", homepage: "https://nos.nl/sport", lang: nl }
+  - { id: nos-schaatsen,  name: "NOS Schaatsen",  category: sport, url: "https://feeds.nos.nl/nossportschaatsen", homepage: "https://nos.nl/sport", lang: nl }
+  - { id: nos-tennis,     name: "NOS Tennis",     category: sport, url: "https://feeds.nos.nl/nossporttennis", homepage: "https://nos.nl/sport", lang: nl }
+  - { id: nos-f1,         name: "NOS Formule 1",  category: sport, url: "https://feeds.nos.nl/nossportformule1", homepage: "https://nos.nl/sport", lang: nl }
+  - { id: nu-sport,       name: "NU.nl Sport",    category: sport, url: "https://www.nu.nl/rss/Sport", homepage: "https://www.nu.nl", lang: nl }
+  - { id: nu-voetbal,     name: "NU.nl Voetbal",  category: sport, url: "https://www.nu.nl/rss/Voetbal", homepage: "https://www.nu.nl", lang: nl }
+  - { id: guardian-football, name: "The Guardian · Football", category: sport, url: "https://www.theguardian.com/football/rss", homepage: "https://www.theguardian.com/football", lang: en }
+  - { id: vi,             name: "Voetbal International", category: sport, url: "https://www.vi.nl/rss", homepage: "https://www.vi.nl", lang: nl }
+  - { id: fcupdate,       name: "FCUpdate",       category: sport, url: "https://www.fcupdate.nl/rss", homepage: "https://www.fcupdate.nl", lang: nl }
+  - { id: wielerflits,    name: "WielerFlits",    category: sport, url: "https://www.wielerflits.nl/feed/", homepage: "https://www.wielerflits.nl", lang: nl }
+  - { id: nu-wielrennen,  name: "NU.nl Wielrennen", category: sport, url: "https://www.nu.nl/rss/Wielrennen", homepage: "https://www.nu.nl", lang: nl }
+
+  # --- Internationaal ---
+  - { id: guardian-world, name: "The Guardian · World", category: world, url: "https://www.theguardian.com/world/rss", homepage: "https://www.theguardian.com/world", lang: en, default_enabled: true }
+  - { id: bbc-world,      name: "BBC News · World", category: world, url: "https://feeds.bbci.co.uk/news/world/rss.xml", homepage: "https://www.bbc.com/news/world", lang: en, default_enabled: true }
+  - { id: dw,             name: "Deutsche Welle", category: world, url: "https://rss.dw.com/rdf/rss-en-all", homepage: "https://www.dw.com", lang: en }
+  - { id: aljazeera,      name: "Al Jazeera",     category: world, url: "https://www.aljazeera.com/xml/rss/all.xml", homepage: "https://www.aljazeera.com", lang: en }
+  - { id: euronews,       name: "Euronews",       category: world, url: "https://www.euronews.com/rss", homepage: "https://www.euronews.com", lang: en }
+  - { id: france24,       name: "France 24",      category: world, url: "https://www.france24.com/en/rss", homepage: "https://www.france24.com/en/", lang: en }
+
+  # --- België ---
+  - { id: vrt-nws,        name: "VRT NWS",        category: be, url: "https://www.vrt.be/vrtnws/nl.rss.articles.xml", homepage: "https://www.vrt.be/vrtnws/nl/", lang: nl }
+  - { id: hln,            name: "Het Laatste Nieuws", category: be, url: "https://www.hln.be/home/rss.xml", homepage: "https://www.hln.be", lang: nl }
+  - { id: knack,          name: "Knack",          category: be, url: "https://www.knack.be/feed/", homepage: "https://www.knack.be", lang: nl }
+  - { id: tijd,           name: "De Tijd",        category: be, url: "https://www.tijd.be/rss/nieuws.xml", homepage: "https://www.tijd.be", lang: nl }
+  - { id: bruzz,          name: "Bruzz",          category: be, url: "https://www.bruzz.be/rss.xml", homepage: "https://www.bruzz.be", lang: nl }
+  - { id: sporza,         name: "Sporza",         category: be, url: "https://sporza.be/nl.rss.xml", homepage: "https://sporza.be", lang: nl }
