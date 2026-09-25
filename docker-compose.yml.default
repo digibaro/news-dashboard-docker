@@ -1,6 +1,6 @@
 # Template. Copy it once and adapt the copy:
-#   cp docker-compose.yaml.default docker-compose.yaml
-# docker-compose.yaml is not tracked by git, so `git pull` never overwrites your changes.
+#   cp docker-compose.yml.default docker-compose.yml
+# docker-compose.yml is not tracked by git, so `git pull` never overwrites your changes.
 # Start with:  docker compose up -d --build
 # The container filesystem is read-only and nothing is written at runtime (no volumes needed).
 services:

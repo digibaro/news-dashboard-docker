@@ -63,7 +63,7 @@ It is built as **one Go binary with the frontend embedded, plus one `config.yaml
 ```sh
 git clone https://github.com/digibaro/news-dashboard-docker.git nieuwsdashboard && cd nieuwsdashboard
 cp config.yaml.default config.yaml                  # your own settings; not tracked by git
-cp docker-compose.yaml.default docker-compose.yaml  # your own ports/limits; not tracked by git
+cp docker-compose.yml.default docker-compose.yml    # your own ports/limits; not tracked by git
 # SANS ISC requires a User-Agent with contact details:
 export NDB_USER_AGENT="Nieuwsdashboard/1.0 (+https://nieuws.example.nl; beheer@example.nl)"
 export ABUSECH_AUTH_KEY=""          # optional, free key from https://auth.abuse.ch/
@@ -79,7 +79,7 @@ What you get:
 - **Health check:** `HEALTHCHECK` uses the binary's own `-healthcheck` flag, so no curl is needed in the image.
 - **Logs:** go to stdout (`docker logs nieuwsdashboard`).
 
-**Your own files:** `config.yaml` and `docker-compose.yaml` are copies of the `.default` templates. They are in `.gitignore`, so `git pull` never overwrites them. After an update, compare them with the templates (`diff config.yaml.default config.yaml`) to pick up new options.
+**Your own files:** `config.yaml` and `docker-compose.yml` are copies of the `.default` templates. They are in `.gitignore`, so `git pull` never overwrites them. After an update, compare them with the templates (`diff config.yaml.default config.yaml`, `diff docker-compose.yml.default docker-compose.yml`) to pick up new options. Keep only one compose file in the folder: when several exist (`compose.yaml`, `docker-compose.yml`, `docker-compose.yaml`), Compose warns and uses the first in that order.
 
 **Config changes:** `config.yaml` is bind-mounted read-only. Many editors save by replacing the file, and a single-file bind mount keeps pointing at the old version. After editing, run `docker compose restart`.
 
@@ -348,7 +348,7 @@ Notes:
 
 ## Docker on an ISPConfig VPS
 
-Use the same proxy directives as above, but publish the container on localhost only. In your `docker-compose.yaml` (copied from `docker-compose.yaml.default`):
+Use the same proxy directives as above, but publish the container on localhost only. In your `docker-compose.yml` (copied from `docker-compose.yml.default`):
 
 ```yaml
     ports:
@@ -365,18 +365,21 @@ Then run `docker compose up -d --build`. Docker's own restart policy (`unless-st
 
 | What | systemd | Docker |
 |---|---|---|
-| New version | replace `/opt/nieuwsdashboard/nieuwsdashboard`, then `sudo systemctl restart nieuwsdashboard` | `git pull && docker compose up -d --build` (your `config.yaml` and `docker-compose.yaml` are left alone) |
+| New version | replace `/opt/nieuwsdashboard/nieuwsdashboard`, then `sudo systemctl restart nieuwsdashboard` | `git pull && docker compose up -d --build` (your `config.yaml` and `docker-compose.yml` are left alone) |
 | Edit sources/config | edit `config.yaml`, then `sudo systemctl reload nieuwsdashboard` (or wait ≤ 60 s) | edit `config.yaml`, then `docker compose restart` |
 
-**One-time step when updating from 1.5.0 or older with Docker.** Up to 1.5.0 the repository contained `docker-compose.yml`. From 1.5.1 it ships `docker-compose.yaml.default`, and your own `docker-compose.yaml` is not tracked. Keep your current file before pulling:
+**One-time step when updating from 1.5.0 or older with Docker.** Up to 1.5.0 `docker-compose.yml` was part of the repository. Now it ships `docker-compose.yml.default`, and your own `docker-compose.yml` is not tracked. Before this first pull, git either refuses to update ("Your local changes … would be overwritten") or deletes the file. Keep your version like this:
 
 ```sh
-cp docker-compose.yml docker-compose.yaml   # keep your settings (git would delete or refuse to update docker-compose.yml)
-git checkout -- docker-compose.yml          # drop local edits to the old tracked file; they are saved in the copy
-git pull                                    # removes docker-compose.yml; docker-compose.yaml stays
+cp docker-compose.yml /tmp/docker-compose.yml.mine   # safety copy of your settings
+git checkout -- docker-compose.yml                   # drop local edits to the old tracked file
+git pull                                             # removes the old tracked docker-compose.yml
+cp /tmp/docker-compose.yml.mine docker-compose.yml   # put yours back: now untracked and ignored
 ```
 
-Then, in `docker-compose.yaml`, remove the `args: VERSION: …` lines under `build:` and set `image: nieuwsdashboard:latest`: the version now comes from the `VERSION` file. Finish with `docker compose up -d --build`.
+Then, in `docker-compose.yml`, remove the `args:` / `VERSION: …` lines under `build:` and set `image: nieuwsdashboard:latest`: the version now comes from the `VERSION` file. Finish with `docker compose up -d --build`. `git status` should show nothing.
+
+**Coming from 1.5.1** (which used `docker-compose.yaml`): your `docker-compose.yaml` keeps working and stays ignored. To follow the new name, run `mv docker-compose.yaml docker-compose.yml`.
 
 A restart starts with an empty cache, which fills within about 30 seconds. If you want the news to be there immediately after a restart, see *snapshot* below.
 
@@ -535,6 +538,9 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.5.2
+- **Compose file name:** the template is now `docker-compose.yml.default`; copy it to `docker-compose.yml`, the familiar name. It is still ignored by git. A `docker-compose.yaml` from 1.5.1 keeps working (see *Updating*).
 
 ### 1.5.1
 - **Docker Compose template:** the repository ships `docker-compose.yaml.default`. Copy it to `docker-compose.yaml`, which is not tracked, so `git pull` never touches your local compose file (see *Updating* for the one-time step).

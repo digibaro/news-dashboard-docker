@@ -24,8 +24,9 @@
 # Project brief (kept locally)
 /SPEC.md
 
-# Local Docker Compose file: copy docker-compose.yaml.default to docker-compose.yaml
-/docker-compose.yaml
+# Local Docker Compose file: copy docker-compose.yml.default to docker-compose.yml
+# (other names Compose accepts are ignored too)
 /docker-compose.yml
+/docker-compose.yaml
 /compose.yaml
 /compose.yml
