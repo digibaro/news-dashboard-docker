@@ -62,7 +62,8 @@ It is built as **one Go binary with the frontend embedded, plus one `config.yaml
 
 ```sh
 git clone https://github.com/digibaro/news-dashboard-docker.git nieuwsdashboard && cd nieuwsdashboard
-cp config.yaml.default config.yaml  # your own settings; not tracked by git
+cp config.yaml.default config.yaml                  # your own settings; not tracked by git
+cp docker-compose.yaml.default docker-compose.yaml  # your own ports/limits; not tracked by git
 # SANS ISC requires a User-Agent with contact details:
 export NDB_USER_AGENT="Nieuwsdashboard/1.0 (+https://nieuws.example.nl; beheer@example.nl)"
 export ABUSECH_AUTH_KEY=""          # optional, free key from https://auth.abuse.ch/
@@ -77,6 +78,8 @@ What you get:
 - **Container hardening:** runs with `read_only: true`, `cap_drop: [ALL]`, `no-new-privileges` and a 128 MB memory limit, and needs no volumes. It typically uses 20–40 MB of RAM.
 - **Health check:** `HEALTHCHECK` uses the binary's own `-healthcheck` flag, so no curl is needed in the image.
 - **Logs:** go to stdout (`docker logs nieuwsdashboard`).
+
+**Your own files:** `config.yaml` and `docker-compose.yaml` are copies of the `.default` templates. They are in `.gitignore`, so `git pull` never overwrites them. After an update, compare them with the templates (`diff config.yaml.default config.yaml`) to pick up new options.
 
 **Config changes:** `config.yaml` is bind-mounted read-only. Many editors save by replacing the file, and a single-file bind mount keeps pointing at the old version. After editing, run `docker compose restart`.
 
@@ -345,7 +348,7 @@ Notes:
 
 ## Docker on an ISPConfig VPS
 
-Use the same proxy directives as above, but publish the container on localhost only. In `docker-compose.yml`:
+Use the same proxy directives as above, but publish the container on localhost only. In your `docker-compose.yaml` (copied from `docker-compose.yaml.default`):
 
 ```yaml
     ports:
@@ -362,8 +365,18 @@ Then run `docker compose up -d --build`. Docker's own restart policy (`unless-st
 
 | What | systemd | Docker |
 |---|---|---|
-| New version | replace `/opt/nieuwsdashboard/nieuwsdashboard`, then `sudo systemctl restart nieuwsdashboard` | `git pull && docker compose up -d --build` |
+| New version | replace `/opt/nieuwsdashboard/nieuwsdashboard`, then `sudo systemctl restart nieuwsdashboard` | `git pull && docker compose up -d --build` (your `config.yaml` and `docker-compose.yaml` are left alone) |
 | Edit sources/config | edit `config.yaml`, then `sudo systemctl reload nieuwsdashboard` (or wait ≤ 60 s) | edit `config.yaml`, then `docker compose restart` |
+
+**One-time step when updating from 1.5.0 or older with Docker.** Up to 1.5.0 the repository contained `docker-compose.yml`. From 1.5.1 it ships `docker-compose.yaml.default`, and your own `docker-compose.yaml` is not tracked. Keep your current file before pulling:
+
+```sh
+cp docker-compose.yml docker-compose.yaml   # keep your settings (git would delete or refuse to update docker-compose.yml)
+git checkout -- docker-compose.yml          # drop local edits to the old tracked file; they are saved in the copy
+git pull                                    # removes docker-compose.yml; docker-compose.yaml stays
+```
+
+Then, in `docker-compose.yaml`, remove the `args: VERSION: …` lines under `build:` and set `image: nieuwsdashboard:latest`: the version now comes from the `VERSION` file. Finish with `docker compose up -d --build`.
 
 A restart starts with an empty cache, which fills within about 30 seconds. If you want the news to be there immediately after a restart, see *snapshot* below.
 
@@ -522,6 +535,10 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.5.1
+- **Docker Compose template:** the repository ships `docker-compose.yaml.default`. Copy it to `docker-compose.yaml`, which is not tracked, so `git pull` never touches your local compose file (see *Updating* for the one-time step).
+- **Version:** the version now comes from the `VERSION` file instead of a build argument in the compose file.
 
 ### 1.5.0
 - **Datalekken panel:** the latest 3 Dutch and 3 other data breaches at organisations from Have I Been Pwned (CC BY 4.0), below Security-adviezen.

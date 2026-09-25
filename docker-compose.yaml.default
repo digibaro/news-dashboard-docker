@@ -1,12 +1,13 @@
-# Example deployment. Start with:  docker compose up -d --build
+# Template. Copy it once and adapt the copy:
+#   cp docker-compose.yaml.default docker-compose.yaml
+# docker-compose.yaml is not tracked by git, so `git pull` never overwrites your changes.
+# Start with:  docker compose up -d --build
 # The container filesystem is read-only and nothing is written at runtime (no volumes needed).
 services:
   nieuwsdashboard:
     build:
-      context: .
-      args:
-        VERSION: "1.5.0"
-    image: nieuwsdashboard:1.5.0
+      context: .                  # the version comes from the VERSION file in the repository
+    image: nieuwsdashboard:latest
     container_name: nieuwsdashboard
     restart: unless-stopped
     ports:

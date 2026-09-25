@@ -4,3 +4,5 @@ config.yaml
 SPEC.md
 .env
 *.local.yaml
+docker-compose.yaml
+docker-compose.yml
