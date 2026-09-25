@@ -35,3 +35,6 @@
 /docker-compose.override.yaml
 /compose.override.yml
 /compose.override.yaml
+
+# Local backups
+*.bak
