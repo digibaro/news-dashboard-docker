@@ -835,6 +835,10 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.6.1</h3>
+    <ul>
+      <li>Treinstoringen gecontroleerd met echte NS-gegevens: nettere titels, geen dubbele oorzaak, en bij werkzaamheden de periode.</li>
+    </ul>
     <h3>Versie 1.6.0</h3>
     <ul>
       <li>Nieuwe panelen: Luchtkwaliteit (kies je eigen plaats), Treinstoringen, Energieprijzen (stroom per uur, gas en de goedkoopste uren) en Politiek vandaag (Tweede Kamer).</li>
@@ -890,6 +894,10 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.6.1</h3>
+    <ul>
+      <li>Train disruptions checked against live NS data: tidier titles, no repeated cause, and the period for engineering works.</li>
+    </ul>
     <h3>Version 1.6.0</h3>
     <ul>
       <li>New panels: Air quality (choose your own place), Train disruptions, Energy prices (hourly electricity, gas and the cheapest hours) and Politics today (House of Representatives).</li>
@@ -1445,13 +1453,13 @@ const EN = {
   "calamiteit": "calamity",
   "Treinstoringen konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.": "Train disruptions could not be loaded ({err}). Retrying automatically.",
   "Dit paneel staat uit in config.yaml (trains.enabled).": "This panel is disabled in config.yaml (trains.enabled).",
-  "Actuele situatie op het spoor (NS)": "Current rail situation (NS)",
+  "Actuele situatie op het spoor": "Current rail situation",
   "Voor treinstoringen is een gratis sleutel van de NS API nodig. De beheerder vraagt die aan op apiportal.ns.nl en zet hem in config.yaml (keys.ns_api_key) of als NS_API_KEY.": "Train disruptions need a free NS API key. The administrator requests one at apiportal.ns.nl and sets it in config.yaml (keys.ns_api_key) or as NS_API_KEY.",
   "De NS API is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.": "The NS API is unreachable ({err}); retrying automatically.",
   "Treinstoringen worden voor het eerst opgehaald.": "Train disruptions are being fetched for the first time.",
   "Storingen op het spoor": "Disruptions",
   "Geen storingen op het spoor.": "No disruptions on the railways.",
-  "Werkzaamheden nu ({n} gepland in totaal)": "Engineering works now ({n} planned in total)",
+  "Werkzaamheden ({n})": "Engineering works ({n})",
   "Vandaag in de Kamer": "Today in parliament",
   "Volgende vergaderdag: {day}": "Next sitting day: {day}",
   "De Kameragenda kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.": "The parliament agenda could not be loaded ({err}). Retrying automatically.",
@@ -3070,7 +3078,7 @@ function renderTrains(body) {
   const r = st.data;
   if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('Treinstoringen konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
   if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (trains.enabled).' })); return; }
-  const nsLink = () => extLink('https://www.ns.nl/reisinformatie/actuele-situatie-op-het-spoor', t('Actuele situatie op het spoor (NS)'));
+  const nsLink = () => extLink('https://www.ns.nl/reisinformatie/actuele-situatie-op-het-spoor', t('Actuele situatie op het spoor'));
   if (!r.key) {
     body.replaceChildren(h('p', { class: 'pnote', text: t('Voor treinstoringen is een gratis sleutel van de NS API nodig. De beheerder vraagt die aan op apiportal.ns.nl en zet hem in config.yaml (keys.ns_api_key) of als NS_API_KEY.') }),
       h('p', { class: 'pfoot' }, nsLink()));
@@ -3081,7 +3089,7 @@ function renderTrains(body) {
   const out = [], now = d.calamities.concat(d.disruptions);
   out.push(h('div', { class: 'tgrp' }, h('h3', { text: t('Storingen op het spoor') }),
     now.length ? h('ul', { class: 'plist' }, now.slice(0, 6).map(trainItem)) : h('p', { class: 'pnote', text: t('Geen storingen op het spoor.') })));
-  if (d.maintenance.length) out.push(h('div', { class: 'tgrp' }, h('h3', { text: t('Werkzaamheden nu ({n} gepland in totaal)', { n: d.maintenance_total }) }),
+  if (d.maintenance.length) out.push(h('div', { class: 'tgrp' }, h('h3', { text: t('Werkzaamheden ({n})', { n: d.maintenance_total }) }),
     h('ul', { class: 'plist' }, d.maintenance.slice(0, 3).map(trainItem))));
   out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://www.ns.nl/', 'NS'), ' · ', nsLink()));
   body.replaceChildren(...out);

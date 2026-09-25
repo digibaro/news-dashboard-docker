@@ -1654,6 +1654,27 @@ func TestParseNSDisruptions(t *testing.T) {
 	if d.MaintTotal != 2 || len(d.Maintenance) != 1 || d.Maintenance[0].Title != "Werk Zwolle" {
 		t.Errorf("maintenance: %d %+v", d.MaintTotal, d.Maintenance)
 	}
+	// Live NS format (25 Sep 2026): offsets without colon, title ending in a period, cause repeated in
+	// the situation, and a readable period for maintenance.
+	live := `[{"type":"DISRUPTION","id":"6067873","title":"Nijmegen - 's-Hertogenbosch.","isActive":true,"start":"2026-09-25T15:19:00+0200",
+	  "end":"2026-09-26T00:30:00+0200","impact":{"value":3},"expectedDuration":{"description":"Dit duurt tot ongeveer zaterdag 26 september 0:30 uur.","endTime":"2026-09-26T00:30:00+0200"},
+	  "timespans":[{"start":"2026-09-25T15:19:00+0200","end":"2026-09-26T00:30:00+0200","situation":{"label":"Door een defect spoor: tussen Oss en 's-Hertogenbosch rijden er veel minder treinen."},"cause":{"label":"defect spoor"},"advices":[]}],
+	  "titleSections":[[{"type":"STATION","value":"Nijmegen"}]],"publicationSections":[],"alternativeTransportTimespans":[],"local":false},
+	 {"type":"MAINTENANCE","id":"7004492","title":"Groningen - Leer.","isActive":true,"start":"2024-02-01T04:00:00+0100","end":"2026-10-04T23:58:00+0200","impact":{"value":3},
+	  "summaryAdditionalTravelTime":{"label":"De extra reistijd verschilt per reis.","shortLabel":"x"},"period":"Donderdag 1 februari 2024 4:00 uur t/m zondag 4 oktober 23:58 uur.",
+	  "timespans":[{"situation":{"label":"Door een aangepaste dienstregeling: tussen Bad Nieuweschans en Weener rijden er bussen."},"cause":{"label":"aangepaste dienstregeling"},"additionalTravelTime":{"label":"De extra reistijd verschilt per reis."}}]}]`
+	v, err = parseNSDisruptions([]byte(live), now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d = v.(TrainData)
+	if x := d.Disruptions[0]; x.Title != "Nijmegen - 's-Hertogenbosch" || x.Cause != "" || x.Start == nil || !x.Start.Equal(time.Date(2026, 9, 25, 13, 19, 0, 0, time.UTC)) ||
+		x.Expected != "Dit duurt tot ongeveer zaterdag 26 september 0:30 uur." {
+		t.Errorf("live disruption: %+v", x)
+	}
+	if m := d.Maintenance[0]; m.Title != "Groningen - Leer" || m.Expected != "Donderdag 1 februari 2024 4:00 uur t/m zondag 4 oktober 23:58 uur." || m.Extra != "De extra reistijd verschilt per reis." {
+		t.Errorf("live maintenance: %+v", m)
+	}
 	if _, err := parseNSDisruptions([]byte(`{"error":"x"}`), now); err == nil {
 		t.Error("object instead of list: expected error")
 	}

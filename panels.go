@@ -3329,6 +3329,7 @@ func parseNSDisruptions(body []byte, now time.Time) (any, error) {
 		IsActive          *bool                        `json:"isActive"`
 		Start             string                       `json:"start"`
 		End               string                       `json:"end"`
+		Period            string                       `json:"period"` // maintenance: "Donderdag 1 februari 2024 4:00 uur t/m ..."
 		ExpectedDuration  struct{ Description string } `json:"expectedDuration"`
 		SummaryAdditional struct{ Label string }       `json:"summaryAdditionalTravelTime"`
 		Impact            struct{ Value int }          `json:"impact"`
@@ -3346,7 +3347,7 @@ func parseNSDisruptions(body []byte, now time.Time) (any, error) {
 		if x.IsActive != nil && !*x.IsActive {
 			continue
 		}
-		t := TrainDisruption{ID: truncate(plainText(x.ID), 60), Title: truncate(plainText(x.Title), 160), Impact: x.Impact.Value,
+		t := TrainDisruption{ID: truncate(plainText(x.ID), 60), Title: truncate(strings.TrimSuffix(plainText(x.Title), "."), 160), Impact: x.Impact.Value,
 			Expected: truncate(plainText(x.ExpectedDuration.Description), 160), Extra: truncate(plainText(x.SummaryAdditional.Label), 80)}
 		if t.Title == "" {
 			continue
@@ -3361,6 +3362,13 @@ func parseNSDisruptions(body []byte, now time.Time) (any, error) {
 		}
 		if t.Situation == "" {
 			t.Situation = truncate(plainText(x.Description), 200)
+		}
+		if t.Expected == "" {
+			t.Expected = truncate(plainText(x.Period), 160)
+		}
+		// NS starts the situation with the cause ("Door een defect spoor: ..."): don't repeat it
+		if t.Cause != "" && strings.Contains(strings.ToLower(t.Situation), strings.ToLower(t.Cause)) {
+			t.Cause = ""
 		}
 		if s, ok := parseDate(x.Start); ok {
 			s = s.UTC()

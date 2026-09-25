@@ -569,6 +569,13 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 
 ## Changelog
 
+### 1.6.1
+- **Treinstoringen checked against live NS data:** the NS API format matches the parser. Display fixes:
+  - no trailing period in titles
+  - the cause is no longer repeated when NS's situation text already contains it
+  - engineering works show NS's period ("… t/m zondag 4 oktober 23:58 uur")
+  - the heading says "Werkzaamheden (n)" instead of a misleading "planned in total"
+
 ### 1.6.0
 - **New panels:**
   - **Luchtkwaliteit:** the nearest Luchtmeetnet station's index and pollutants, for a place chosen per visitor (default: the weather location).
