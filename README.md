@@ -80,27 +80,23 @@ ABUSECH_AUTH_KEY=
 NS_API_KEY=
 ENV
 chmod 600 .env
-docker compose up -d        # pulls the published image from ghcr.io; nothing is built on your server
+docker compose pull && docker compose up -d      # ready-made image from ghcr.io
+# or build it yourself from this checkout:  docker compose build && docker compose up -d
 ```
 
 - **`NDB_USER_AGENT`:** SANS ISC requires a User-Agent with your own site and e-mail.
 - **`ABUSECH_AUTH_KEY`:** optional; a free key from <https://auth.abuse.ch/>.
 - **`NS_API_KEY`:** for Treinstoringen; a free key from <https://apiportal.ns.nl>.
-- **`NDB_TAG`** (optional): which image tag to follow. `1` (default) takes every 1.x release, `1.7` only fixes of 1.7, `1.7.1` exactly that version.
+- **`NDB_TAG`** (optional): which published image to download. `1` (default) is the newest 1.x, `1.7` the newest 1.7.x, `1.7.2` exactly that version.
 
-**The image:** `ghcr.io/digibaro/news-dashboard-docker`, for linux/amd64 and linux/arm64. GitHub Actions builds it for every release, and publishing stops if `go vet` or a test fails. The repository clone is only needed for the templates and the README.
+**Download or build: your choice, every time.** The compose file has both an `image:` and a `build:` entry:
 
-**Building from source instead** (for example to test changes): add to `docker-compose.override.yml`:
+| | Command | What runs |
+|---|---|---|
+| **Ready-made image** | `docker compose pull && docker compose up -d` | the image GitHub Actions built and tested for the release (`ghcr.io/digibaro/news-dashboard-docker`, linux/amd64 and linux/arm64) |
+| **Build from source** | `git pull && docker compose build && docker compose up -d` | an image built on your server from your checkout; the tests run during the build |
 
-```yaml
-services:
-  nieuwsdashboard:
-    build: .
-    image: nieuwsdashboard:local
-    pull_policy: build
-```
-
-Then run `docker compose up -d --build`.
+Whichever you ran last is what runs. A plain `docker compose up -d` never downloads or builds by itself while an image is present. The footer shows the running version.
 
 The compose file loads `.env` with `env_file`, so a new variable only needs a line in `.env`. This needs Docker Compose 2.24 or newer; check with `docker compose version`. After editing `.env`, run `docker compose up -d`: `restart` keeps the old environment.
 
@@ -430,61 +426,18 @@ Then run `docker compose up -d`. Docker's own restart policy (`unless-stopped`) 
 
 | What | systemd | Docker |
 |---|---|---|
-| New version | replace `/opt/nieuwsdashboard/nieuwsdashboard`, then `sudo systemctl restart nieuwsdashboard` | `docker compose pull && docker compose up -d`, or automatically (below). Run `git pull` too, to get the new templates and README; your `config.yaml`, `.env` and compose files are left alone. |
+| New version | download the archive for your platform from the release, replace `/opt/nieuwsdashboard/nieuwsdashboard`, then `sudo systemctl restart nieuwsdashboard` | `git pull`, then **either** `docker compose pull && docker compose up -d` (ready-made image) **or** `docker compose build && docker compose up -d` (build it yourself). Your `config.yaml`, `.env` and compose files are left alone. |
 | Edit sources/config | edit `config.yaml`, then `sudo systemctl reload nieuwsdashboard` (or wait ≤ 60 s) | edit `config.yaml`, then `docker compose restart` |
 
-### Automatic updates (Docker)
+Updating is done by hand, so you decide when; the release notes on GitHub say what changed. There is no automatic updater. If you want one, a cron job can run the download commands from the table above.
 
-A daily timer pulls the image and recreates the container only when there is a new one. `NDB_TAG` in `.env` sets how far it goes (see *Quick start*). There's no extra container with access to the Docker socket (as Watchtower would need), just the host's own systemd.
-
-Save as `/etc/systemd/system/nieuws-hub-update.service`, with `WorkingDirectory` set to the folder that has your `docker-compose.yml`:
-
-```ini
-[Unit]
-Description=Update the Nieuws Hub container image
-Wants=network-online.target
-After=network-online.target docker.service
-
-[Service]
-Type=oneshot
-WorkingDirectory=/opt/nieuws-hub
-ExecStart=/usr/bin/docker compose pull --quiet
-ExecStart=/usr/bin/docker compose up -d
-ExecStart=/usr/bin/docker image prune -f --filter label=org.opencontainers.image.source=https://github.com/digibaro/news-dashboard-docker
-```
-
-And as `/etc/systemd/system/nieuws-hub-update.timer`:
-
-```ini
-[Unit]
-Description=Daily Nieuws Hub image update
-
-[Timer]
-OnCalendar=*-*-* 04:30
-RandomizedDelaySec=30m
-Persistent=true
-
-[Install]
-WantedBy=timers.target
-```
-
-```sh
-sudo systemctl daemon-reload
-sudo systemctl enable --now nieuws-hub-update.timer
-sudo systemctl start nieuws-hub-update.service          # run once now to test
-journalctl -u nieuws-hub-update.service -n 20           # what it did
-docker logs nieuwsdashboard 2>&1 | grep -E "started|config:"   # running version, missing settings
-```
-
-Or with cron: `30 4 * * * cd /opt/nieuws-hub && docker compose pull -q && docker compose up -d && docker image prune -f >/dev/null`.
-
-**One-time step when switching from a self-built image (1.7.0 or older):** your `docker-compose.yml` still has `build:`. Copy the new template over it; your local changes live in `docker-compose.override.yml` and `.env`:
+**One-time step when coming from 1.7.1 or older:** copy the new template over your `docker-compose.yml`. Your local changes live in `docker-compose.override.yml` and `.env`:
 
 ```sh
 git pull
 cp docker-compose.yml docker-compose.yml.bak
 cp docker-compose.yml.default docker-compose.yml
-docker compose pull && docker compose up -d
+docker compose pull && docker compose up -d      # or: docker compose build && docker compose up -d
 ```
 
 **One-time step when updating from 1.5.0 or older with Docker.** Up to 1.5.0 `docker-compose.yml` was part of the repository. Now it ships `docker-compose.yml.default`, and your own `docker-compose.yml` is not tracked. Before this first pull, git either refuses to update ("Your local changes … would be overwritten") or deletes the file. Keep your version like this:
@@ -660,6 +613,13 @@ go run . -check-feeds                # verify all feeds
 
 ---
 
+**Releasing a new version:**
+1. Set the version in `VERSION` (e.g. `1.7.3`).
+2. Add a `### 1.7.3` entry at the top of the changelog below; it becomes the release notes. Preview them with `sh .github/release-notes.sh 1.7.3`.
+3. Commit and push, then tag and push the tag: `git tag -a v1.7.3 -m "Nieuws Hub 1.7.3" && git push origin v1.7.3`.
+
+GitHub Actions then publishes the image (`:1.7.3`, `:1.7`, `:1`, `:latest`), builds the Linux downloads and `SHA256SUMS`, and creates the GitHub release. It stops before publishing anything if the tag doesn't match `VERSION`, the changelog entry is missing, or a test fails.
+
 ## Possible extensions
 
 These fit the architecture as extra scheduled jobs, but need a key, an account or a custom parser. So they are not in `config.yaml`:
@@ -677,6 +637,15 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.7.2
+- **Download or build, your choice at every update:**
+  - `docker compose pull && docker compose up -d` runs the ready-made image from GitHub.
+  - `docker compose build && docker compose up -d` builds it on your server from your checkout.
+
+  The compose template now has both `image:` and `build:`. Whichever you ran last is what runs.
+- **Updates are done by hand;** the automatic-update timer was removed from the README.
+- **Releases are created automatically:** pushing a version tag builds the image, the Linux downloads and `SHA256SUMS`, and publishes the GitHub release. The notes come from this changelog.
 
 ### 1.7.1
 - **Published images:** `ghcr.io/digibaro/news-dashboard-docker`, for linux/amd64 and linux/arm64, built by GitHub Actions for every release tag. Tags: `1.7.1`, `1.7`, `1` and `latest`. A failing vet or test stops the publish.
