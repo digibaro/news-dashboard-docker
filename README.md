@@ -80,12 +80,27 @@ ABUSECH_AUTH_KEY=
 NS_API_KEY=
 ENV
 chmod 600 .env
-docker compose up -d --build
+docker compose up -d        # pulls the published image from ghcr.io; nothing is built on your server
 ```
 
 - **`NDB_USER_AGENT`:** SANS ISC requires a User-Agent with your own site and e-mail.
 - **`ABUSECH_AUTH_KEY`:** optional; a free key from <https://auth.abuse.ch/>.
 - **`NS_API_KEY`:** for Treinstoringen; a free key from <https://apiportal.ns.nl>.
+- **`NDB_TAG`** (optional): which image tag to follow. `1` (default) takes every 1.x release, `1.7` only fixes of 1.7, `1.7.1` exactly that version.
+
+**The image:** `ghcr.io/digibaro/news-dashboard-docker`, for linux/amd64 and linux/arm64. GitHub Actions builds it for every release, and publishing stops if `go vet` or a test fails. The repository clone is only needed for the templates and the README.
+
+**Building from source instead** (for example to test changes): add to `docker-compose.override.yml`:
+
+```yaml
+services:
+  nieuwsdashboard:
+    build: .
+    image: nieuwsdashboard:local
+    pull_policy: build
+```
+
+Then run `docker compose up -d --build`.
 
 The compose file loads `.env` with `env_file`, so a new variable only needs a line in `.env`. This needs Docker Compose 2.24 or newer; check with `docker compose version`. After editing `.env`, run `docker compose up -d`: `restart` keeps the old environment.
 
@@ -405,7 +420,7 @@ Use the same proxy directives as above, but publish the container on localhost o
       - "127.0.0.1:8080:8080"
 ```
 
-Then run `docker compose up -d --build`. Docker's own restart policy (`unless-stopped`) replaces the systemd unit.
+Then run `docker compose up -d`. Docker's own restart policy (`unless-stopped`) replaces the systemd unit, and the update timer below keeps the image current.
 
 **Client IPs.** Requests from nginx/Apache on the host reach the container from the Docker gateway (`172.16.0.0/12`). The compose file therefore sets `NDB_TRUSTED_PROXIES=127.0.0.1,::1,172.16.0.0/12`, so the rate limits apply per visitor and not to everyone at once. When port 8080 is **published directly to the internet** without a proxy in front, remove `172.16.0.0/12`. On setups where Docker's userland proxy forwards external traffic, visitors would otherwise appear to come from the gateway and could set their own `X-Forwarded-For`.
 
@@ -415,8 +430,62 @@ Then run `docker compose up -d --build`. Docker's own restart policy (`unless-st
 
 | What | systemd | Docker |
 |---|---|---|
-| New version | replace `/opt/nieuwsdashboard/nieuwsdashboard`, then `sudo systemctl restart nieuwsdashboard` | `git pull && docker compose up -d --build` (your `config.yaml` and `docker-compose.yml` are left alone) |
+| New version | replace `/opt/nieuwsdashboard/nieuwsdashboard`, then `sudo systemctl restart nieuwsdashboard` | `docker compose pull && docker compose up -d`, or automatically (below). Run `git pull` too, to get the new templates and README; your `config.yaml`, `.env` and compose files are left alone. |
 | Edit sources/config | edit `config.yaml`, then `sudo systemctl reload nieuwsdashboard` (or wait ≤ 60 s) | edit `config.yaml`, then `docker compose restart` |
+
+### Automatic updates (Docker)
+
+A daily timer pulls the image and recreates the container only when there is a new one. `NDB_TAG` in `.env` sets how far it goes (see *Quick start*). There's no extra container with access to the Docker socket (as Watchtower would need), just the host's own systemd.
+
+Save as `/etc/systemd/system/nieuws-hub-update.service`, with `WorkingDirectory` set to the folder that has your `docker-compose.yml`:
+
+```ini
+[Unit]
+Description=Update the Nieuws Hub container image
+Wants=network-online.target
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/nieuws-hub
+ExecStart=/usr/bin/docker compose pull --quiet
+ExecStart=/usr/bin/docker compose up -d
+ExecStart=/usr/bin/docker image prune -f --filter label=org.opencontainers.image.source=https://github.com/digibaro/news-dashboard-docker
+```
+
+And as `/etc/systemd/system/nieuws-hub-update.timer`:
+
+```ini
+[Unit]
+Description=Daily Nieuws Hub image update
+
+[Timer]
+OnCalendar=*-*-* 04:30
+RandomizedDelaySec=30m
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+```sh
+sudo systemctl daemon-reload
+sudo systemctl enable --now nieuws-hub-update.timer
+sudo systemctl start nieuws-hub-update.service          # run once now to test
+journalctl -u nieuws-hub-update.service -n 20           # what it did
+docker logs nieuwsdashboard 2>&1 | grep -E "started|config:"   # running version, missing settings
+```
+
+Or with cron: `30 4 * * * cd /opt/nieuws-hub && docker compose pull -q && docker compose up -d && docker image prune -f >/dev/null`.
+
+**One-time step when switching from a self-built image (1.7.0 or older):** your `docker-compose.yml` still has `build:`. Copy the new template over it; your local changes live in `docker-compose.override.yml` and `.env`:
+
+```sh
+git pull
+cp docker-compose.yml docker-compose.yml.bak
+cp docker-compose.yml.default docker-compose.yml
+docker compose pull && docker compose up -d
+```
 
 **One-time step when updating from 1.5.0 or older with Docker.** Up to 1.5.0 `docker-compose.yml` was part of the repository. Now it ships `docker-compose.yml.default`, and your own `docker-compose.yml` is not tracked. Before this first pull, git either refuses to update ("Your local changes … would be overwritten") or deletes the file. Keep your version like this:
 
@@ -427,7 +496,7 @@ git pull                                             # removes the old tracked d
 cp /tmp/docker-compose.yml.mine docker-compose.yml   # put yours back: now untracked and ignored
 ```
 
-Then, in `docker-compose.yml`, remove the `args:` / `VERSION: …` lines under `build:` and set `image: nieuwsdashboard:latest`: the version now comes from the `VERSION` file. Finish with `docker compose up -d --build`. `git status` should show nothing.
+Then keep your port and network changes in `docker-compose.override.yml`, copy the template over your `docker-compose.yml` (see the step above), and run `docker compose pull && docker compose up -d`. `git status` should show nothing.
 
 **Coming from 1.5.1** (which used `docker-compose.yaml`): your `docker-compose.yaml` keeps working and stays ignored. To follow the new name, run `mv docker-compose.yaml docker-compose.yml`.
 
@@ -608,6 +677,13 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.7.1
+- **Published images:** `ghcr.io/digibaro/news-dashboard-docker`, for linux/amd64 and linux/arm64, built by GitHub Actions for every release tag. Tags: `1.7.1`, `1.7`, `1` and `latest`. A failing vet or test stops the publish.
+- **The compose template uses the published image** (`NDB_TAG`, default `1`); building from source moves to an override.
+- **Automatic updates:** a systemd timer (or cron line) pulls the image daily and recreates the container only when it changed.
+- **CI:** formatting, vet and tests run on every push to `main`.
+- **Dockerfile:** cross-compiles for the target platform (no emulation), and labels the image with its source and licence.
 
 ### 1.7.0
 - **New name:** the app is now called **Nieuws Hub** (browser tab, header and installed app). The program, container and repository keep their technical names.

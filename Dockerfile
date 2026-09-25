@@ -1,8 +1,11 @@
-# Nieuwsdashboard: static Go binary on distroless (no shell, no package manager), non-root.
-# Build:  docker build -t nieuwsdashboard .
-# Run:    see docker-compose.yml.default (copy it to docker-compose.yml)
+# Nieuws Hub: static Go binary on distroless (no shell, no package manager), non-root.
+# Published images: ghcr.io/digibaro/news-dashboard-docker (linux/amd64, linux/arm64), see .github/workflows.
+# Build locally:   docker build -t nieuwsdashboard .
+# Run:             see docker-compose.yml.default (copy it to docker-compose.yml)
 
-FROM golang:1.27-alpine AS build
+# The build stage runs on the build machine's own platform and cross-compiles for the target,
+# so multi-arch images need no emulation (tests run natively, once).
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
@@ -11,10 +14,16 @@ COPY web ./web
 # the image is only built when vet and the unit tests pass (including a check of config.yaml.default)
 RUN go vet ./... && go test -count=1 ./...
 # the version is read from the VERSION file, so a local docker-compose.yml never goes stale
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=$(tr -d ' \n' < VERSION)" -o /out/nieuwsdashboard .
+# declared here, after the tests, so the vet/test step is shared by all target platforms
+ARG TARGETOS=linux TARGETARCH
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags="-s -w -X main.version=$(tr -d ' \n' < VERSION)" -o /out/nieuwsdashboard .
 
 # distroless/static ships CA certificates and tzdata (the binary embeds tzdata as well).
 FROM gcr.io/distroless/static:nonroot
+LABEL org.opencontainers.image.title="Nieuws Hub" \
+      org.opencontainers.image.description="Dutch news, weather and cyber-threat dashboard in one Go binary" \
+      org.opencontainers.image.source="https://github.com/digibaro/news-dashboard-docker" \
+      org.opencontainers.image.licenses="GPL-3.0-or-later"
 WORKDIR /app
 COPY --from=build /out/nieuwsdashboard /app/nieuwsdashboard
 # built-in default; docker-compose.yml mounts your own config.yaml over it

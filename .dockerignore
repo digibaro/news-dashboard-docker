@@ -6,3 +6,5 @@ SPEC.md
 *.local.yaml
 docker-compose.yaml
 docker-compose.yml
+docker-compose.override.yml
+.github

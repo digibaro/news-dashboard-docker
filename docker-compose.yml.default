@@ -1,13 +1,16 @@
 # Template. Copy it once and adapt the copy:
 #   cp docker-compose.yml.default docker-compose.yml
 # docker-compose.yml is not tracked by git, so `git pull` never overwrites your changes.
-# Start with:  docker compose up -d --build
+# Start with:  docker compose up -d
+# Updates:     docker compose pull && docker compose up -d   (or automatically, see "Updating" in the README)
 # The container filesystem is read-only and nothing is written at runtime (no volumes needed).
 services:
   nieuwsdashboard:
-    build:
-      context: .                  # the version comes from the VERSION file in the repository
-    image: nieuwsdashboard:latest
+    # Published image, built and tested by GitHub Actions for every release (linux/amd64, linux/arm64).
+    # NDB_TAG (in .env) chooses how far automatic updates go:
+    #   1 = every 1.x release (default) · 1.7 = fixes of 1.7 only · 1.7.1 = this exact version
+    # To build from source instead, put "build: ." and "pull_policy: build" in docker-compose.override.yml.
+    image: ghcr.io/digibaro/news-dashboard-docker:${NDB_TAG:-1}
     container_name: nieuwsdashboard
     restart: unless-stopped
     ports:
