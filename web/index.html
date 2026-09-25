@@ -19,6 +19,8 @@
     var p = JSON.parse(localStorage.getItem('ndb:prefs') || '{}'), d = document.documentElement;
     if (p.theme === 'light' || p.theme === 'dark') d.setAttribute('data-theme', p.theme);
     if (p.density === 'comfortable') d.setAttribute('data-density', 'comfortable');
+    var m = new URLSearchParams(location.search).get('mode') || p.mode;
+    if (m === 'digest' || m === 'kiosk') d.setAttribute('data-mode', m);
     var l = p.lang === 'en' || p.lang === 'nl' ? p.lang : p.lang === 'auto' ? (/^nl/i.test(navigator.language || '') ? 'nl' : 'en') : 'nl';
     d.lang = l;
     if (l === 'en') { d.classList.add('i18n-pending'); setTimeout(function () { d.classList.remove('i18n-pending'); }, 1500); }
@@ -525,6 +527,89 @@ table.tt { width: 100%; border-collapse: collapse; font-size: 12px; }
 .agroup .m .un { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .alsk { display: grid; gap: 12px; align-content: start; height: 420px; }
 
+/* ---------- Energieprijzen ---------- */
+.enow { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.enow .big { font-size: 30px; font-weight: 650; letter-spacing: -.01em; }
+.enow .unit { color: var(--text-2); }
+.enow .sub { color: var(--text-3); font-size: 12px; flex-basis: 100%; }
+.eline { margin: 4px 0; font-size: 13px; color: var(--text-2); }
+.eline b { color: var(--text); font-weight: 650; }
+.echart { display: block; width: 100%; height: auto; margin: 8px 0 4px; }
+.echart rect { fill: var(--line-strong); }
+.echart rect.win { fill: var(--sev-low); }
+.echart rect.now { fill: var(--accent); }
+.echart text { fill: var(--text-3); font-size: 5.5px; font-family: var(--font); }
+.echart line { stroke: var(--line); stroke-width: .5; }
+.esk { height: 290px; }
+@media (max-width: 699px) { .esk { height: 275px; } }
+
+/* ---------- Luchtkwaliteit ---------- */
+.airnow { display: flex; gap: 14px; align-items: center; }
+.airnow .lki { flex: none; width: 58px; height: 58px; border-radius: 8px; display: grid; place-items: center; font-size: 28px; font-weight: 700;
+  border: 3px solid var(--lvl); color: var(--text); }
+.airnow .alab { font-size: 16px; font-weight: 650; }
+.airnow .aadv { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+.lki-good { --lvl: var(--sev-low); } .lki-mod { --lvl: var(--sev-med); } .lki-insuf { --lvl: var(--sev-high); }
+.lki-bad { --lvl: var(--sev-crit); } .lki-vbad { --lvl: #7b2cbf; }
+.airc { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 10px 0 4px; padding: 0; list-style: none; font-size: 13px; }
+.airc b { font-weight: 650; }
+.airc span { color: var(--text-3); font-size: 11px; }
+.asc { font-size: 11px; color: var(--text-3); margin: 6px 0 0; }
+.ask { height: 145px; }
+@media (max-width: 1099px) { .ask { height: 170px; } }
+@media (max-width: 699px) { .ask { height: 195px; } }
+
+/* ---------- Treinstoringen / Politiek ---------- */
+.tgrp h3, .pgrp h3 { margin: 8px 0 4px; font-size: 12px; font-weight: 650; color: var(--text-2); text-transform: uppercase; letter-spacing: .03em; }
+.tgrp:first-child h3, .pgrp:first-child h3 { margin-top: 0; }
+.tgrp .plist .d2, .pgrp .plist .d2 { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+.tgrp .m, .pgrp .m { flex-wrap: wrap; row-gap: 0; }
+.pgrp .tm { font-variant-numeric: tabular-nums; color: var(--text-2); font-weight: 600; margin-right: 6px; }
+.pgrp .cx { text-decoration: line-through; color: var(--text-3); }
+.pgrp .plist .tag, .tgrp .plist .tag { margin-right: 6px; vertical-align: 1px; }
+.tag.ok { color: var(--sev-low); }
+.tsk2 { height: 80px; } .psk { height: 540px; }
+@media (max-width: 699px) { .psk { height: 620px; } }
+
+/* ---------- Overzicht (digest) & kiosk ---------- */
+.digest { display: none; }
+[data-mode="digest"] .digest { display: block; }
+[data-mode="digest"] .layout { grid-template-columns: minmax(0, 1fr); }
+[data-mode="digest"] #news, [data-mode="digest"] #side, [data-mode="digest"] #chips { display: none; }
+.digest-h { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin: 4px 0 14px; }
+.digest-h h2 { margin: 0; font-size: 20px; font-weight: 650; }
+.digest-h .muted { color: var(--text-3); font-size: 13px; }
+.digest-h .btn { margin-left: auto; }
+.dgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 16px; align-items: start; }
+.dcard { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; background: var(--surface); min-width: 0; }
+.dcard h3 { margin: 0 0 6px; font-size: 14px; }
+.dcard h3 button { all: unset; cursor: pointer; font-weight: 650; }
+.dcard h3 button:hover { text-decoration: underline; text-underline-offset: 2px; }
+.dcard h3 button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+.dcard p { margin: 3px 0; font-size: 13px; color: var(--text-2); }
+.dcard .big { font-size: 22px; font-weight: 650; color: var(--text); }
+.dcard ul { list-style: none; margin: 0; padding: 0; }
+.dcard li { padding: 4px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.dcard li:first-child { border-top: 0; }
+.dcard li a { color: var(--text); text-decoration: none; font-weight: 550; }
+.dcard li a:hover { text-decoration: underline; }
+.dcard li small { display: block; color: var(--text-3); font-size: 12px; }
+.dcard.wide { grid-column: 1 / -1; }
+@media (min-width: 1000px) { .dcard.wide { grid-column: span 2; } }
+.kiosk-exit { position: fixed; right: 8px; bottom: 8px; z-index: 50; display: none; height: 26px; padding: 0 8px; font-size: 12px; }
+[data-mode="kiosk"] .kiosk-exit { display: inline-flex; }
+[data-mode="kiosk"] body { zoom: 1.15; }
+@media (min-width: 1800px) { [data-mode="kiosk"] body { zoom: 1.3; } }
+[data-mode="kiosk"] #open-settings, [data-mode="kiosk"] .search, [data-mode="kiosk"] #search-open, [data-mode="kiosk"] #theme-seg,
+[data-mode="kiosk"] #lang-seg, [data-mode="kiosk"] .news-bar .icon-btn, [data-mode="kiosk"] .item .bm, [data-mode="kiosk"] #welcome,
+[data-mode="kiosk"] .foot, [data-mode="kiosk"] .more, [data-mode="kiosk"] #chips .chip.off, [data-mode="kiosk"] .pextra { display: none !important; }
+@media (min-width: 1100px) {
+  [data-mode="kiosk"] body { overflow: hidden; }
+  [data-mode="kiosk"] .layout { padding-bottom: 0; }
+  [data-mode="kiosk"] #news, [data-mode="kiosk"] #side { overflow-y: auto; scrollbar-width: none; position: relative; }
+  [data-mode="kiosk"] #news::-webkit-scrollbar, [data-mode="kiosk"] #side::-webkit-scrollbar { display: none; }
+}
+
 /* ---------- Datalekken ---------- */
 .bgrp h3 { margin: 8px 0 4px; font-size: 12px; font-weight: 650; color: var(--text-2); text-transform: uppercase; letter-spacing: .03em; }
 .bgrp:first-child h3 { margin-top: 0; }
@@ -665,11 +750,11 @@ textarea.json {
   <symbol id="w-thunder" viewBox="0 0 24 24"><path d="M6.5 14a3.5 3.5 0 0 1-.4-6.98A5.5 5.5 0 0 1 16.8 5.6 4.2 4.2 0 0 1 17.5 14z"/><path d="M12.8 14.5l-2.6 4h3.2l-2.2 4"/></symbol>
 </svg>
 
-<div class="alertbar" id="alertbar" role="region" aria-label="Dreigingsniveau en weeralarm">
+<div class="alertbar" id="alertbar" role="region" aria-label="Weeralarm, alarmeringen en dreigingsniveau">
   <div class="alertbar-in">
-    <a class="ab" id="ab-nctv" href="https://www.nctv.nl/onderwerpen/d/dtn" target="_blank" rel="noopener noreferrer"><span class="d" aria-hidden="true"></span><span><span class="long">Dreigingsniveau terrorisme: </span><span class="short">Terreurdreiging: </span>…</span></a>
     <a class="ab" id="ab-knmi" href="https://www.knmi.nl/nederland-nu/weer/waarschuwingen" target="_blank" rel="noopener noreferrer"><span class="d" aria-hidden="true"></span><span>KNMI: …</span></a>
     <a class="ab" id="ab-p2k" href="#panel-alarms"><span><span class="long">Alarmeringen laatste uur: </span><span class="short">Alarmeringen (uur): </span>…</span></a>
+    <a class="ab" id="ab-nctv" href="https://www.nctv.nl/onderwerpen/d/dtn" target="_blank" rel="noopener noreferrer"><span class="d" aria-hidden="true"></span><span><span class="long">Dreigingsniveau terrorisme: </span><span class="short">Terreurdreiging: </span>…</span></a>
   </div>
 </div>
 <header class="top" id="top">
@@ -701,6 +786,11 @@ textarea.json {
 </header>
 
 <main class="layout">
+  <section class="digest" id="digest" aria-labelledby="digest-h" tabindex="-1">
+    <div class="digest-h"><h2 id="digest-h">Vandaag in het kort</h2><span class="muted" id="digest-date"></span>
+      <button class="btn" type="button" id="digest-exit">Volledige weergave</button></div>
+    <div class="dgrid" id="dgrid"></div>
+  </section>
   <section class="news" id="news" aria-labelledby="news-h" tabindex="-1">
     <div class="news-bar">
       <h2 id="news-h">Nieuws</h2>
@@ -717,6 +807,7 @@ textarea.json {
   <aside class="side" id="side" aria-label="Weer, cyberdreigingen en adviezen" tabindex="-1"></aside>
 </main>
 
+<button class="btn kiosk-exit" id="kiosk-exit" type="button">Kiosk verlaten</button>
 <footer class="foot">
   <p>Berichten, koppen en samenvattingen zijn eigendom van de oorspronkelijke uitgevers; elke kop linkt naar het origineel.</p>
   <p>Je voorkeuren staan alleen in deze browser. Deze site gebruikt geen cookies, trackers of externe lettertypen.</p>
@@ -744,6 +835,12 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.6.0</h3>
+    <ul>
+      <li>Nieuwe panelen: Luchtkwaliteit (kies je eigen plaats), Treinstoringen, Energieprijzen (stroom per uur, gas en de goedkoopste uren) en Politiek vandaag (Tweede Kamer).</li>
+      <li>Overzicht: het belangrijkste van vandaag op één scherm (toets v). Kiosk: voor een wandscherm. Kies onder Instellingen → Weergave → Modus.</li>
+      <li>Bovenbalk: eerst KNMI, dan de alarmeringen, dan het dreigingsniveau.</li>
+    </ul>
     <h3>Versie 1.5.0</h3>
     <ul>
       <li>Nieuw paneel Datalekken: de laatste 3 Nederlandse en 3 andere datalekken bij organisaties, van Have I Been Pwned. Met aantal accounts, datum en welke gegevens zijn gelekt.</li>
@@ -793,6 +890,12 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.6.0</h3>
+    <ul>
+      <li>New panels: Air quality (choose your own place), Train disruptions, Energy prices (hourly electricity, gas and the cheapest hours) and Politics today (House of Representatives).</li>
+      <li>Overview: the essentials of today on one screen (key v). Kiosk: for a wall display. Choose under Settings → Display → Mode.</li>
+      <li>Top bar: KNMI first, then emergency alerts, then the threat level.</li>
+    </ul>
     <h3>Version 1.5.0</h3>
     <ul>
       <li>New panel Data breaches: the latest 3 Dutch and 3 other data breaches at organisations, from Have I Been Pwned. With number of accounts, dates and what data leaked.</li>
@@ -856,6 +959,7 @@ textarea.json {
     <dt><kbd class="k">1</kbd> … <kbd class="k">9</kbd></dt><dd>Categorie kiezen (1 = Alles)</dd>
     <dt><kbd class="k">/</kbd></dt><dd>Zoeken</dd>
     <dt><kbd class="k">r</kbd></dt><dd>Nieuws verversen</dd>
+    <dt><kbd class="k">v</kbd></dt><dd>Overzicht van vandaag aan / uit</dd>
     <dt><kbd class="k">?</kbd></dt><dd>Dit overzicht</dd>
     <dt><kbd class="k">Esc</kbd></dt><dd>Venster sluiten of zoekopdracht wissen</dd>
   </dl>
@@ -901,8 +1005,26 @@ textarea.json {
       </div>
       <p class="msg" id="alarm-msg" role="status"></p>
     </section>
+    <section aria-labelledby="set-air-h" id="set-air">
+      <h3 id="set-air-h">Plaats voor luchtkwaliteit</h3>
+      <p class="hint" id="air-now"></p>
+      <div class="row" style="margin-top:0">
+        <input class="field" style="flex:1;min-width:12rem" type="search" id="air-search" placeholder="Zoek een plaats" aria-label="Zoek een plaats voor de luchtkwaliteit" autocomplete="off">
+        <button class="btn" type="button" id="air-save">Opslaan</button>
+      </div>
+      <ul class="georesults" id="air-results" aria-label="Gevonden plaatsen"></ul>
+      <div class="row"><button class="btn" type="button" id="air-wx">Zelfde als weerlocatie</button></div>
+      <p class="msg" id="air-msg" role="status"></p>
+    </section>
     <section aria-labelledby="set-view-h">
       <h3 id="set-view-h">Weergave</h3>
+      <div class="opt"><span id="lbl-mode">Modus<small>Overzicht: het belangrijkste van vandaag op één scherm. Kiosk: voor een wandscherm; groter en schuift vanzelf door. Ook via het adres: ?mode=digest of ?mode=kiosk.</small></span>
+        <div class="seg" role="radiogroup" aria-labelledby="lbl-mode" id="mode-seg">
+          <label><input type="radio" name="mode" value="normal"><span>Normaal</span></label>
+          <label><input type="radio" name="mode" value="digest"><span>Overzicht</span></label>
+          <label><input type="radio" name="mode" value="kiosk"><span>Kiosk</span></label>
+        </div>
+      </div>
       <div class="opt"><span id="lbl-theme2">Thema</span>
         <div class="seg" role="radiogroup" aria-labelledby="lbl-theme2" id="theme-seg2">
           <label><input type="radio" name="theme2" value="light"><span>Licht</span></label>
@@ -966,8 +1088,12 @@ const TZ = 'Europe/Amsterdam';
 const KEY = 'ndb:prefs', SEEN_KEY = 'ndb:seen', READ_KEY = 'ndb:read', SAVED_KEY = 'ndb:saved';
 const PANELS = {
   weather: 'Weer',
+  air: 'Luchtkwaliteit',
   traffic: 'Verkeer',
+  trains: 'Treinstoringen',
   alarms: 'Alarmeringen',
+  energy: 'Energieprijzen',
+  politics: 'Politiek vandaag',
   threats: 'Cyberdreigingen',
   advisories: 'Security-adviezen',
   breaches: 'Datalekken',
@@ -980,7 +1106,7 @@ const MIN = 60e3;
 const DEFAULTS = {
   v: 2, theme: 'auto', sources: null, known: [], pageSize: 60, summaries: true,
   density: 'compact', category: 'all', weather: null, threatTab: 'ips', advFilter: 'all',
-  lang: 'nl', alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, watch: [], mute: [],
+  lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, watch: [], mute: [],
   panels: { order: PANEL_IDS.slice(), collapsed: {}, hidden: {} },
 };
 
@@ -1257,6 +1383,133 @@ const EN = {
   '{ok} van {total} bronnen in orde': '{ok} of {total} sources OK', ', {n} met een probleem.': ', {n} with a problem.', ' Server gestart {t}, versie {v}.': ' Server started {t}, version {v}.',
   '{n} {what} op je volglijst, {m} verborgen.': '{n} {what} on your watchlist, {m} hidden.', 'woord': 'word', 'woorden': 'words',
   'Versie {v}.': 'Version {v}.', 'Zoek een plaats en druk op Opslaan, of kies een plaats uit de lijst.': 'Search for a place and press Save, or pick one from the list.',
+  // 1.6.0 panels, overview and kiosk
+  "Luchtkwaliteit": "Air quality",
+  "Treinstoringen": "Train disruptions",
+  "Energieprijzen": "Energy prices",
+  "Politiek vandaag": "Politics today",
+  "Energieprijzen konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.": "Energy prices could not be loaded ({err}). Retrying automatically.",
+  "Dit paneel staat uit in config.yaml (energy.enabled).": "This panel is disabled in config.yaml (energy.enabled).",
+  "EnergyZero is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.": "EnergyZero is unreachable ({err}); retrying automatically.",
+  "Energieprijzen worden voor het eerst opgehaald.": "Energy prices are being fetched for the first time.",
+  "per kWh": "per kWh",
+  "stroom nu ({span})": "electricity now ({span})",
+  "Gas: ": "Gas: ",
+  " per m³": " per m³",
+  "Dag kiezen": "Choose day",
+  "Morgen": "Tomorrow",
+  "Goedkoopste 3 uur: ": "Cheapest 3 hours: ",
+  " (gemiddeld {p})": " (average {p})",
+  "Laagste {lo} om {lt} · hoogste {hi} om {ht}": "Lowest {lo} at {lt} · highest {hi} at {ht}",
+  "De prijzen voor morgen verschijnen rond 13:00.": "Tomorrow's prices appear around 13:00.",
+  "incl. btw en de in config.yaml ingestelde toeslagen": "incl. VAT and the surcharges set in config.yaml",
+  "marktprijs (day-ahead) incl. btw, zonder energiebelasting en opslag van je leverancier": "market price (day-ahead) incl. VAT, without energy tax and your supplier's markup",
+  "Stroomprijs per uur: laagste {lo}, hoogste {hi}, gemiddeld {avg}.": "Electricity price per hour: lowest {lo}, highest {hi}, average {avg}.",
+  "Plaats voor luchtkwaliteit wijzigen (nu {name})": "Change place for air quality (now {name})",
+  "Luchtkwaliteit kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.": "Air quality could not be loaded ({err}). Retrying automatically.",
+  "Dit paneel staat uit in config.yaml (air.enabled).": "This panel is disabled in config.yaml (air.enabled).",
+  "Luchtmeetnet is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.": "Luchtmeetnet is unreachable ({err}); retrying automatically.",
+  "Meetgegevens worden voor het eerst opgehaald.": "Measurements are being fetched for the first time.",
+  "Luchtkwaliteitsindex {v}: ": "Air quality index {v}: ",
+  "Goed": "Good",
+  "Matig": "Moderate",
+  "Onvoldoende": "Poor",
+  "Slecht": "Bad",
+  "Zeer slecht": "Very bad",
+  "goed": "good",
+  "onvoldoende": "poor",
+  "slecht": "bad",
+  "zeer slecht": "very bad",
+  "Geen gevolgen voor de gezondheid.": "No health effects.",
+  "Voor de meeste mensen geen gevolgen; wie gevoelig is, merkt soms iets.": "No effects for most people; sensitive people may notice something.",
+  "Gevoelige mensen: beperk zware inspanning buiten.": "Sensitive people: limit strenuous activity outdoors.",
+  "Beperk zware inspanning buiten, vooral met longklachten.": "Limit strenuous activity outdoors, especially with lung problems.",
+  "Vermijd zware inspanning buiten.": "Avoid strenuous activity outdoors.",
+  "Meetstation ": "Station ",
+  " · {d} km": " · {d} km",
+  "Gemeten waarden in µg/m³": "Measured values in µg/m³",
+  "Het dichtstbijzijnde meetstation ligt op {d} km; de waarde kan afwijken van jouw plek.": "The nearest station is {d} km away; values may differ where you are.",
+  "Luchtkwaliteitsindex 1–11: 1–3 goed · 4–6 matig · 7–8 onvoldoende · 9–10 slecht · 11 zeer slecht": "Air quality index 1–11: 1–3 good · 4–6 moderate · 7–8 poor · 9–10 bad · 11 very bad",
+  " (RIVM, GGD’s, DCMR en provincies) · gemeten {t}": " (RIVM, municipal health services, DCMR and provinces) · measured {t}",
+  "Nu: zelfde als je weerlocatie ({name}).": "Now: same as your weather location ({name}).",
+  "Luchtkwaliteit wordt nu getoond voor {name}.": "Air quality is now shown for {name}.",
+  "Luchtkwaliteit volgt weer je weerlocatie.": "Air quality follows your weather location again.",
+  "Plaats voor luchtkwaliteit": "Place for air quality",
+  "Zoek een plaats voor de luchtkwaliteit": "Search a place for air quality",
+  "Modus": "Mode",
+  "Normaal": "Normal",
+  "Overzicht": "Overview",
+  "Kiosk": "Kiosk",
+  "Overzicht: het belangrijkste van vandaag op één scherm. Kiosk: voor een wandscherm; groter en schuift vanzelf door. Ook via het adres: ?mode=digest of ?mode=kiosk.": "Overview: the essentials of today on one screen. Kiosk: for a wall display; larger and scrolls by itself. Also via the address: ?mode=digest or ?mode=kiosk.",
+  "oorzaak: {c}": "cause: {c}",
+  "calamiteit": "calamity",
+  "Treinstoringen konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.": "Train disruptions could not be loaded ({err}). Retrying automatically.",
+  "Dit paneel staat uit in config.yaml (trains.enabled).": "This panel is disabled in config.yaml (trains.enabled).",
+  "Actuele situatie op het spoor (NS)": "Current rail situation (NS)",
+  "Voor treinstoringen is een gratis sleutel van de NS API nodig. De beheerder vraagt die aan op apiportal.ns.nl en zet hem in config.yaml (keys.ns_api_key) of als NS_API_KEY.": "Train disruptions need a free NS API key. The administrator requests one at apiportal.ns.nl and sets it in config.yaml (keys.ns_api_key) or as NS_API_KEY.",
+  "De NS API is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.": "The NS API is unreachable ({err}); retrying automatically.",
+  "Treinstoringen worden voor het eerst opgehaald.": "Train disruptions are being fetched for the first time.",
+  "Storingen op het spoor": "Disruptions",
+  "Geen storingen op het spoor.": "No disruptions on the railways.",
+  "Werkzaamheden nu ({n} gepland in totaal)": "Engineering works now ({n} planned in total)",
+  "Vandaag in de Kamer": "Today in parliament",
+  "Volgende vergaderdag: {day}": "Next sitting day: {day}",
+  "De Kameragenda kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.": "The parliament agenda could not be loaded ({err}). Retrying automatically.",
+  "Dit paneel staat uit in config.yaml (politics.enabled).": "This panel is disabled in config.yaml (politics.enabled).",
+  "De Tweede Kamer-API is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.": "The Tweede Kamer API is unreachable ({err}); retrying automatically.",
+  "De Kameragenda wordt voor het eerst opgehaald.": "The parliament agenda is being fetched for the first time.",
+  "geannuleerd": "cancelled",
+  "Geen debatten of commissievergaderingen gepland in de komende week.": "No debates or committee meetings planned in the coming week.",
+  "Laatste stemmingen": "Latest votes",
+  "aangenomen": "passed",
+  "verworpen": "rejected",
+  "Tweede Kamer (open data)": "House of Representatives (open data)",
+  "Commissiedebat": "Committee debate",
+  "Plenair debat (tweeminutendebat)": "Plenary debate (two-minute debate)",
+  "Plenair debat (wetgeving)": "Plenary debate (legislation)",
+  "Plenair debat (debat)": "Plenary debate",
+  "Plenair debat (overig)": "Plenary debate (other)",
+  "Plenair debat (dertigledendebat)": "Plenary debate (thirty-member debate)",
+  "Plenair debat (meerderheidsdebat)": "Plenary debate (majority debate)",
+  "Wetgevingsoverleg": "Legislative consultation",
+  "Notaoverleg": "Policy paper consultation",
+  "Rondetafelgesprek": "Round-table discussion",
+  "Technische briefing": "Technical briefing",
+  "Stemmingen": "Votes",
+  "Regeling van werkzaamheden": "Order of business",
+  "Hamerstukken": "Formalities",
+  "Petitie": "Petition",
+  "Hoorzitting": "Hearing",
+  "Vragenuur": "Question time",
+  "Mondelinge vragen": "Oral questions",
+  "Motie": "Motion",
+  "Amendement": "Amendment",
+  "Wetsvoorstel": "Bill",
+  "Commissiedebat (procedure)": "Committee debate (procedure)",
+  "Vandaag in het kort": "Today at a glance",
+  "Volledige weergave": "Full view",
+  "Toon het paneel": "Show the panel",
+  "Belangrijkste nieuws": "Top news",
+  "+{n} bronnen": "+{n} sources",
+  "Nog geen nieuws van de afgelopen 24 uur.": "No news from the last 24 hours yet.",
+  "Morgen {min} tot {max}, {desc}": "Tomorrow {min} to {max}, {desc}",
+  "per kWh nu": "per kWh now",
+  "Goedkoopst vandaag: {span} ({p})": "Cheapest today: {span} ({p})",
+  "Goedkoopst morgen: {span} ({p})": "Cheapest tomorrow: {span} ({p})",
+  "Veiligheid": "Security",
+  "NCSC-advies · {sev}": "NCSC advisory · {sev}",
+  "Datalek · {n} accounts": "Data breach · {n} accounts",
+  "Geen hoge security-adviezen (48 uur) en geen nieuwe datalekken (7 dagen).": "No high security advisories (48 hours) and no new data breaches (7 days).",
+  "Alle gevolgde diensten werken normaal.": "All followed services are operating normally.",
+  "Kiosk verlaten": "Leave kiosk",
+  "Overzicht van vandaag aan / uit": "Today's overview on / off",
+  "Energie, lucht, trein en politiek": "Energy, air, trains and politics",
+  "EnergyZero · energieprijzen": "EnergyZero · energy prices",
+  "Luchtmeetnet · meetstations": "Luchtmeetnet · stations",
+  "Luchtmeetnet · luchtkwaliteitsindex": "Luchtmeetnet · air quality index",
+  "NS · treinstoringen": "NS · train disruptions",
+  "Tweede Kamer · agenda en stemmingen": "House of Representatives · agenda and votes",
+  "Weeralarm, alarmeringen en dreigingsniveau": "Weather warnings, emergency alerts and threat level",
 };
 
 // Sentences the server composes from parts (rain summary, directions, source names).
@@ -1398,12 +1651,15 @@ function sanitize(p) {
   const terms = a => Array.isArray(a) ? [...new Set(a.filter(t => typeof t === 'string').map(t => t.trim().slice(0, 60)).filter(Boolean))].slice(0, 50) : [];
   d.watch = terms(p.watch);
   d.mute = terms(p.mute);
-  const w = p.weather;
-  if (w && typeof w === 'object' && Number.isFinite(w.lat) && Number.isFinite(w.lon) && Math.abs(w.lat) <= 90 && Math.abs(w.lon) <= 180) {
+  const loc = w => {
+    if (!w || typeof w !== 'object' || !Number.isFinite(w.lat) || !Number.isFinite(w.lon) || Math.abs(w.lat) > 90 || Math.abs(w.lon) > 180) return null;
     const str = (v, n) => typeof v === 'string' ? v.slice(0, n) : undefined;
-    d.weather = { name: str(w.name, 60) || 'Gekozen locatie', lat: Math.round(w.lat * 100) / 100, lon: Math.round(w.lon * 100) / 100,
+    return { name: str(w.name, 60) || 'Gekozen locatie', lat: Math.round(w.lat * 100) / 100, lon: Math.round(w.lon * 100) / 100,
       region: str(w.region, 60), cc: /^[A-Z]{2}$/.test(w.cc) ? w.cc : undefined };
-  }
+  };
+  d.weather = loc(p.weather);
+  d.air = loc(p.air);
+  if (['normal', 'digest', 'kiosk'].includes(p.mode)) d.mode = p.mode;
   const pp = p.panels;
   if (pp && typeof pp === 'object') {
     const order = Array.isArray(pp.order) ? [...new Set(pp.order.filter(x => PANEL_IDS.includes(x)))] : [];
@@ -1686,7 +1942,7 @@ function matchesFilter(it) {
   if (prefs.hideRead && isRead(it)) return false;
   return matchesQuery(it);
 }
-function renderAll() { renderWelcome(); buildChips(); renderStream(); renderNotices(); renderMeta(); renderNewButton(); }
+function renderAll() { renderWelcome(); buildChips(); renderStream(); renderNotices(); renderMeta(); renderNewButton(); if (viewMode === 'digest') queueDigest(); }
 function renderMeta() {
   // freshness of the server data: the most recent successful fetch among the chosen sources
   const ts = enabledIds().map(id => status[id]?.fetched_at).filter(Boolean).map(t => new Date(t)).sort((a, b) => b - a)[0];
@@ -1866,6 +2122,7 @@ function togglePanel(id) {
   $(`#p-${id}-body`).hidden = c;
 }
 function renderPanel(id) {
+  if (viewMode === 'digest') queueDigest();
   const body = $(`#p-${id}-body`);
   if (!body) return;
   (panelRenderers[id] || (() => {}))(body, $(`#p-${id}-extra`));
@@ -1881,6 +2138,10 @@ const freshOf = {
   ap: () => { const s = panelData.ap?.status; return s && { ts: s.fetched_at, max: 65, stale: !!s.error }; },
   alarms: () => { const d = panelData.alarms?.data; return d?.enabled && { ts: d.fetched_at, max: 6, stale: !!d.stale }; },
   traffic: () => { const d = panelData.traffic?.data; return d?.enabled && { ts: d.fetched_at, max: 15, stale: !!d.error }; },
+  energy: () => { const d = panelData.energy?.data; return d?.enabled && { ts: d.fetched_at, max: 130, stale: !!d.error }; },
+  air: () => { const d = panelData.air?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 70, stale: !!d.error }; },
+  trains: () => { const d = panelData.trains?.data; return d?.key && d.fetched_at && { ts: d.fetched_at, max: 12, stale: !!d.error }; },
+  politics: () => { const d = panelData.politics?.data; return d?.enabled && { ts: d.fetched_at, max: 70, stale: !!d.error }; },
   breaches: () => { const d = panelData.breaches?.data; return d?.enabled && { ts: d.fetched_at, max: 400, stale: !!d.error }; },
   outages: () => { const d = panelData.outages?.data; return d?.enabled && { ts: oldest(d.providers), max: 25, stale: d.providers?.some(p => p.error) }; },
   health: () => { const s = panelData.health?.status; return s && { ts: s.fetched_at, max: 65, stale: !!s.error }; },
@@ -1894,6 +2155,10 @@ const panelRenderers = {
   alarms: renderAlarms,
   outages: renderOutages,
   breaches: renderBreaches,
+  energy: renderEnergy,
+  air: renderAir,
+  trains: renderTrains,
+  politics: renderPolitics,
   health: renderHealth,
   ap: renderAP,
 };
@@ -2633,6 +2898,369 @@ function renderBreaches(body) {
   body.replaceChildren(...out);
 }
 
+// ---------------------------------------------------------------- energieprijzen (EnergyZero)
+async function loadEnergy() {
+  try { panelData.energy = { data: await api('api/energy') }; }
+  catch (e) { panelData.energy = { ...(panelData.energy || {}), error: e }; }
+  renderPanel('energy');
+}
+let energyDay = 'today';
+const eur = (v, d = 2) => new Intl.NumberFormat(locale(), { style: 'currency', currency: 'EUR', minimumFractionDigits: d, maximumFractionDigits: d }).format(v);
+const hourSpan = (from, hours) => `${fmt.time.format(from)}–${fmt.time.format(new Date(+from + hours * 36e5))}`;
+function cheapestWindow(pts, n = 3) {
+  let best = null;
+  for (let i = 0; i + n <= pts.length; i++) {
+    const avg = pts.slice(i, i + n).reduce((a, p) => a + p.p, 0) / n;
+    if (!best || avg < best.avg) best = { from: pts[i].date, avg };
+  }
+  return best;
+}
+function energyDays(d) {
+  const all = (d.electricity || []).map(p => ({ ...p, date: new Date(p.t) }));
+  const today = dayKey(new Date());
+  return { all, today: all.filter(p => dayKey(p.date) === today), tomorrow: all.filter(p => dayKey(p.date) > today) };
+}
+const pointAt = (list, now) => list.find(p => +p.date <= now && now < +p.date + 36e5);
+function energyChart(list, win, now) {
+  const n = list.length, W = n * 10, H = 34, lbl = 8;
+  const vals = list.map(p => p.p), lo = Math.min(0, ...vals), hi = Math.max(0.001, ...vals);
+  const y = v => 1 + (H - 1) * (hi - v) / (hi - lo || 1);
+  const avg = vals.reduce((a, v) => a + v, 0) / n;
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H + lbl}`, class: 'echart', role: 'img',
+    'aria-label': t('Stroomprijs per uur: laagste {lo}, hoogste {hi}, gemiddeld {avg}.', { lo: eur(Math.min(...vals), 3), hi: eur(Math.max(...vals), 3), avg: eur(avg, 3) }) });
+  svg.append(svgEl('line', { x1: 0, x2: W, y1: y(0), y2: y(0) }));
+  list.forEach((p, i) => {
+    const top = Math.min(y(p.p), y(0)), hgt = Math.max(1, Math.abs(y(p.p) - y(0)));
+    const inWin = win && +p.date >= +win.from && +p.date < +win.from + 3 * 36e5;
+    const isNow = +p.date <= now && now < +p.date + 36e5;
+    const r = svgEl('rect', { x: i * 10 + 1, y: top, width: 8, height: hgt, class: isNow ? 'now' : inWin ? 'win' : null });
+    const ti = svgEl('title', {}); ti.textContent = `${fmt.time.format(p.date)}: ${eur(p.p, 3)}`;
+    r.append(ti); svg.append(r);
+    if (i % 6 === 0) { const tx = svgEl('text', { x: i * 10 + 1, y: H + lbl - 1.5 }); tx.textContent = fmt.time.format(p.date).slice(0, 2); svg.append(tx); }
+  });
+  return svg;
+}
+function renderEnergy(body) {
+  const st = panelData.energy;
+  if (!st) { body.replaceChildren(h('div', { class: 'tsk esk', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:80%' }))); return; }
+  const r = st.data;
+  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('Energieprijzen konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
+  if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (energy.enabled).' })); return; }
+  const d = r.data;
+  if (!d) { body.replaceChildren(h('p', { class: 'pnote', text: r.error ? t('EnergyZero is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: r.error }) : t('Energieprijzen worden voor het eerst opgehaald.') })); return; }
+  const now = Date.now(), days = energyDays(d);
+  if (energyDay === 'tomorrow' && !days.tomorrow.length) energyDay = 'today';
+  const list = days[energyDay], cur = pointAt(days.all, now);
+  const gas = (d.gas || []).map(p => ({ ...p, date: new Date(p.t) })).filter(p => +p.date <= now).pop();
+  const out = [];
+  if (cur) out.push(h('div', { class: 'enow' }, h('span', { class: 'big', text: eur(cur.p) }), h('span', { class: 'unit', text: t('per kWh') }),
+    h('span', { class: 'sub', text: t('stroom nu ({span})', { span: hourSpan(cur.date, 1) }) })));
+  if (gas) out.push(h('p', { class: 'eline' }, t('Gas: '), h('b', { text: eur(gas.p) }), t(' per m³')));
+  if (days.tomorrow.length) {
+    out.push(h('div', { class: 'advf', role: 'group', 'aria-label': t('Dag kiezen') }, [['today', 'Vandaag'], ['tomorrow', 'Morgen']].map(([id, l]) =>
+      h('button', { class: 'chip', type: 'button', 'aria-pressed': String(energyDay === id), text: t(l),
+        onclick: () => { energyDay = id; renderPanel('energy'); $('#panel-energy .advf [aria-pressed="true"]')?.focus(); } }))));
+  }
+  if (list.length) {
+    const rest = energyDay === 'today' ? list.filter(p => +p.date + 36e5 > now) : list;
+    const win = cheapestWindow(rest, 3);
+    out.push(energyChart(list, win, now));
+    if (win) out.push(h('p', { class: 'eline' }, t('Goedkoopste 3 uur: '), h('b', { text: hourSpan(win.from, 3) }), t(' (gemiddeld {p})', { p: eur(win.avg) })));
+    const hi = list.reduce((a, p) => (p.p > a.p ? p : a), list[0]), lo = list.reduce((a, p) => (p.p < a.p ? p : a), list[0]);
+    out.push(h('p', { class: 'eline', text: t('Laagste {lo} om {lt} · hoogste {hi} om {ht}', { lo: eur(lo.p), lt: fmt.time.format(lo.date), hi: eur(hi.p), ht: fmt.time.format(hi.date) }) }));
+  }
+  if (!days.tomorrow.length) out.push(h('p', { class: 'eline', text: t('De prijzen voor morgen verschijnen rond 13:00.') }));
+  out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://www.energyzero.nl/', 'EnergyZero'), ' · ',
+    d.all_in ? t('incl. btw en de in config.yaml ingestelde toeslagen') : t('marktprijs (day-ahead) incl. btw, zonder energiebelasting en opslag van je leverancier')));
+  body.replaceChildren(...out);
+}
+
+// ---------------------------------------------------------------- luchtkwaliteit (Luchtmeetnet)
+let airSeq = 0;
+const airLoc = () => prefs.air || prefs.weather || null;
+const airLocName = () => tr(airLoc()?.name || catalog?.weather_location?.name || 'standaardlocatie');
+async function loadAir() {
+  const seq = ++airSeq, l = airLoc();
+  try {
+    const d = await api('api/air' + (l ? `?lat=${l.lat}&lon=${l.lon}` : ''));
+    if (seq !== airSeq) return;
+    panelData.air = { data: d };
+  } catch (e) { if (seq !== airSeq) return; panelData.air = { ...(panelData.air || {}), error: e }; }
+  renderPanel('air');
+}
+const LKI_LEVELS = [[3, 'goed', 'lki-good'], [6, 'matig', 'lki-mod'], [8, 'onvoldoende', 'lki-insuf'], [10, 'slecht', 'lki-bad'], [11, 'zeer slecht', 'lki-vbad']];
+const lkiLevel = v => LKI_LEVELS.find(([max]) => Math.round(v) <= max) || LKI_LEVELS.at(-1);
+const LKI_ADVICE = { goed: 'Geen gevolgen voor de gezondheid.', matig: 'Voor de meeste mensen geen gevolgen; wie gevoelig is, merkt soms iets.',
+  onvoldoende: 'Gevoelige mensen: beperk zware inspanning buiten.', slecht: 'Beperk zware inspanning buiten, vooral met longklachten.',
+  'zeer slecht': 'Vermijd zware inspanning buiten.' };
+const AIR_NAMES = { NO2: 'NO₂', PM25: 'PM2,5', PM10: 'PM10', O3: 'O₃' };
+function renderAir(body, extra) {
+  const st = panelData.air;
+  extra.replaceChildren(h('span', { text: airLocName() + ' · ' }),
+    h('button', { class: 'linkbtn', type: 'button', onclick: () => openSettings('air'), 'aria-label': t('Plaats voor luchtkwaliteit wijzigen (nu {name})', { name: airLocName() }), text: t('wijzigen') }));
+  if (!st) { body.replaceChildren(h('div', { class: 'tsk ask', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:80%' }))); return; }
+  const r = st.data;
+  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('Luchtkwaliteit kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
+  if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (air.enabled).' })); return; }
+  if (!r.station) { body.replaceChildren(h('p', { class: 'pnote', text: r.error ? t('Luchtmeetnet is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: r.error }) : t('Meetgegevens worden voor het eerst opgehaald.') })); return; }
+  const [, label, cls] = lkiLevel(r.lki.value), s = r.station, out = [];
+  out.push(h('div', { class: 'airnow ' + cls },
+    h('div', { class: 'lki', 'aria-hidden': 'true', text: String(Math.round(r.lki.value)) }),
+    h('div', null, h('div', { class: 'alab' }, h('span', { class: 'sr-only', text: t('Luchtkwaliteitsindex {v}: ', { v: Math.round(r.lki.value) }) }), t(label[0].toUpperCase() + label.slice(1))),
+      h('div', { class: 'aadv', text: t(LKI_ADVICE[label]) }),
+      h('div', { class: 'aadv' }, t('Meetstation '), h('span', { translate: 'no' }, extLink(s.url, s.name)), t(' · {d} km', { d: s.distance_km.toLocaleString(locale()) })))));
+  if (r.components?.length) out.push(h('ul', { class: 'airc', 'aria-label': t('Gemeten waarden in µg/m³') }, r.components.map(c =>
+    h('li', null, h('b', { text: AIR_NAMES[c.formula] || c.formula }), ' ', c.value.toLocaleString(locale()), ' ', h('span', { text: 'µg/m³' })))));
+  if (s.distance_km > 25) out.push(h('p', { class: 'pnote', text: t('Het dichtstbijzijnde meetstation ligt op {d} km; de waarde kan afwijken van jouw plek.', { d: Math.round(s.distance_km) }) }));
+  out.push(h('p', { class: 'asc', text: t('Luchtkwaliteitsindex 1–11: 1–3 goed · 4–6 matig · 7–8 onvoldoende · 9–10 slecht · 11 zeer slecht') }));
+  out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink(r.source?.url || 'https://www.luchtmeetnet.nl/', 'Luchtmeetnet'), t(' (RIVM, GGD’s, DCMR en provincies) · gemeten {t}', { t: fmt.time.format(new Date(r.lki.at)) })));
+  body.replaceChildren(...out);
+}
+function updateAirHint() {
+  const el = $('#air-now'); if (!el) return;
+  el.textContent = prefs.air ? t('Nu: {name}.', { name: tr(prefs.air.name) }) : t('Nu: zelfde als je weerlocatie ({name}).', { name: airLocName() });
+}
+function setAirLocation(loc, msg) {
+  prefs.air = loc ? sanitize({ air: loc }).air : null;
+  savePrefs(); updateAirHint();
+  $('#air-results').replaceChildren();
+  $('#air-msg').classList.remove('err'); $('#air-msg').textContent = msg;
+  panelData.air = null; renderPanel('air'); loadAir();
+}
+function wireAirSettings() {
+  let timer, seq = 0;
+  const input = $('#air-search'), list = $('#air-results'), msg = $('#air-msg');
+  const pick = r => setAirLocation({ name: r.name, lat: r.lat, lon: r.lon, region: r.region, cc: r.cc }, t('Luchtkwaliteit wordt nu getoond voor {name}.', { name: [r.name, r.region].filter(Boolean).join(', ') }));
+  const search = async (q, best) => {
+    const n = ++seq;
+    try {
+      const d = await api('api/geocode?q=' + encodeURIComponent(q));
+      if (n !== seq) return;
+      msg.classList.remove('err');
+      if (best) { if (d.results[0]) pick(d.results[0]); else { msg.textContent = t('Geen plaats gevonden voor “{q}”.', { q }); msg.classList.add('err'); } return; }
+      msg.textContent = d.results.length ? t('{n} plaatsen gevonden.', { n: d.results.length }) : t('Geen plaats gevonden voor “{q}”.', { q });
+      list.replaceChildren(...d.results.map(r => h('li', null, h('button', { type: 'button', onclick: () => pick(r) },
+        r.name, ' ', h('small', { text: [r.region, r.country].filter(Boolean).join(', ') })))));
+    } catch (e) { if (n === seq) { msg.textContent = t('Zoeken lukt nu niet: {err}.', { err: tr(e.message) }); msg.classList.add('err'); } }
+  };
+  input.addEventListener('input', () => { clearTimeout(timer); const q = input.value.trim(); if (q.length < 2) { list.replaceChildren(); return; } timer = setTimeout(() => search(q), 300); });
+  const save = () => { clearTimeout(timer); const q = input.value.trim(); if (q.length < 2) { msg.textContent = t('Zoek een plaats en druk op Opslaan, of kies een plaats uit de lijst.'); return; } search(q, true); };
+  $('#air-save').addEventListener('click', save);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); save(); } });
+  $('#air-wx').addEventListener('click', () => setAirLocation(null, t('Luchtkwaliteit volgt weer je weerlocatie.')));
+}
+
+// ---------------------------------------------------------------- treinstoringen (NS)
+async function loadTrains() {
+  try { panelData.trains = { data: await api('api/trains') }; }
+  catch (e) { panelData.trains = { ...(panelData.trains || {}), error: e }; }
+  renderPanel('trains');
+}
+function trainItem(x) {
+  const bits = [x.cause && t('oorzaak: {c}', { c: x.cause }), x.extra, x.expected].filter(Boolean);
+  return h('li', null,
+    x.type === 'calamity' ? h('span', { class: 'tag sev-critical', text: t('calamiteit') }) : null,
+    h('span', { translate: 'no' }, h('b', { text: x.title })),
+    x.situation && x.situation !== x.title ? h('div', { class: 'd2', translate: 'no', text: x.situation }) : null,
+    bits.length ? h('div', { class: 'm', translate: 'no' }, bits.map(b => h('span', { text: b }))) : null);
+}
+function renderTrains(body) {
+  const st = panelData.trains;
+  if (!st) { body.replaceChildren(h('div', { class: 'tsk tsk2', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:80%' }))); return; }
+  const r = st.data;
+  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('Treinstoringen konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
+  if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (trains.enabled).' })); return; }
+  const nsLink = () => extLink('https://www.ns.nl/reisinformatie/actuele-situatie-op-het-spoor', t('Actuele situatie op het spoor (NS)'));
+  if (!r.key) {
+    body.replaceChildren(h('p', { class: 'pnote', text: t('Voor treinstoringen is een gratis sleutel van de NS API nodig. De beheerder vraagt die aan op apiportal.ns.nl en zet hem in config.yaml (keys.ns_api_key) of als NS_API_KEY.') }),
+      h('p', { class: 'pfoot' }, nsLink()));
+    return;
+  }
+  const d = r.data;
+  if (!d) { body.replaceChildren(h('p', { class: 'pnote', text: r.error ? t('De NS API is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: r.error }) : t('Treinstoringen worden voor het eerst opgehaald.') })); return; }
+  const out = [], now = d.calamities.concat(d.disruptions);
+  out.push(h('div', { class: 'tgrp' }, h('h3', { text: t('Storingen op het spoor') }),
+    now.length ? h('ul', { class: 'plist' }, now.slice(0, 6).map(trainItem)) : h('p', { class: 'pnote', text: t('Geen storingen op het spoor.') })));
+  if (d.maintenance.length) out.push(h('div', { class: 'tgrp' }, h('h3', { text: t('Werkzaamheden nu ({n} gepland in totaal)', { n: d.maintenance_total }) }),
+    h('ul', { class: 'plist' }, d.maintenance.slice(0, 3).map(trainItem))));
+  out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://www.ns.nl/', 'NS'), ' · ', nsLink()));
+  body.replaceChildren(...out);
+}
+
+// ---------------------------------------------------------------- politiek vandaag (Tweede Kamer)
+async function loadPolitics() {
+  try { panelData.politics = { data: await api('api/politics') }; }
+  catch (e) { panelData.politics = { ...(panelData.politics || {}), error: e }; }
+  renderPanel('politics');
+}
+function politicsDayLabel(day) {
+  const d = new Date(day + 'T12:00:00Z');
+  return day === dayKey(new Date()) ? t('Vandaag in de Kamer') : t('Volgende vergaderdag: {day}', { day: fmt.day.format(d) });
+}
+function renderPolitics(body) {
+  const st = panelData.politics;
+  if (!st) { body.replaceChildren(h('div', { class: 'tsk psk', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:90%' }))); return; }
+  const r = st.data;
+  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('De Kameragenda kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
+  if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (politics.enabled).' })); return; }
+  const d = r.data;
+  if (!d) { body.replaceChildren(h('p', { class: 'pnote', text: r.error ? t('De Tweede Kamer-API is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: r.error }) : t('De Kameragenda wordt voor het eerst opgehaald.') })); return; }
+  const acts = d.activities || [], out = [];
+  out.push(h('div', { class: 'pgrp' }, h('h3', { text: politicsDayLabel(d.day) }),
+    acts.length ? h('ul', { class: 'plist' }, acts.slice(0, 6).map(a => h('li', null,
+      h('span', { class: 'tm', text: fmt.time.format(new Date(a.start)) }),
+      h('span', { translate: 'no', class: a.cancelled ? 'cx' : null }, extLink(a.url, a.subject)),
+      h('div', { class: 'm' }, h('span', { text: tr(a.kind) }), a.committee ? h('span', { translate: 'no', text: a.committee }) : null,
+        a.cancelled ? h('span', { class: 'tag plain', text: t('geannuleerd') }) : null))))
+      : h('p', { class: 'pnote', text: t('Geen debatten of commissievergaderingen gepland in de komende week.') })));
+  if (d.votes?.length) out.push(h('div', { class: 'pgrp' }, h('h3', { text: t('Laatste stemmingen') }),
+    h('ul', { class: 'plist' }, d.votes.slice(0, 4).map(v => h('li', null,
+      h('span', { class: 'tag ' + (v.result === 'aangenomen' ? 'ok' : 'sev-high'), text: t(v.result) }),
+      h('span', { translate: 'no' }, extLink(v.url, v.subject)),
+      h('div', { class: 'm' }, h('span', { text: tr(v.kind) }), h('span', { text: fmt.short.format(new Date(v.date)) })))))));
+  out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://opendata.tweedekamer.nl/', t('Tweede Kamer (open data)'))));
+  body.replaceChildren(...out);
+}
+
+// ---------------------------------------------------------------- overzicht (digest) & kiosk
+const urlMode = new URLSearchParams(location.search).get('mode');
+let viewMode = 'normal', digestQueued = false, kioskTimer = null, kioskPauseUntil = 0, wakeLock = null;
+function queueDigest() {
+  if (digestQueued) return;
+  digestQueued = true;
+  requestAnimationFrame(() => { digestQueued = false; renderDigest(); });
+}
+const panelOn = id => !prefs.panels.hidden[id];
+function dCard(id, title, kids, wide) {
+  return h('section', { class: 'dcard' + (wide ? ' wide' : ''), 'aria-labelledby': 'dc-' + id },
+    h('h3', { id: 'dc-' + id }, h('button', { type: 'button', title: t('Toon het paneel'), onclick: () => showPanel(id), text: t(title) + ' →' })), kids);
+}
+function showPanel(id) {
+  setMode('normal');
+  if (id === 'news') { $('#news').focus({ preventScroll: true }); $('#news').scrollIntoView({ block: 'start' }); return; }
+  if (prefs.panels.hidden[id]) { delete prefs.panels.hidden[id]; savePrefs(); buildPanels(); }
+  if (prefs.panels.collapsed[id]) togglePanel(id);
+  $(`#panel-${id}`)?.scrollIntoView({ block: 'start' });
+  $(`#panel-${id} .ptoggle`)?.focus({ preventScroll: true });
+}
+function topStories(n) {
+  const cutoff = Date.now() - 24 * 36e5;
+  const recent = items.filter(it => +it.date >= cutoff && !isMuted(it));
+  return recent.map(it => ({ it, score: (it.related?.length || 0) })).sort((a, b) => b.score - a.score || b.it.date - a.it.date).slice(0, n).map(x => x.it);
+}
+function renderDigest() {
+  const grid = $('#dgrid'); if (!grid) return;
+  $('#digest-date').textContent = fmt.day.format(new Date());
+  const cards = [], li = (a, small) => h('li', null, a, small ? h('small', { text: small }) : null);
+  const wx = panelData.weather?.data;
+  if (panelOn('weather') && wx) {
+    const warn = wx.warnings?.find(w => w.here), tm = wx.daily?.[1];
+    cards.push(dCard('weather', 'Weer', [h('p', null, h('span', { class: 'big', text: deg(wx.current.temp) }), ' ', tr(wx.current.desc), ' · ', wxLocName()),
+      wx.rain?.summary ? h('p', { text: tr(wx.rain.summary) }) : null,
+      warn ? h('p', { text: t('Code {lvl}: {type}', { lvl: tr(LEVEL_NL[warn.level]), type: tr(warn.type).toLowerCase() }) }) : null,
+      tm ? h('p', { text: t('Morgen {min} tot {max}, {desc}', { min: deg(tm.min), max: deg(tm.max), desc: tr(tm.desc).toLowerCase() }) }) : null]));
+  }
+  const stories = topStories(7);
+  cards.push(dCard('news', 'Belangrijkste nieuws', stories.length ? h('ul', { translate: 'no' }, stories.map(it => li(extLink(it.url, it.title),
+    [srcName(it.source), it.related?.length ? t('+{n} bronnen', { n: it.related.length }) : null, fmt.time.format(it.date)].filter(Boolean).join(' · '))))
+    : h('p', { text: t('Nog geen nieuws van de afgelopen 24 uur.') }), true));
+  const tr0 = panelData.traffic?.data?.data;
+  if (panelOn('traffic') && tr0) cards.push(dCard('traffic', 'Verkeer', [h('p', { text: [t(tr0.jam_count === 1 ? '{n} file' : '{n} files', { n: tr0.jam_count }),
+    tr0.total_delay_s ? t('samen {d} vertraging', { d: durationNL(tr0.total_delay_s) }) : null, t(tr0.accident_count === 1 ? '{n} ongeval' : '{n} ongevallen', { n: tr0.accident_count })].filter(Boolean).join(' · ') }),
+    (tr0.jams || []).length ? h('ul', { translate: 'no' }, tr0.jams.slice(0, 3).map(j => li(h('b', { text: [j.road, tr(j.dir)].filter(Boolean).join(' ') }), j.from && j.to ? t('tussen {a} en {b}', { a: j.from, b: j.to }) : ''))) : null]));
+  const trn = panelData.trains?.data;
+  if (panelOn('trains') && trn?.key && trn.data) {
+    const now = trn.data.calamities.concat(trn.data.disruptions);
+    cards.push(dCard('trains', 'Treinstoringen', now.length ? h('ul', { translate: 'no' }, now.slice(0, 3).map(x => li(h('b', { text: x.title }), [x.extra, x.expected].filter(Boolean).join(' · '))))
+      : h('p', { text: t('Geen storingen op het spoor.') })));
+  }
+  const en = panelData.energy?.data?.data;
+  if (panelOn('energy') && en) {
+    const ds = energyDays(en), cur = pointAt(ds.all, Date.now()), win = cheapestWindow(ds.today.filter(p => +p.date + 36e5 > Date.now()), 3), winT = cheapestWindow(ds.tomorrow, 3);
+    cards.push(dCard('energy', 'Energieprijzen', [cur ? h('p', null, h('span', { class: 'big', text: eur(cur.p) }), ' ', t('per kWh nu')) : null,
+      win ? h('p', { text: t('Goedkoopst vandaag: {span} ({p})', { span: hourSpan(win.from, 3), p: eur(win.avg) }) }) : null,
+      winT ? h('p', { text: t('Goedkoopst morgen: {span} ({p})', { span: hourSpan(winT.from, 3), p: eur(winT.avg) }) }) : null]));
+  }
+  const air = panelData.air?.data;
+  if (panelOn('air') && air?.lki) {
+    const [, label] = lkiLevel(air.lki.value);
+    cards.push(dCard('air', 'Luchtkwaliteit', [h('p', null, h('span', { class: 'big', text: String(Math.round(air.lki.value)) }), ' ', t(label), ' · ', airLocName()),
+      h('p', { text: t(LKI_ADVICE[label]) })]));
+  }
+  const sec = [];
+  const adv = panelData.advisories?.data?.items || [];
+  for (const a of adv.filter(a => (a.severity === 'high' || a.severity === 'critical') && Date.now() - advDate(a) < 48 * 36e5).slice(0, 3))
+    sec.push(li(h('span', { translate: 'no' }, extLink(a.url, a.title)), t('NCSC-advies · {sev}', { sev: t(SEV_NL[a.severity] || a.severity) })));
+  const br = panelData.breaches?.data?.data;
+  for (const b of [...(br?.nl || []), ...(br?.other || [])].filter(b => Date.now() - new Date(b.added) < 7 * 864e5).slice(0, 3))
+    sec.push(li(h('span', { translate: 'no' }, extLink(b.url, b.title)), t('Datalek · {n} accounts', { n: fmt.compact.format(b.count) })));
+  if ((panelOn('advisories') || panelOn('breaches')) && (panelData.advisories || panelData.breaches))
+    cards.push(dCard(panelOn('advisories') ? 'advisories' : 'breaches', 'Veiligheid', sec.length ? h('ul', null, sec) : h('p', { text: t('Geen hoge security-adviezen (48 uur) en geen nieuwe datalekken (7 dagen).') })));
+  const pol = panelData.politics?.data?.data;
+  if (panelOn('politics') && pol) {
+    const acts = (pol.activities || []).filter(a => !a.cancelled).slice(0, 4);
+    cards.push(dCard('politics', 'Politiek vandaag', [h('p', { text: politicsDayLabel(pol.day) }),
+      acts.length ? h('ul', { translate: 'no' }, acts.map(a => li(extLink(a.url, a.subject), `${fmt.time.format(new Date(a.start))} · ${a.kind}`))) : null,
+      pol.votes?.[0] ? h('p', { translate: 'no', text: `${t(pol.votes[0].result)}: ${pol.votes[0].subject}` }) : null]));
+  }
+  const outg = panelData.outages?.data;
+  if (panelOn('outages') && outg?.enabled) {
+    const bad = (outg.providers || []).filter(p => p.data && p.data.status !== 'ok');
+    cards.push(dCard('outages', 'Storingen', bad.length ? h('ul', null, bad.map(p => li(h('b', { text: p.name }), t(OUT_NL[p.data.status])))) : h('p', { text: t('Alle gevolgde diensten werken normaal.') })));
+  }
+  grid.replaceChildren(...cards);
+}
+function setMode(m, save = true) {
+  if (!['normal', 'digest', 'kiosk'].includes(m)) m = 'normal';
+  viewMode = m;
+  if (m === 'normal') document.documentElement.removeAttribute('data-mode'); else document.documentElement.setAttribute('data-mode', m);
+  if (save) { prefs.mode = m; savePrefs(); }
+  for (const r of document.querySelectorAll('input[name="mode"]')) r.checked = r.value === m;
+  if (m === 'digest') renderDigest();
+  if (m === 'kiosk') startKiosk(); else stopKiosk();
+}
+function kioskFit() {
+  if (viewMode !== 'kiosk') return;
+  const lay = $('.layout'), wide = matchMedia('(min-width: 1100px)').matches;
+  if (!wide) { lay.style.height = ''; return; }
+  const z = parseFloat(getComputedStyle(document.body).zoom) || 1, top = $('#news').getBoundingClientRect().top;
+  const hgt = Math.max(200, (innerHeight - top) / z) + 'px';
+  $('#news').style.height = $('#side').style.height = hgt;
+}
+function kioskScroll(el, frac) {
+  const max = el.scrollHeight - el.clientHeight;
+  if (max <= 4) return;
+  el.scrollTo({ top: el.scrollTop >= max - 4 ? 0 : Math.min(max, el.scrollTop + el.clientHeight * frac), behavior: 'smooth' });
+}
+function kioskNextPanel(side) {
+  const max = side.scrollHeight - side.clientHeight;
+  if (max <= 4) return;
+  const next = [...side.querySelectorAll('.panel')].find(p => p.offsetTop > side.scrollTop + 8);
+  side.scrollTo({ top: side.scrollTop >= max - 4 || !next ? 0 : Math.min(max, next.offsetTop), behavior: 'smooth' });
+}
+const kioskPause = () => { kioskPauseUntil = Date.now() + 60e3; };
+function kioskStep() {
+  if (document.hidden || Date.now() < kioskPauseUntil) return;
+  if (matchMedia('(min-width: 1100px)').matches) { kioskScroll($('#news'), 0.8); kioskNextPanel($('#side')); }
+  else kioskScroll(document.scrollingElement, 0.8);
+}
+function kioskWake() { if (viewMode === 'kiosk' && navigator.wakeLock && !document.hidden) navigator.wakeLock.request('screen').then(l => { wakeLock = l; }).catch(() => {}); }
+function startKiosk() {
+  stopKiosk();
+  kioskFit();
+  kioskTimer = setInterval(kioskStep, 15000);
+  for (const ev of ['pointerdown', 'keydown', 'wheel', 'touchstart']) addEventListener(ev, kioskPause, { passive: true });
+  addEventListener('resize', kioskFit);
+  kioskWake();
+}
+function stopKiosk() {
+  clearInterval(kioskTimer); kioskTimer = null;
+  for (const ev of ['pointerdown', 'keydown', 'wheel', 'touchstart']) removeEventListener(ev, kioskPause);
+  removeEventListener('resize', kioskFit);
+  $('#news').style.height = $('#side').style.height = '';
+  wakeLock?.release().catch(() => {}); wakeLock = null;
+}
+
 // ---------------------------------------------------------------- health (RIVM, alerts only)
 // Health alerts: infectious diseases, outbreaks, vaccination, heat and smog. Other RIVM news is left out.
 const HEALTH_RE = /(uitbraak|besmet|infectie|virus|bacteri|vaccin|prik tegen|griep|influenza|mazelen|kinkhoest|legionella|salmonella|listeria|mpox|covid|corona|westnijl|vogelgriep|zoonose|epidemie|pandemie|hepatitis|tuberculose|\btbc\b|dengue|malaria|q-koorts|polio|difterie|rodehond|pokken|resisten|hitteplan|\bhitte\b|smog|\bozon)/;
@@ -2720,6 +3348,9 @@ function openSettings(target) {
   $('#watch-msg').textContent = '';
   updateWxLocHint();
   updateAlarmHint();
+  updateAirHint();
+  $('#set-air').hidden = !catalog.air;
+  for (const r of document.querySelectorAll('input[name="mode"]')) r.checked = r.value === viewMode;
   $('#alarm-city').value = prefs.alarmCity ? alarmCityName() : '';
   $('#alarm-msg').textContent = '';
   $('#prefs-json').value = JSON.stringify(prefs, null, 2);
@@ -2727,9 +3358,9 @@ function openSettings(target) {
   if (!dlg.open) dlg.showModal();
   loadHealth();
   if (typeof target === 'string') { // called from a button with a section or category to show
-    const el = target === 'watch' ? $('#set-watch') : target === 'presets' ? $('#set-src-h') : $(`#src-groups [data-cat="${target}"]`);
+    const el = target === 'watch' ? $('#set-watch') : target === 'presets' ? $('#set-src-h') : target === 'air' ? $('#set-air') : $(`#src-groups [data-cat="${target}"]`);
     el?.scrollIntoView({ block: 'start' });
-    (target === 'watch' ? $('#watch-in') : target === 'presets' ? $('#qpresets button:not([disabled])') : el?.querySelector('input'))?.focus({ preventScroll: true });
+    (target === 'watch' ? $('#watch-in') : target === 'presets' ? $('#qpresets button:not([disabled])') : target === 'air' ? $('#air-search') : el?.querySelector('input'))?.focus({ preventScroll: true });
   }
 }
 function buildQuickPresets() {
@@ -2906,7 +3537,7 @@ function renderStatus() {
   const feeds = d.feeds || [];
   groups.push({ title: 'Cyberdreigingen', rows: feeds.filter(f => f.kind === 'threat').map(f => ({ name: f.name, s: f })) });
   groups.push({ title: 'Security-adviezen', rows: feeds.filter(f => f.kind === 'advisory').map(f => ({ name: f.name, s: f })) });
-  for (const [kind, title] of [['alert', 'Bovenbalk'], ['traffic', 'Verkeer'], ['breach', 'Datalekken'], ['outage', 'Storingen']]) {
+  for (const [kind, title] of [['alert', 'Bovenbalk'], ['traffic', 'Verkeer'], ['breach', 'Datalekken'], ['daily', 'Energie, lucht, trein en politiek'], ['outage', 'Storingen']]) {
     groups.push({ title, rows: feeds.filter(f => f.kind === kind).map(f => ({ name: f.name, s: f })) });
   }
   const all = groups.flatMap(g => g.rows);
@@ -2937,6 +3568,8 @@ function onKey(e) {
   if (e.target.closest?.('input, textarea, select, [contenteditable]')) return;
   const k = e.key, cur = document.activeElement?.closest?.('#stream .item');
   const act = fn => { e.preventDefault(); fn(); };
+  if (k === 'Escape' && viewMode === 'kiosk') return act(() => setMode('normal'));
+  if (k === 'v') return act(() => setMode(viewMode === 'digest' ? 'normal' : 'digest'));
   if (k === '/') return act(() => { $('#top').classList.add('searching'); $('#q').focus(); });
   if (k === '?') return act(openKeys);
   if (k === 'j' || k === 'k') return act(() => moveItem(cur, k === 'j' ? 1 : -1));
@@ -3071,6 +3704,11 @@ function wire() {
     panelData.alarms = null; renderPanel('alarms'); loadAlarms();
   });
   $('#wx-geo').addEventListener('click', useMyLocation);
+  wireAirSettings();
+  for (const r of document.querySelectorAll('input[name="mode"]')) r.addEventListener('change', () => setMode(r.value));
+  $('#digest-exit').addEventListener('click', () => setMode('normal'));
+  $('#kiosk-exit').addEventListener('click', () => setMode('normal'));
+  document.addEventListener('visibilitychange', kioskWake);
   $('#wx-default').addEventListener('click', () => setWeatherLocation(null, 'Het weer wordt weer voor de standaardlocatie getoond.'));
   $('#ab-p2k').addEventListener('click', e => {
     e.preventDefault();
@@ -3113,10 +3751,12 @@ function closeMobileSearch() {
 async function init() {
   startTranslation();
   buildFormatters();
+  viewMode = ['normal', 'digest', 'kiosk'].includes(urlMode) ? urlMode : prefs.mode;
   document.documentElement.classList.remove('i18n-pending');
   applyTheme(prefs.theme);
   applyDensity(prefs.density);
   wire();
+  setMode(viewMode, false); // from prefs, or ?mode= for this visit
   updateClock();
   buildPanels();
   renderSkeleton();
@@ -3142,7 +3782,8 @@ async function init() {
   buildChips();
   if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
   await Promise.allSettled([loadNews({ replace: true }), loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(),
-    loadBreaches(), loadOutages(), loadHealthPanel(), loadAP()]);
+    loadBreaches(), loadOutages(), loadHealthPanel(), loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics()]);
+  kioskFit(); // the header and top bar have their final height now
   // intervals from config.yaml (refresh:), in seconds; defaults if the server is older
   const R = (k, def) => Math.max(60, catalog?.refresh?.[k] || def * 60) * 1000;
   every(R('news', 5), () => loadNews());
@@ -3154,6 +3795,10 @@ async function init() {
   every(R('traffic', 5), loadTraffic);
   every(R('alarms', 2), loadAlarms);
   every(R('breaches', 30), loadBreaches);
+  every(R('energy', 30), loadEnergy);
+  every(R('air', 15), loadAir);
+  every(R('trains', 3), loadTrains);
+  every(R('politics', 15), loadPolitics);
   every(R('outages', 10), loadOutages);
   every(R('health', 30), loadHealthPanel);
   setInterval(tick, 15e3);

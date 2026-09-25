@@ -11,7 +11,11 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
   - the ISC Infocon level
   - Autoriteit Persoonsgegevens enforcement news
 - **Security advisories**: NCSC-NL, with the `[kans/schade]` rating parsed into badges, plus optional CERT-EU, CISA, BSI and MSRC.
-- **Top bar:** the NCTV terrorism threat level, the current KNMI weather code, and the number of P2000 alerts in the last hour per service for a configured area (default Den Haag).
+- **Top bar:** the current KNMI weather code, the number of P2000 alerts in the last hour per service for a configured area (default Den Haag), and the NCTV terrorism threat level.
+- **Luchtkwaliteit:** the air quality index (1–11) and NO₂, PM2.5, PM10 and O₃ from the nearest Luchtmeetnet station. The place is chosen per visitor (default: their weather location).
+- **Treinstoringen:** current rail disruptions and engineering works from the NS Disruptions API (needs a free key).
+- **Energieprijzen:** today's and tomorrow's hourly electricity prices and the gas price (EnergyZero), with a chart and the cheapest 3 hours.
+- **Politiek vandaag:** today's debates and committee meetings of the Tweede Kamer (or the next sitting day) and the latest votes.
 - **Verkeer:** jams, accidents and road closures from NDW open data (Rijkswaterstaat), with readable road names.
 - **Alarmeringen:** the latest P2000 alerts for your city from Zwaailicht.nl, grouped as Brandweer, Ambulance, Politie and Lifeliner (at most 2 each). The city is chosen per visitor under Instellingen.
 - **Datalekken:** the latest 3 Dutch and 3 other data breaches at organisations, from Have I Been Pwned: number of accounts, leak date, and what data leaked.
@@ -29,6 +33,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Thumbnails:** optional, via the built-in image proxy.
 - **Installable and offline-capable** (PWA).
 - **Keyboard shortcuts:** press `?` in the app.
+- **Overview and kiosk mode:** "Vandaag in het kort" puts the essentials of today on one screen; kiosk mode is for a wall display (see below).
 
 It is built as **one Go binary with the frontend embedded, plus one `config.yaml`**:
 - **No database.** All caching is in memory.
@@ -95,8 +100,12 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 | `fetch` | `user_agent` (**put your site and e-mail here**), default refresh `interval`, `timeout`, `max_concurrent` (max 2 per host is fixed) |
 | `cache` | `max_items_per_source`, `max_age`, `snapshot_path` (empty = no disk writes, see below) |
 | `features` | `show_images` (keep feed images), `proxy_images` (serve them through `/api/img`, see below), `geolocation` (ip-api lookups), `allow_custom_feeds` (reserved, see below) |
-| `refresh` | how often an open browser tab asks the server for new data, per panel: `news`, `alerts`, `weather`, `traffic`, `alarms`, `threats`, `advisories`, `breaches`, `outages`, `ap`, `health` (1m–24h, see below) |
-| `keys` | `abusech_auth_key` (optional) |
+| `refresh` | how often an open browser tab asks the server for new data, per panel: `news`, `alerts`, `weather`, `air`, `traffic`, `trains`, `alarms`, `energy`, `politics`, `threats`, `advisories`, `breaches`, `outages`, `ap`, `health` (1m–24h, see below) |
+| `keys` | `abusech_auth_key` (optional), `ns_api_key` (Treinstoringen) |
+| `energy` | Energieprijzen: `enabled`, `url`, `interval` (min. 15m), `vat` (0.21), `electricity_extra` / `gas_extra` (€ added per kWh / m³, e.g. energy tax and markup; default 0) |
+| `air` | Luchtkwaliteit: `enabled`, `base` (Luchtmeetnet API), `stations_url` (RIVM station list, CSV), `interval` (min. 15m) |
+| `trains` | Treinstoringen: `enabled`, `url` (NS Disruptions API v3), `interval` (min. 2m). Needs `keys.ns_api_key` |
+| `politics` | Politiek vandaag: `enabled`, `base` (Tweede Kamer OData), `interval` (min. 10m) |
 | `weather` | default `location` (`name`, `lat`, `lon`, `region` = province for warnings, `country`), `interval`, MeteoAlarm feed URLs |
 | `threats` | `enabled`, `interval` (min. 15m, ISC's request), `daily_interval`, `cisa_kev` |
 | `alerts` | top bar: `nctv` (`enabled`, `url`, `interval`, min. 1h) and `knmi` (`true`/`false`) |
@@ -119,6 +128,7 @@ Environment variables override the file, so Docker users rarely need to edit it:
 | `NDB_USER_AGENT` | `fetch.user_agent` |
 | `NDB_SNAPSHOT_PATH` | `cache.snapshot_path` |
 | `ABUSECH_AUTH_KEY` | `keys.abusech_auth_key` |
+| `NS_API_KEY` | `keys.ns_api_key` |
 | `NDB_TRUSTED_PROXIES` | `server.trusted_proxies` (comma-separated IPs/CIDRs) |
 | `NDB_METRICS` | `server.metrics` (`true`/`false`) |
 
@@ -136,7 +146,11 @@ There are two separate rates:
 | News | 5m | per source, `fetch.default_interval` 10m (some 15–30m) |
 | Top bar (NCTV, KNMI, P2000 counts) | 3m | NCTV 6h, KNMI 10m, counts 3m |
 | Weather | 15m | forecast 15m, rain 5m, warnings 10m |
+| Luchtkwaliteit | 15m | index 30m, station list daily |
 | Traffic | 5m | 5m |
+| Treinstoringen | 3m | 5m |
+| Energieprijzen | 30m | 1h |
+| Politiek vandaag | 15m | 30m |
 | Alarmeringen | 2m | 2m per city |
 | Cyberdreigingen | 15m | 15m (ISC minimum), 30-day summary 1h |
 | Security advisories | 30m | 15m |
@@ -406,12 +420,24 @@ The server fetches everything; browsers only talk to the dashboard itself.
 | [NDW](https://www.ndw.nu/) | traffic | Open data (Rijkswaterstaat, provinces, municipalities), polled every 5 min (≈ 260 KB). ANWB has no public API, and its site is not scraped. Road names come from NDW's VILD location table: only its ~400 KB table is read from the 42 MB zip with HTTP range requests, kept in memory and refreshed weekly or when NDW switches versions. |
 | Azure, Microsoft 365, AWS, Cloudflare | outages | The providers' public status feeds. Microsoft 365 uses the JSON behind status.cloud.microsoft (consumer services, undocumented). The health of your own tenant would need Microsoft Graph with an app registration. |
 | [RIVM](https://www.rivm.nl/) | health alerts | Public RSS. |
+| [EnergyZero](https://www.energyzero.nl/) | Energieprijzen | The public price API behind EnergyZero's website (day-ahead EPEX prices). Not officially documented and no published terms (checked September 2026); fetched hourly, two small requests. |
+| [Luchtmeetnet](https://www.luchtmeetnet.nl/) / [RIVM](https://data.rivm.nl/data/luchtmeetnet/) | Luchtkwaliteit | The index (every 30 min, ≈3 requests for all stations) and pollutants (on demand, cached 30 min) from the Luchtmeetnet API. Station locations come from RIVM's `luchtmeetnet_meetlocaties.csv`, one file checked daily, so no per-station API calls: the API answers bursts with HTTP 429. RIVM: "a free service from which no rights can be derived"; attribution shown. |
+| [NS API portal](https://apiportal.ns.nl/) | Treinstoringen | Disruptions API v3. Free, but needs registration and a subscription key; the NS API terms apply. |
+| [Tweede Kamer open data](https://opendata.tweedekamer.nl/) | Politiek vandaag | Official OData API, no key. No explicit licence found on the portal (checked September 2026), attribution shown. |
 | [Have I Been Pwned](https://haveibeenpwned.com/) | Datalekken | The public breach list (`/api/v3/breaches`): no API key, and no visitor data is sent. Licensed **CC BY 4.0** (attribution shown in the panel). Fetched every 3 h. Left out: unverified, fabricated, retired, spam lists, malware and stealer logs, entries without a domain, and (unless `include_sensitive: true`) sensitive breaches. HIBP has no country field, so "Dutch" means a `.nl` domain or a description mentioning Dutch/the Netherlands. |
 | [Zwaailicht.nl](https://zwaailicht.nl/blog/rss-feeds-p2000-meldingen) | P2000 alerts | Public Atom feeds per city (`/feed/meldingen/<city>.xml`), refreshed every minute. House numbers are left out by Zwaailicht. Fetched only for cities visitors actually choose, and cached 2 min per city. **Not for emergencies: call 112.** |
 
 **Grid operators (Stedin, Enexis, Liander)** publish outages only as web pages or through internal app APIs, not as open data (checked September 2026). They are therefore not included; see the `# TODO` in `config.yaml`.
 
 **Commercial use:** Open-Meteo, Buienradar, SANS ISC and ip-api all restrict it. Check their terms. For geolocation, the alternative is an offline GeoLite2/DB-IP Lite database, which adds a data file and a monthly update.
+
+**Overview and kiosk mode.** Each visitor chooses a mode under Instellingen → Weergave → Modus; it is stored in their browser:
+
+- **Normaal:** the news stream with the panels.
+- **Overzicht** (key `v`): "Vandaag in het kort" puts weather, the most widely covered news of the last 24 h, traffic, trains, energy, air quality, security (high NCSC advisories, new breaches), politics and outages on one screen. A card title opens the full panel. Hidden panels are left out.
+- **Kiosk:** for a wall display. Larger text, no settings or search. News and panels scroll by themselves every 15 s, pausing for a minute after any touch or key. The screen is kept awake where the browser allows it (Wake Lock). Leave with Esc or the small button in the corner.
+
+A URL sets the mode for that visit only, without changing the saved choice: `https://nieuws.example.nl/?mode=kiosk` for a wall display, `?mode=digest` for the overview.
 
 ---
 
@@ -493,6 +519,10 @@ All JSON responses:
 | `GET /api/alerts` | top bar: NCTV level (`level`, `name`, `since`) and KNMI summary (`level`, `active`, `onset`, `types`, `areas`) |
 | `GET /api/traffic` | jams (road, direction, from/to, delay), accidents, closure count, VILD version |
 | `GET /api/alarms?city=` | P2000 alerts for a city slug (default from config): per service at most 2, with urgency, units and detail; Lifeliner falls back to national when the city has none |
+| `GET /api/energy` | Energieprijzen: hourly `electricity` (today, tomorrow from ~13:00) and `gas` prices in € incl. VAT (+ configured extras) |
+| `GET /api/air?lat=&lon=` | Luchtkwaliteit: nearest station (`name`, `distance_km`, `url`), `lki` (`value` 1–11, `at`) and `components` (NO2, PM25, PM10, O3 in µg/m³) |
+| `GET /api/trains` | Treinstoringen: `key` (false without an NS key), `calamities`, `disruptions`, `maintenance` (active now, max 5) and `maintenance_total` |
+| `GET /api/politics` | Politiek vandaag: `day`, `activities` (time, kind, subject, committee, cancelled, url) and the latest `votes` (result, kind, subject, date, url) |
 | `GET /api/breaches` | Datalekken: the latest 3 Dutch (`nl`) and 3 other (`other`) breaches with `title`, `domain`, `url`, `breach_date`, `added`, `count`, `data_classes`, plus `total`/`shown` |
 | `GET /api/outages` | per provider: status (`ok`/`minor`/`major`) and incidents |
 | `GET /api/advisories?sources=&limit=` | normalised advisories: `{id, source, title, url, published, updated, severity, probability, impact, cves, products, exploited}` |
@@ -538,6 +568,16 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.6.0
+- **New panels:**
+  - **Luchtkwaliteit:** the nearest Luchtmeetnet station's index and pollutants, for a place chosen per visitor (default: the weather location).
+  - **Treinstoringen:** NS disruptions and engineering works (NS Disruptions API; free key via `keys.ns_api_key` / `NS_API_KEY`).
+  - **Energieprijzen:** hourly electricity prices for today and tomorrow, the gas price, a chart and the cheapest 3 hours (EnergyZero). Optional extras in config for an all-in price.
+  - **Politiek vandaag:** Tweede Kamer meetings of today or the next sitting day, and the latest votes.
+- **Overview and kiosk mode**, per visitor or via `?mode=digest` / `?mode=kiosk`.
+- **Top bar order:** KNMI, Alarmeringen, then the NCTV threat level.
+- New config sections `energy`, `air`, `trains`, `politics`, `keys.ns_api_key` and their `refresh` keys.
 
 ### 1.5.2
 - **Compose file name:** the template is now `docker-compose.yml.default`; copy it to `docker-compose.yml`, the familiar name. It is still ignored by git. A `docker-compose.yaml` from 1.5.1 keeps working (see *Updating*).

@@ -175,6 +175,7 @@ type Config struct {
 	Refresh map[string]Duration `yaml:"refresh"`
 	Keys    struct {
 		AbusechAuthKey string `yaml:"abusech_auth_key"`
+		NSAPIKey       string `yaml:"ns_api_key"` // NS Disruptions API (Treinstoringen)
 	} `yaml:"keys"`
 	Weather struct {
 		Location   Location          `yaml:"location"`
@@ -216,6 +217,34 @@ type Config struct {
 			Interval Duration `yaml:"interval"`
 		} `yaml:"counts"`
 	} `yaml:"alarms"`
+	// Energy: Energieprijzen panel (EnergyZero day-ahead prices, no key).
+	Energy struct {
+		Enabled          bool     `yaml:"enabled"`
+		URL              string   `yaml:"url"`
+		Interval         Duration `yaml:"interval"`
+		VAT              float64  `yaml:"vat"`               // 0.21
+		ElectricityExtra float64  `yaml:"electricity_extra"` // €/kWh added (energy tax, markup; incl. VAT), default 0
+		GasExtra         float64  `yaml:"gas_extra"`         // €/m³ added, default 0
+	} `yaml:"energy"`
+	// Air: Luchtkwaliteit panel (Luchtmeetnet, nearest station to the visitor's location).
+	Air struct {
+		Enabled     bool     `yaml:"enabled"`
+		Base        string   `yaml:"base"`
+		StationsURL string   `yaml:"stations_url"` // RIVM list of measuring locations (CSV)
+		Interval    Duration `yaml:"interval"`
+	} `yaml:"air"`
+	// Trains: Treinstoringen panel (NS Disruptions API v3; needs keys.ns_api_key).
+	Trains struct {
+		Enabled  bool     `yaml:"enabled"`
+		URL      string   `yaml:"url"`
+		Interval Duration `yaml:"interval"`
+	} `yaml:"trains"`
+	// Politics: Politiek vandaag panel (Tweede Kamer open data, no key).
+	Politics struct {
+		Enabled  bool     `yaml:"enabled"`
+		Base     string   `yaml:"base"`
+		Interval Duration `yaml:"interval"`
+	} `yaml:"politics"`
 	// Breaches: the Datalekken panel (Have I Been Pwned breach list, no key needed).
 	Breaches struct {
 		Enabled          bool     `yaml:"enabled"`
@@ -271,6 +300,11 @@ func defaultConfig() *Config {
 	for k, v := range defaultRefresh {
 		c.Refresh[k] = Duration(v)
 	}
+	c.Energy.Enabled, c.Energy.URL, c.Energy.Interval, c.Energy.VAT = true, "https://api.energyzero.nl/v1/energyprices", Duration(time.Hour), 0.21
+	c.Air.Enabled, c.Air.Base, c.Air.Interval = true, "https://api.luchtmeetnet.nl/open_api", Duration(30*time.Minute)
+	c.Air.StationsURL = "https://data.rivm.nl/data/luchtmeetnet/Metadata/luchtmeetnet_meetlocaties.csv"
+	c.Trains.Enabled, c.Trains.URL, c.Trains.Interval = true, "https://gateway.apiportal.ns.nl/disruptions/v3?isActive=true", Duration(5*time.Minute)
+	c.Politics.Enabled, c.Politics.Base, c.Politics.Interval = true, "https://gegevensmagazijn.tweedekamer.nl/OData/v4/2.0", Duration(30*time.Minute)
 	c.Breaches.Enabled = true
 	c.Breaches.URL = "https://haveibeenpwned.com/api/v3/breaches"
 	c.Breaches.Interval = Duration(3 * time.Hour)
@@ -320,6 +354,7 @@ func (c *Config) applyEnv() {
 	set(&c.Fetch.UserAgent, "NDB_USER_AGENT")
 	set(&c.Cache.SnapshotPath, "NDB_SNAPSHOT_PATH")
 	set(&c.Keys.AbusechAuthKey, "ABUSECH_AUTH_KEY")
+	set(&c.Keys.NSAPIKey, "NS_API_KEY")
 	if v := os.Getenv("NDB_TRUSTED_PROXIES"); v != "" { // e.g. the Docker gateway range
 		c.Server.TrustedProxies = strings.Split(strings.ReplaceAll(v, " ", ""), ",")
 	}
@@ -335,13 +370,14 @@ var defaultRefresh = map[string]time.Duration{
 	"news": 5 * time.Minute, "weather": 15 * time.Minute, "alerts": 3 * time.Minute,
 	"traffic": 5 * time.Minute, "alarms": 2 * time.Minute, "threats": 15 * time.Minute,
 	"advisories": 30 * time.Minute, "outages": 10 * time.Minute, "ap": 30 * time.Minute, "breaches": 30 * time.Minute,
+	"energy": 30 * time.Minute, "air": 15 * time.Minute, "trains": 3 * time.Minute, "politics": 15 * time.Minute,
 	"health": 30 * time.Minute,
 }
 
 func (c *Config) validate() error {
 	for k, v := range c.Refresh {
 		if _, ok := defaultRefresh[k]; !ok {
-			return fmt.Errorf("refresh.%s: unknown panel (known: news, weather, alerts, traffic, alarms, threats, advisories, breaches, outages, ap, health)", k)
+			return fmt.Errorf("refresh.%s: unknown panel (known: news, weather, alerts, traffic, alarms, energy, air, trains, politics, threats, advisories, breaches, outages, ap, health)", k)
 		}
 		if v.D() < time.Minute || v.D() > 24*time.Hour {
 			return fmt.Errorf("refresh.%s: %s is outside 1m..24h", k, v.D())
@@ -436,6 +472,20 @@ func (c *Config) validate() error {
 				fail("alarms.counts.cities: %q is not a city slug (e.g. den-haag)", city)
 			}
 		}
+	}
+	httpsURL := func(u string) bool { return isHTTPURL(u) && strings.HasPrefix(u, "https://") }
+	if c.Energy.Enabled && (c.Energy.Interval.D() < 15*time.Minute || !httpsURL(c.Energy.URL) || c.Energy.VAT < 0 || c.Energy.VAT > 1 ||
+		math.Abs(c.Energy.ElectricityExtra) > 2 || math.Abs(c.Energy.GasExtra) > 5) {
+		fail("energy: interval must be at least 15m, url https, vat 0–1, extras within ±2 €/kWh and ±5 €/m³")
+	}
+	if c.Air.Enabled && (c.Air.Interval.D() < 15*time.Minute || !httpsURL(c.Air.Base) || !httpsURL(c.Air.StationsURL)) {
+		fail("air: interval must be at least 15m, base and stations_url https URLs")
+	}
+	if c.Trains.Enabled && (c.Trains.Interval.D() < 2*time.Minute || !httpsURL(c.Trains.URL)) {
+		fail("trains: interval must be at least 2m and url an https URL")
+	}
+	if c.Politics.Enabled && (c.Politics.Interval.D() < 10*time.Minute || !httpsURL(c.Politics.Base)) {
+		fail("politics: interval must be at least 10m and base an https URL")
 	}
 	if c.Breaches.Enabled {
 		if c.Breaches.Interval.D() < time.Hour {
@@ -616,6 +666,7 @@ type App struct {
 	metrics *httpMetrics
 	vild    atomic.Pointer[vildTable] // NDW location table for road names
 	alarms  *ttlCache[[]Alarm]        // P2000 alerts per city slug
+	air     *ttlCache[[]AirComponent] // pollutant values per Luchtmeetnet station
 	p2k     map[string]*p2kCounter    // national alerts per service, last hour
 }
 
@@ -739,7 +790,7 @@ func run(cfgPath string) error {
 
 	a := &App{cfgPath: cfgPath, level: level, started: time.Now(), news: newNewsCache(), sched: newScheduler(), wx: newWeatherCaches(),
 		threats: newStateStore(), geo: newGeoCache(10000), metrics: newHTTPMetrics(),
-		alarms: newTTLCache[[]Alarm](500), p2k: newP2KCounters()}
+		alarms: newTTLCache[[]Alarm](500), air: newTTLCache[[]AirComponent](200), p2k: newP2KCounters()}
 	if st, err := os.Stat(cfgPath); err == nil {
 		a.cfgMod = st.ModTime()
 	}
@@ -914,6 +965,10 @@ func (a *App) routes(basePath string) http.Handler {
 	handle("GET /api/traffic", a.handleTraffic)
 	handle("GET /api/outages", a.handleOutages)
 	handle("GET /api/breaches", a.handleBreaches)
+	handle("GET /api/energy", a.handleEnergy)
+	handle("GET /api/air", a.handleAir)
+	handle("GET /api/trains", a.handleTrains)
+	handle("GET /api/politics", a.handlePolitics)
 	handle("GET /api/alarms", a.handleAlarms)
 	handle("GET /healthz", a.handleHealth)
 	handle("GET /metrics", a.handleMetrics)
@@ -1107,6 +1162,10 @@ func (a *App) handleCatalog(w http.ResponseWriter, r *http.Request) {
 		"traffic":          cfg.Traffic.Enabled,
 		"outages":          cfg.Outages.Enabled,
 		"breaches":         cfg.Breaches.Enabled,
+		"energy":           cfg.Energy.Enabled,
+		"air":              cfg.Air.Enabled,
+		"trains":           cfg.Trains.Enabled,
+		"politics":         cfg.Politics.Enabled,
 		"alarms":           map[string]any{"enabled": cfg.Alarms.Enabled, "city": cfg.Alarms.City},
 		"alerts":           map[string]bool{"nctv": cfg.Alerts.NCTV.Enabled, "knmi": cfg.Alerts.KNMI},
 		"presets":          cfg.Presets,
@@ -1264,6 +1323,19 @@ func (a *App) otherFeeds(cfg *Config) []FeedStatus {
 	}
 	if cfg.Breaches.Enabled {
 		add("hibp:breaches", "Have I Been Pwned · datalekken", "breach")
+	}
+	if cfg.Energy.Enabled {
+		add("energyzero", "EnergyZero · energieprijzen", "daily")
+	}
+	if cfg.Air.Enabled {
+		add("lml:stations", "RIVM · meetstations luchtkwaliteit", "daily")
+		add("lml:lki", "Luchtmeetnet · luchtkwaliteitsindex", "daily")
+	}
+	if cfg.Trains.Enabled && cfg.Keys.NSAPIKey != "" {
+		add("ns:disruptions", "NS · treinstoringen", "daily")
+	}
+	if cfg.Politics.Enabled {
+		add("tk:politics", "Tweede Kamer · agenda en stemmingen", "daily")
 	}
 	if cfg.Outages.Enabled {
 		for _, p := range cfg.Outages.Providers {

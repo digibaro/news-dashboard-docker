@@ -1657,6 +1657,26 @@ func (a *App) threatJobs(cfg *Config) []Job {
 	if cfg.Traffic.Enabled {
 		jobs = append(jobs, Job{Key: "ndw:traffic", Sig: cfg.Traffic.URL, Interval: cfg.Traffic.Interval.D(), Run: a.runTraffic})
 	}
+	if cfg.Energy.Enabled {
+		jobs = append(jobs, Job{Key: "energyzero", Sig: fmt.Sprint(cfg.Energy.URL, cfg.Energy.VAT, cfg.Energy.ElectricityExtra, cfg.Energy.GasExtra),
+			Interval: cfg.Energy.Interval.D(), Run: a.runEnergy})
+	}
+	if cfg.Air.Enabled {
+		jobs = append(jobs, Job{Key: "lml:stations", Sig: cfg.Air.StationsURL, Interval: 24 * time.Hour,
+			Run: a.fetchJob("lml:stations", func() string { return a.config().Air.StationsURL }, "text/csv, */*;q=0.5", nil, parseLMLStations, nil)},
+			Job{Key: "lml:lki", Sig: cfg.Air.Base, Interval: cfg.Air.Interval.D(), Run: a.runAirLKI})
+	}
+	if cfg.Trains.Enabled && cfg.Keys.NSAPIKey != "" {
+		jobs = append(jobs, Job{Key: "ns:disruptions", Sig: cfg.Trains.URL, Interval: cfg.Trains.Interval.D(),
+			Run: a.fetchJob("ns:disruptions", func() string { return a.config().Trains.URL }, "application/json",
+				func() map[string]string {
+					return map[string]string{"Ocp-Apim-Subscription-Key": a.config().Keys.NSAPIKey}
+				},
+				func(b []byte) (any, error) { return parseNSDisruptions(b, time.Now()) }, nil)})
+	}
+	if cfg.Politics.Enabled {
+		jobs = append(jobs, Job{Key: "tk:politics", Sig: cfg.Politics.Base, Interval: cfg.Politics.Interval.D(), Run: a.runPolitics})
+	}
 	if cfg.Breaches.Enabled {
 		sensitive := cfg.Breaches.IncludeSensitive
 		jobs = append(jobs, Job{Key: "hibp:breaches", Sig: fmt.Sprint(cfg.Breaches.URL, sensitive), Interval: cfg.Breaches.Interval.D(),
@@ -2975,4 +2995,613 @@ func (a *App) p2kJobs(cfg *Config) []Job {
 		}})
 	}
 	return jobs
+}
+
+// ---------------------------------------------------------------------------
+// Energieprijzen: day-ahead electricity and gas prices from EnergyZero (no key).
+// With inclBtw=true the API rounds to whole cents, so market prices are fetched
+// without VAT and VAT (plus optional fixed extras such as energy tax and the
+// supplier's markup, from config) is added here.
+
+type EnergyPoint struct {
+	Time  time.Time `json:"t"`
+	Price float64   `json:"p"` // €/kWh or €/m³
+}
+
+type EnergyData struct {
+	Electricity []EnergyPoint `json:"electricity"` // hourly: today and, from about 13:00, tomorrow
+	Gas         []EnergyPoint `json:"gas"`
+	AllIn       bool          `json:"all_in"` // extras configured: prices approximate the full consumer price
+}
+
+func parseEnergyZero(body []byte, vat, extra float64) ([]EnergyPoint, error) {
+	var r struct {
+		Prices []struct {
+			ReadingDate time.Time `json:"readingDate"`
+			Price       *float64  `json:"price"`
+		} `json:"Prices"`
+	}
+	if err := json.Unmarshal(body, &r); err != nil {
+		return nil, fmt.Errorf("energyzero: %w", err)
+	}
+	out := make([]EnergyPoint, 0, len(r.Prices))
+	for _, p := range r.Prices {
+		if p.Price == nil || *p.Price < -5 || *p.Price > 10 || p.ReadingDate.IsZero() {
+			continue
+		}
+		v := *p.Price*(1+vat) + extra
+		out = append(out, EnergyPoint{Time: p.ReadingDate.UTC(), Price: math.Round(v*1e5) / 1e5})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Time.Before(out[j].Time) })
+	return out, nil
+}
+
+func (a *App) runEnergy(ctx context.Context) error {
+	const key = "energyzero"
+	cfg := a.config().Energy
+	now := time.Now().In(amsterdam)
+	from := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, amsterdam)
+	till := from.AddDate(0, 0, 2).Add(-time.Millisecond)
+	get := func(usage int, extra float64) ([]EnergyPoint, error) {
+		u := fmt.Sprintf("%s?fromDate=%s&tillDate=%s&interval=4&usageType=%d&inclBtw=false", cfg.URL,
+			from.UTC().Format("2006-01-02T15:04:05.000Z"), till.UTC().Format("2006-01-02T15:04:05.000Z"), usage)
+		resp, err := a.fetcher.Do(ctx, FetchReq{URL: u, Accept: "application/json"})
+		if err != nil {
+			return nil, fmt.Errorf("energyzero: %w", err)
+		}
+		return parseEnergyZero(resp.Body, cfg.VAT, extra)
+	}
+	el, err := get(1, cfg.ElectricityExtra)
+	if err == nil && len(el) == 0 {
+		err = errors.New("energyzero: no electricity prices")
+	}
+	var gas []EnergyPoint
+	if err == nil {
+		gas, err = get(3, cfg.GasExtra)
+	}
+	if err != nil {
+		a.threats.fail(key, err)
+		slog.Warn("fetch failed", "source", key, "err", err)
+		return err
+	}
+	a.threats.ok(key, EnergyData{Electricity: el, Gas: gas, AllIn: cfg.ElectricityExtra != 0 || cfg.GasExtra != 0}, "", "")
+	return nil
+}
+
+func (a *App) handleEnergy(w http.ResponseWriter, r *http.Request) {
+	if !a.config().Energy.Enabled {
+		writeJSON(w, r, http.StatusOK, 60, map[string]any{"enabled": false})
+		return
+	}
+	e := a.feedEntry("energyzero")
+	e["enabled"] = true
+	if v, ok := a.threats.get("energyzero").Data.(EnergyData); ok {
+		e["data"] = v
+	}
+	writeJSON(w, r, http.StatusOK, 60, e)
+}
+
+// ---------------------------------------------------------------------------
+// Luchtkwaliteit: the Luchtkwaliteitsindex (LKI, 1–11) and pollutant values from
+// the nearest Luchtmeetnet station (RIVM, GGD, DCMR, provinces; open data).
+// Station coordinates come from RIVM's station list (one CSV, daily), the LKI of
+// all stations from the Luchtmeetnet API on the configured interval (≈3 requests),
+// and pollutants per station on demand (cached 30 min).
+
+type airStation struct {
+	Number, Name, Municipality string
+	Lat, Lon                   float64
+}
+
+type airLKI struct {
+	Value float64
+	At    time.Time
+}
+
+type AirComponent struct {
+	Formula string    `json:"formula"`
+	Value   float64   `json:"value"`
+	At      time.Time `json:"at"`
+}
+
+var (
+	airStationRe = regexp.MustCompile(`^[A-Z]{2}[0-9A-Z]{3,8}$`)
+	airFormulas  = []string{"NO2", "PM25", "PM10", "O3"}
+	errLMLBusy   = errors.New("luchtmeetnet: HTTP 429, too many requests")
+)
+
+type lmlPage struct {
+	Pagination struct {
+		LastPage int `json:"last_page"`
+	} `json:"pagination"`
+	Data json.RawMessage `json:"data"`
+}
+
+func (a *App) lmlGet(ctx context.Context, path string) (lmlPage, error) {
+	var p lmlPage
+	resp, err := a.fetcher.Do(ctx, FetchReq{URL: strings.TrimSuffix(a.config().Air.Base, "/") + path, Accept: "application/json"})
+	if resp != nil && resp.Status == http.StatusTooManyRequests {
+		return p, errLMLBusy
+	}
+	if err != nil {
+		return p, fmt.Errorf("luchtmeetnet: %w", err)
+	}
+	if err := json.Unmarshal(resp.Body, &p); err != nil {
+		return p, fmt.Errorf("luchtmeetnet: %w", err)
+	}
+	return p, nil
+}
+
+// parseLMLStations reads RIVM's list of measuring locations (luchtmeetnet_meetlocaties.csv,
+// semicolon-separated): id;source;name;place;lat;lon;height;start;end. Stations with an end date are
+// closed and left out. One file, fetched once a day with a conditional GET, replaces ~100 API calls.
+func parseLMLStations(body []byte) (any, error) {
+	out := map[string]airStation{}
+	for _, line := range strings.Split(strings.ReplaceAll(string(body), "\r\n", "\n"), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, "meetlocatie_id") {
+			continue
+		}
+		f := strings.Split(line, ";")
+		if len(f) < 9 || !airStationRe.MatchString(f[0]) || strings.TrimSpace(f[8]) != "" {
+			continue
+		}
+		lat, err1 := strconv.ParseFloat(f[4], 64)
+		lon, err2 := strconv.ParseFloat(f[5], 64)
+		if err1 != nil || err2 != nil || lat < 50 || lat > 54 || lon < 2.5 || lon > 7.5 {
+			continue
+		}
+		out[f[0]] = airStation{Number: f[0], Name: truncate(plainText(f[2]), 80), Municipality: truncate(plainText(f[3]), 60), Lat: lat, Lon: lon}
+	}
+	if len(out) < 10 {
+		return nil, fmt.Errorf("luchtmeetnet: only %d active stations in the station list", len(out))
+	}
+	return out, nil
+}
+
+func (a *App) runAirLKI(ctx context.Context) error {
+	const key = "lml:lki"
+	now := time.Now().UTC()
+	span := fmt.Sprintf("start=%s&end=%s", now.Add(-3*time.Hour).Format("2006-01-02T15:04:05Z"), now.Format("2006-01-02T15:04:05Z"))
+	out := map[string]airLKI{}
+	for page, last := 1, 1; page <= last && page <= 20; page++ {
+		p, err := a.lmlGet(ctx, fmt.Sprintf("/lki?%s&order_by=timestamp_measured&order_direction=desc&page=%d", span, page))
+		if err != nil {
+			a.threats.fail(key, err)
+			return err
+		}
+		last = p.Pagination.LastPage
+		var list []struct {
+			Station string    `json:"station_number"`
+			Value   float64   `json:"value"`
+			At      time.Time `json:"timestamp_measured"`
+		}
+		if err := json.Unmarshal(p.Data, &list); err != nil {
+			a.threats.fail(key, err)
+			return err
+		}
+		for _, m := range list {
+			if m.Value < 1 || m.Value > 11 || !airStationRe.MatchString(m.Station) {
+				continue
+			}
+			if cur, ok := out[m.Station]; !ok || m.At.After(cur.At) {
+				out[m.Station] = airLKI{Value: m.Value, At: m.At.UTC()}
+			}
+		}
+	}
+	a.threats.ok(key, out, "", "")
+	return nil
+}
+
+func (a *App) fetchAirComponents(ctx context.Context, station string) ([]AirComponent, error) {
+	now := time.Now().UTC()
+	p, err := a.lmlGet(ctx, fmt.Sprintf("/measurements?station_number=%s&start=%s&end=%s&order_by=timestamp_measured&order_direction=desc", station,
+		now.Add(-4*time.Hour).Format("2006-01-02T15:04:05Z"), now.Format("2006-01-02T15:04:05Z")))
+	if err != nil {
+		return nil, err
+	}
+	var list []struct {
+		Formula string    `json:"formula"`
+		Value   float64   `json:"value"`
+		At      time.Time `json:"timestamp_measured"`
+	}
+	if err := json.Unmarshal(p.Data, &list); err != nil {
+		return nil, fmt.Errorf("luchtmeetnet: %w", err)
+	}
+	latest := map[string]AirComponent{}
+	for _, m := range list {
+		if cur, ok := latest[m.Formula]; (!ok || m.At.After(cur.At)) && m.Value >= 0 && m.Value < 5000 {
+			latest[m.Formula] = AirComponent{Formula: m.Formula, Value: math.Round(m.Value*10) / 10, At: m.At.UTC()}
+		}
+	}
+	out := []AirComponent{}
+	for _, f := range airFormulas {
+		if c, ok := latest[f]; ok {
+			out = append(out, c)
+		}
+	}
+	return out, nil
+}
+
+func distanceKm(lat1, lon1, lat2, lon2 float64) float64 {
+	const r = 6371.0
+	rad := math.Pi / 180
+	dLat, dLon := (lat2-lat1)*rad, (lon2-lon1)*rad
+	h := math.Sin(dLat/2)*math.Sin(dLat/2) + math.Cos(lat1*rad)*math.Cos(lat2*rad)*math.Sin(dLon/2)*math.Sin(dLon/2)
+	return 2 * r * math.Asin(math.Sqrt(h))
+}
+
+// nearestAirStation: the closest station that reported an LKI in the last 3 hours.
+func nearestAirStation(stations map[string]airStation, lki map[string]airLKI, lat, lon float64) (airStation, airLKI, float64, bool) {
+	var best airStation
+	var bl airLKI
+	bd := math.MaxFloat64
+	for n, s := range stations {
+		l, ok := lki[n]
+		if !ok {
+			continue
+		}
+		if d := distanceKm(lat, lon, s.Lat, s.Lon); d < bd || (d == bd && n < best.Number) {
+			best, bl, bd = s, l, d
+		}
+	}
+	return best, bl, bd, bd < math.MaxFloat64
+}
+
+func (a *App) handleAir(w http.ResponseWriter, r *http.Request) {
+	cfg := a.config()
+	if !cfg.Air.Enabled {
+		writeJSON(w, r, http.StatusOK, 60, map[string]any{"enabled": false})
+		return
+	}
+	lat, lon := cfg.Weather.Location.Lat, cfg.Weather.Location.Lon
+	if q := r.URL.Query(); q.Get("lat") != "" || q.Get("lon") != "" {
+		var ok1, ok2 bool
+		lat, ok1 = parseCoord(q.Get("lat"), 90)
+		lon, ok2 = parseCoord(q.Get("lon"), 180)
+		if !ok1 || !ok2 {
+			writeError(w, r, http.StatusBadRequest, "lat/lon ongeldig")
+			return
+		}
+	}
+	stations, _ := a.threats.get("lml:stations").Data.(map[string]airStation)
+	lki, _ := a.threats.get("lml:lki").Data.(map[string]airLKI)
+	e := a.feedEntry("lml:lki")
+	e["enabled"] = true
+	e["source"] = map[string]string{"name": "Luchtmeetnet", "url": "https://www.luchtmeetnet.nl/"}
+	s, l, dist, ok := nearestAirStation(stations, lki, lat, lon)
+	if !ok {
+		if st := a.threats.get("lml:stations"); st.Err != "" && e["error"] == nil && len(stations) == 0 {
+			e["error"], e["error_since"] = st.Err, st.ErrSince.UTC().Truncate(time.Second)
+		}
+		writeJSON(w, r, http.StatusOK, 60, e)
+		return
+	}
+	e["station"] = map[string]any{"number": s.Number, "name": s.Name, "municipality": s.Municipality,
+		"distance_km": math.Round(dist*10) / 10, "url": "https://www.luchtmeetnet.nl/meetpunten?station=" + url.QueryEscape(s.Number)}
+	e["lki"] = map[string]any{"value": l.Value, "at": l.At}
+	ip := a.clientIP(r)
+	ctx := context.WithoutCancel(r.Context())
+	comps, _, _, err := a.air.get(s.Number, 30*time.Minute, func() ([]AirComponent, error) {
+		if !a.wx.limiter.allow(ip) {
+			return nil, errRateLimited
+		}
+		return a.fetchAirComponents(ctx, s.Number)
+	})
+	if err == nil {
+		e["components"] = comps
+	}
+	writeJSON(w, r, http.StatusOK, 300, e)
+}
+
+// ---------------------------------------------------------------------------
+// Treinstoringen: current disruptions from the NS Disruptions API (v3). Needs a
+// free subscription key (keys.ns_api_key or NS_API_KEY); without one the panel
+// explains how to get it. Parsing is lenient: unknown fields are ignored and an
+// entry needs only a title.
+
+type TrainDisruption struct {
+	ID        string     `json:"id"`
+	Type      string     `json:"type"` // calamity | disruption | maintenance
+	Title     string     `json:"title"`
+	Situation string     `json:"situation,omitempty"`
+	Cause     string     `json:"cause,omitempty"`
+	Extra     string     `json:"extra_time,omitempty"`
+	Expected  string     `json:"expected,omitempty"`
+	Impact    int        `json:"impact,omitempty"` // 1–5
+	Start     *time.Time `json:"start,omitempty"`
+	End       *time.Time `json:"end,omitempty"`
+}
+
+type TrainData struct {
+	Calamities  []TrainDisruption `json:"calamities"`
+	Disruptions []TrainDisruption `json:"disruptions"`
+	Maintenance []TrainDisruption `json:"maintenance"`
+	MaintTotal  int               `json:"maintenance_total"`
+}
+
+func parseNSDisruptions(body []byte, now time.Time) (any, error) {
+	var list []struct {
+		ID                string                       `json:"id"`
+		Type              string                       `json:"type"`
+		Title             string                       `json:"title"`
+		Description       string                       `json:"description"`
+		IsActive          *bool                        `json:"isActive"`
+		Start             string                       `json:"start"`
+		End               string                       `json:"end"`
+		ExpectedDuration  struct{ Description string } `json:"expectedDuration"`
+		SummaryAdditional struct{ Label string }       `json:"summaryAdditionalTravelTime"`
+		Impact            struct{ Value int }          `json:"impact"`
+		Timespans         []struct {
+			Situation            struct{ Label string } `json:"situation"`
+			Cause                struct{ Label string } `json:"cause"`
+			AdditionalTravelTime struct{ Label string } `json:"additionalTravelTime"`
+		} `json:"timespans"`
+	}
+	if err := json.Unmarshal(body, &list); err != nil {
+		return nil, fmt.Errorf("ns: %w", err)
+	}
+	d := TrainData{Calamities: []TrainDisruption{}, Disruptions: []TrainDisruption{}, Maintenance: []TrainDisruption{}}
+	for _, x := range list {
+		if x.IsActive != nil && !*x.IsActive {
+			continue
+		}
+		t := TrainDisruption{ID: truncate(plainText(x.ID), 60), Title: truncate(plainText(x.Title), 160), Impact: x.Impact.Value,
+			Expected: truncate(plainText(x.ExpectedDuration.Description), 160), Extra: truncate(plainText(x.SummaryAdditional.Label), 80)}
+		if t.Title == "" {
+			continue
+		}
+		if len(x.Timespans) > 0 {
+			ts := x.Timespans[0]
+			t.Situation = truncate(plainText(ts.Situation.Label), 200)
+			t.Cause = truncate(plainText(ts.Cause.Label), 120)
+			if t.Extra == "" {
+				t.Extra = truncate(plainText(ts.AdditionalTravelTime.Label), 80)
+			}
+		}
+		if t.Situation == "" {
+			t.Situation = truncate(plainText(x.Description), 200)
+		}
+		if s, ok := parseDate(x.Start); ok {
+			s = s.UTC()
+			t.Start = &s
+		}
+		if e, ok := parseDate(x.End); ok {
+			e = e.UTC()
+			t.End = &e
+		}
+		if t.Impact < 0 || t.Impact > 5 {
+			t.Impact = 0
+		}
+		switch strings.ToUpper(x.Type) {
+		case "CALAMITY":
+			t.Type = "calamity"
+			d.Calamities = append(d.Calamities, t)
+		case "MAINTENANCE":
+			t.Type = "maintenance"
+			d.MaintTotal++
+			if t.Start == nil || !t.Start.After(now) {
+				d.Maintenance = append(d.Maintenance, t)
+			}
+		default:
+			t.Type = "disruption"
+			d.Disruptions = append(d.Disruptions, t)
+		}
+	}
+	sort.SliceStable(d.Disruptions, func(i, j int) bool { return d.Disruptions[i].Impact > d.Disruptions[j].Impact })
+	sort.SliceStable(d.Maintenance, func(i, j int) bool { return d.Maintenance[i].Impact > d.Maintenance[j].Impact })
+	if len(d.Maintenance) > 5 {
+		d.Maintenance = d.Maintenance[:5]
+	}
+	return d, nil
+}
+
+func (a *App) handleTrains(w http.ResponseWriter, r *http.Request) {
+	cfg := a.config()
+	if !cfg.Trains.Enabled {
+		writeJSON(w, r, http.StatusOK, 60, map[string]any{"enabled": false})
+		return
+	}
+	if cfg.Keys.NSAPIKey == "" {
+		writeJSON(w, r, http.StatusOK, 60, map[string]any{"enabled": true, "key": false})
+		return
+	}
+	e := a.feedEntry("ns:disruptions")
+	e["enabled"], e["key"] = true, true
+	if v, ok := a.threats.get("ns:disruptions").Data.(TrainData); ok {
+		e["data"] = v
+	}
+	writeJSON(w, r, http.StatusOK, 60, e)
+}
+
+// ---------------------------------------------------------------------------
+// Politiek vandaag: today's meetings of the Tweede Kamer (or the next day with
+// meetings, up to a week ahead) and the latest votes, from the Tweede Kamer open
+// data portal (OData, no key). Written deadlines and internal procedure meetings
+// are left out.
+
+type TKActivity struct {
+	Number    string    `json:"number"`
+	Kind      string    `json:"kind"`
+	Subject   string    `json:"subject"`
+	Committee string    `json:"committee,omitempty"`
+	Start     time.Time `json:"start"`
+	End       time.Time `json:"end,omitempty"`
+	Cancelled bool      `json:"cancelled,omitempty"`
+	URL       string    `json:"url"`
+}
+
+type TKVote struct {
+	Result  string    `json:"result"` // aangenomen | verworpen
+	Kind    string    `json:"kind"`   // Motie, Amendement, Wetsvoorstel, ...
+	Subject string    `json:"subject"`
+	Date    time.Time `json:"date"`
+	URL     string    `json:"url"`
+}
+
+type PoliticsData struct {
+	Day        string       `json:"day"` // YYYY-MM-DD of the activities shown
+	Activities []TKActivity `json:"activities"`
+	Votes      []TKVote     `json:"votes"`
+}
+
+var (
+	tkNumberRe = regexp.MustCompile(`^\d{4}[A-Z]\d{4,6}$`)
+	tkSkip     = regexp.MustCompile(`^(Inbreng|E-mailprocedure|Procedurevergadering|Strategische procedurevergadering|Delegatievergadering|Constituerende vergadering|Werkbezoek|Gesprek|Vergadering)`)
+)
+
+func tkActivityURL(number, kind string) string {
+	path := "commissievergaderingen/details?id="
+	if strings.HasPrefix(kind, "Plenair") || kind == "Stemmingen" || kind == "Regeling van werkzaamheden" || kind == "Hamerstukken" || strings.HasPrefix(kind, "Vragenuur") {
+		path = "plenaire_vergaderingen/details/activiteit?id="
+	}
+	return "https://www.tweedekamer.nl/debat_en_vergadering/" + path + url.QueryEscape(number)
+}
+
+func parseTKActivities(body []byte, now time.Time) (string, []TKActivity, error) {
+	var r struct {
+		Value []struct {
+			Nummer, Soort, Onderwerp, Status, Voortouwafkorting string
+			Aanvangstijd, Eindtijd                              *time.Time
+		} `json:"value"`
+	}
+	if err := json.Unmarshal(body, &r); err != nil {
+		return "", nil, fmt.Errorf("tweedekamer: %w", err)
+	}
+	byDay := map[string][]TKActivity{}
+	for _, v := range r.Value {
+		if v.Aanvangstijd == nil || !tkNumberRe.MatchString(v.Nummer) || tkSkip.MatchString(v.Soort) {
+			continue
+		}
+		st := v.Aanvangstijd.In(amsterdam)
+		a := TKActivity{Number: v.Nummer, Kind: truncate(plainText(v.Soort), 60), Subject: truncate(plainText(strings.TrimSuffix(strings.TrimSpace(v.Onderwerp), "(geannuleerd)")), 160),
+			Committee: truncate(plainText(v.Voortouwafkorting), 20), Start: st.UTC(), Cancelled: strings.EqualFold(v.Status, "Geannuleerd"), URL: tkActivityURL(v.Nummer, v.Soort)}
+		if v.Eindtijd != nil {
+			a.End = v.Eindtijd.UTC()
+		}
+		if a.Subject == "" {
+			a.Subject = a.Kind
+		}
+		day := st.Format("2006-01-02")
+		byDay[day] = append(byDay[day], a)
+	}
+	today := now.In(amsterdam).Format("2006-01-02")
+	var days []string
+	for d := range byDay {
+		if d >= today {
+			days = append(days, d)
+		}
+	}
+	sort.Strings(days)
+	for _, d := range days {
+		list := byDay[d]
+		active := 0
+		for _, x := range list {
+			if !x.Cancelled {
+				active++
+			}
+		}
+		if active == 0 && d != today {
+			continue
+		}
+		if d == today && active == 0 && len(days) > 1 {
+			continue // nothing left today: show the next day with meetings
+		}
+		sort.SliceStable(list, func(i, j int) bool { return list[i].Start.Before(list[j].Start) })
+		return d, list, nil
+	}
+	return today, []TKActivity{}, nil
+}
+
+func parseTKVotes(body []byte) ([]TKVote, error) {
+	var r struct {
+		Value []struct {
+			BesluitSoort string
+			GewijzigdOp  time.Time
+			Zaak         []struct {
+				Nummer, Soort, Onderwerp, Titel string
+				Document                        []struct{ DocumentNummer string }
+			}
+			Agendapunt *struct {
+				Activiteit *struct{ Datum *time.Time }
+			}
+		} `json:"value"`
+	}
+	if err := json.Unmarshal(body, &r); err != nil {
+		return nil, fmt.Errorf("tweedekamer: %w", err)
+	}
+	out := []TKVote{}
+	for _, v := range r.Value {
+		if len(v.Zaak) == 0 {
+			continue
+		}
+		z := v.Zaak[0]
+		res := "verworpen"
+		if strings.HasSuffix(v.BesluitSoort, "aangenomen") {
+			res = "aangenomen"
+		}
+		date := v.GewijzigdOp
+		if v.Agendapunt != nil && v.Agendapunt.Activiteit != nil && v.Agendapunt.Activiteit.Datum != nil {
+			date = *v.Agendapunt.Activiteit.Datum
+		}
+		link := "https://www.tweedekamer.nl/kamerstukken/detail?id=" + url.QueryEscape(z.Nummer)
+		if len(z.Document) > 0 && z.Document[0].DocumentNummer != "" {
+			link += "&did=" + url.QueryEscape(z.Document[0].DocumentNummer)
+		}
+		subj := firstNonEmpty(z.Onderwerp, z.Titel)
+		if subj == "" || !tkNumberRe.MatchString(z.Nummer) {
+			continue
+		}
+		out = append(out, TKVote{Result: res, Kind: truncate(plainText(z.Soort), 40), Subject: truncate(plainText(subj), 150), Date: date.UTC(), URL: link})
+	}
+	return out, nil
+}
+
+func (a *App) runPolitics(ctx context.Context) error {
+	const key = "tk:politics"
+	base := strings.TrimSuffix(a.config().Politics.Base, "/")
+	now := time.Now().In(amsterdam)
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, amsterdam)
+	q := url.Values{}
+	q.Set("$filter", fmt.Sprintf("Verwijderd eq false and Datum ge %s and Datum lt %s", today.Format("2006-01-02"), today.AddDate(0, 0, 8).Format("2006-01-02")))
+	q.Set("$orderby", "Aanvangstijd")
+	q.Set("$top", "250")
+	q.Set("$select", "Nummer,Soort,Onderwerp,Status,Voortouwafkorting,Aanvangstijd,Eindtijd")
+	resp, err := a.fetcher.Do(ctx, FetchReq{URL: base + "/Activiteit?" + strings.ReplaceAll(q.Encode(), "+", "%20"), Accept: "application/json"})
+	var d PoliticsData
+	if err == nil {
+		d.Day, d.Activities, err = parseTKActivities(resp.Body, now)
+	}
+	if err == nil {
+		v := url.Values{}
+		v.Set("$filter", "Verwijderd eq false and (BesluitSoort eq 'Stemmen - aangenomen' or BesluitSoort eq 'Stemmen - verworpen')")
+		v.Set("$orderby", "GewijzigdOp desc")
+		v.Set("$top", "6")
+		v.Set("$select", "BesluitSoort,GewijzigdOp")
+		v.Set("$expand", "Zaak($select=Nummer,Soort,Onderwerp,Titel;$expand=Document($select=DocumentNummer)),Agendapunt($select=Id;$expand=Activiteit($select=Datum))")
+		if resp, err = a.fetcher.Do(ctx, FetchReq{URL: base + "/Besluit?" + strings.ReplaceAll(v.Encode(), "+", "%20"), Accept: "application/json"}); err == nil {
+			d.Votes, err = parseTKVotes(resp.Body)
+		}
+	}
+	if err != nil {
+		err = fmt.Errorf("tweedekamer: %w", err)
+		a.threats.fail(key, err)
+		slog.Warn("fetch failed", "source", key, "err", err)
+		return err
+	}
+	a.threats.ok(key, d, "", "")
+	return nil
+}
+
+func (a *App) handlePolitics(w http.ResponseWriter, r *http.Request) {
+	if !a.config().Politics.Enabled {
+		writeJSON(w, r, http.StatusOK, 60, map[string]any{"enabled": false})
+		return
+	}
+	e := a.feedEntry("tk:politics")
+	e["enabled"] = true
+	if v, ok := a.threats.get("tk:politics").Data.(PoliticsData); ok {
+		e["data"] = v
+	}
+	writeJSON(w, r, http.StatusOK, 60, e)
 }

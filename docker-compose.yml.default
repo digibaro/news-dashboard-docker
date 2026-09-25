@@ -25,6 +25,7 @@ services:
       # SANS ISC requires a User-Agent with contact details: set your own site and e-mail.
       NDB_USER_AGENT: "${NDB_USER_AGENT:-Nieuwsdashboard/1.0 (+https://example.nl; contact@example.nl)}"
       ABUSECH_AUTH_KEY: "${ABUSECH_AUTH_KEY:-}"
+      NS_API_KEY: "${NS_API_KEY:-}"             # free key from apiportal.ns.nl (Treinstoringen)
       NDB_LOG_LEVEL: "${NDB_LOG_LEVEL:-info}"
       # Requests via a reverse proxy on the host arrive from the Docker gateway (172.16.0.0/12):
       # trust its X-Forwarded-For so rate limits apply per visitor, not to everyone at once.

@@ -343,6 +343,11 @@ func TestConfigInvalid(t *testing.T) {
 		"refresh unknown":   validConfig + "\nrefresh: { nieuws: 5m }\n",
 		"breaches too fast": validConfig + "\nbreaches: { interval: 10m }\n",
 		"breaches http":     validConfig + "\nbreaches: { url: \"http://example.com/b\" }\n",
+		"energy too fast":   validConfig + "\nenergy: { interval: 5m }\n",
+		"energy bad vat":    validConfig + "\nenergy: { vat: 21 }\n",
+		"air too fast":      validConfig + "\nair: { interval: 1m }\n",
+		"trains http":       validConfig + "\ntrains: { url: \"http://x.example/\" }\n",
+		"politics too fast": validConfig + "\npolitics: { interval: 1m }\n",
 	}
 	for name, y := range cases {
 		if _, err := parseConfig([]byte(y)); err == nil {
@@ -1011,7 +1016,7 @@ func newTestApp(t *testing.T, cfgYAML string) *App {
 	}
 	a := &App{cfg: cfg, level: new(slog.LevelVar), started: time.Now(), news: newNewsCache(), sched: newScheduler(),
 		wx: newWeatherCaches(), threats: newStateStore(), geo: newGeoCache(100), metrics: newHTTPMetrics(),
-		alarms: newTTLCache[[]Alarm](50), p2k: newP2KCounters()}
+		alarms: newTTLCache[[]Alarm](50), air: newTTLCache[[]AirComponent](20), p2k: newP2KCounters()}
 	a.images = newImageProxy(func() string { return "test" })
 	a.fetcher = newFetcher(4, func() string { return "test" }, func() time.Duration { return 5 * time.Second })
 	return a
@@ -1031,7 +1036,7 @@ func TestSecurityHeadersOnEveryRoute(t *testing.T) {
 	a := newTestApp(t, validConfig+"\nfeatures: { show_images: true, proxy_images: true }\n")
 	h := a.routes("/")
 	routes := map[string]int{
-		"/": 200, "/api/catalog": 200, "/api/news": 200, "/api/threats": 200, "/api/advisories": 200, "/api/breaches": 200, "/api/outages": 200, "/healthz": 200,
+		"/": 200, "/api/catalog": 200, "/api/news": 200, "/api/threats": 200, "/api/advisories": 200, "/api/breaches": 200, "/api/outages": 200, "/api/energy": 200, "/api/air": 200, "/api/trains": 200, "/api/politics": 200, "/api/air?lat=x&lon=5": 400, "/healthz": 200,
 		"/api/weather?lat=abc&lon=5": 400, "/api/geocode?q=a": 400, "/api/img?u=aHR0cHM6Ly9ldmls&s=forged": 403,
 		"/manifest.webmanifest": 200, "/icon-192.png": 200, "/sw.js": 200, "/metrics": 404, "/nope": 404, "/api/news/../../etc/passwd": 404,
 	}
@@ -1575,6 +1580,161 @@ func TestParseBreaches(t *testing.T) {
 		if _, err := parseBreaches([]byte(bad), false, now); err == nil {
 			t.Errorf("%q: expected error", bad)
 		}
+	}
+}
+
+func TestParseEnergyZero(t *testing.T) {
+	body := `{"Prices":[{"readingDate":"2026-09-25T01:00:00Z","price":0.1},{"readingDate":"2026-09-25T00:00:00Z","price":0.0616825},
+		{"readingDate":"2026-09-25T02:00:00Z","price":-0.01},{"readingDate":"2026-09-25T03:00:00Z","price":99},{"readingDate":"2026-09-25T04:00:00Z"}]}`
+	pts, err := parseEnergyZero([]byte(body), 0.21, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(pts) != 3 || !pts[0].Time.Equal(time.Date(2026, 9, 25, 0, 0, 0, 0, time.UTC)) || pts[0].Price != 0.07464 || pts[2].Price != -0.0121 {
+		t.Errorf("points: %+v", pts)
+	}
+	pts, _ = parseEnergyZero([]byte(body), 0.21, 0.15)
+	if pts[0].Price != 0.22464 {
+		t.Errorf("extra: %v", pts[0].Price)
+	}
+	if _, err := parseEnergyZero([]byte("<html>"), 0.21, 0); err == nil {
+		t.Error("expected error")
+	}
+}
+
+func TestNearestAirStation(t *testing.T) {
+	st := map[string]airStation{
+		"NL10643": {Number: "NL10643", Name: "Utrecht-Griftpark", Lat: 52.101, Lon: 5.128},
+		"NL10445": {Number: "NL10445", Name: "Den Haag", Lat: 52.075, Lon: 4.316},
+		"NL00001": {Number: "NL00001", Name: "No LKI", Lat: 52.09, Lon: 5.12},
+	}
+	lki := map[string]airLKI{"NL10643": {Value: 3}, "NL10445": {Value: 4}}
+	s, l, d, ok := nearestAirStation(st, lki, 52.09, 5.12)
+	if !ok || s.Number != "NL10643" || l.Value != 3 || d < 1 || d > 2 {
+		t.Errorf("Utrecht: %v %v %.2f", s, l, d)
+	}
+	if s, _, _, _ := nearestAirStation(st, lki, 52.08, 4.31); s.Number != "NL10445" {
+		t.Errorf("Den Haag: %v", s)
+	}
+	if _, _, _, ok := nearestAirStation(st, map[string]airLKI{}, 52, 5); ok {
+		t.Error("no LKI anywhere: expected no station")
+	}
+	if d := distanceKm(52.09, 5.12, 52.37, 4.9); d < 33 || d > 36 {
+		t.Errorf("Utrecht–Amsterdam: %.1f km", d)
+	}
+}
+
+func TestParseNSDisruptions(t *testing.T) {
+	now := time.Date(2026, 9, 25, 12, 0, 0, 0, time.UTC)
+	body := `[
+	 {"id":"1","type":"DISRUPTION","title":"Utrecht - Amersfoort","isActive":true,"start":"2026-09-25T10:00:00+0200","end":"2026-09-25T15:00:00+0200",
+	  "impact":{"value":4},"expectedDuration":{"description":"Tot ongeveer 15:00"},"summaryAdditionalTravelTime":{"label":"30 minuten extra"},
+	  "timespans":[{"situation":{"label":"Minder treinen tussen Utrecht en Amersfoort"},"cause":{"label":"<b>defecte</b> trein"}}]},
+	 {"id":"2","type":"CALAMITY","title":"Landelijke storing","description":"Er rijden geen treinen","isActive":true},
+	 {"id":"3","type":"MAINTENANCE","title":"Werk Zwolle","isActive":true,"start":"2026-09-25T01:00:00Z","impact":{"value":2}},
+	 {"id":"4","type":"MAINTENANCE","title":"Werk later","isActive":true,"start":"2026-10-03T01:00:00Z"},
+	 {"id":"5","type":"DISRUPTION","title":"Oud","isActive":false},
+	 {"id":"6","type":"DISRUPTION","title":""}
+	]`
+	v, err := parseNSDisruptions([]byte(body), now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := v.(TrainData)
+	if len(d.Calamities) != 1 || d.Calamities[0].Situation != "Er rijden geen treinen" {
+		t.Errorf("calamities: %+v", d.Calamities)
+	}
+	if len(d.Disruptions) != 1 {
+		t.Fatalf("disruptions: %+v", d.Disruptions)
+	}
+	x := d.Disruptions[0]
+	if x.Cause != "defecte trein" || x.Extra != "30 minuten extra" || x.Impact != 4 || x.Expected != "Tot ongeveer 15:00" || x.Start == nil || x.End == nil {
+		t.Errorf("disruption: %+v", x)
+	}
+	if d.MaintTotal != 2 || len(d.Maintenance) != 1 || d.Maintenance[0].Title != "Werk Zwolle" {
+		t.Errorf("maintenance: %d %+v", d.MaintTotal, d.Maintenance)
+	}
+	if _, err := parseNSDisruptions([]byte(`{"error":"x"}`), now); err == nil {
+		t.Error("object instead of list: expected error")
+	}
+}
+
+func TestParseLMLStations(t *testing.T) {
+	var b strings.Builder
+	b.WriteString("#export;EXP-2026-001\r\n#bron;https://data.rivm.nl/data/luchtmeetnet\r\n\r\nmeetlocatie_id;bron_id;meetlocatie_naam;meetlocatie_plaatsnaam;breedtegraad;lengtegraad;hoogte;meetlocatie_begindatumtijd;meetlocatie_einddatumtijd\r\n")
+	b.WriteString("NL10643;LML;Utrecht-Griftpark;Utrecht;52.101327;5.128211;5.000;2008-09-01T00:00:00+01:00;\r\n")
+	b.WriteString("NL233AA;PBP_SM;Aardenburg;Zeeland;51.270200;3.455027;3.000;2019-01-01T00:00:00+01:00;\r\n")
+	b.WriteString("NL10533;LML;Aalsmeer;Aalsmeer;52.278999;4.793000;-3.000;1976-04-03T00:00:00+01:00;1986-04-01T00:00:00+01:00\r\n") // closed
+	b.WriteString("NL99999;LML;Far away;X;40.0;5.0;0;2019-01-01T00:00:00+01:00;\r\nbad line\r\n")
+	for i := 0; i < 10; i++ {
+		fmt.Fprintf(&b, "NL0000%d;LML;S%d;P;52.%d;5.%d;0;2019-01-01T00:00:00+01:00;\n", i, i, i, i)
+	}
+	v, err := parseLMLStations([]byte(b.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := v.(map[string]airStation)
+	if s := m["NL10643"]; s.Name != "Utrecht-Griftpark" || s.Municipality != "Utrecht" || s.Lat != 52.101327 || s.Lon != 5.128211 {
+		t.Errorf("Utrecht: %+v", s)
+	}
+	if _, ok := m["NL233AA"]; !ok {
+		t.Error("station ids with letters must be accepted")
+	}
+	if _, ok := m["NL10533"]; ok {
+		t.Error("closed station included")
+	}
+	if _, ok := m["NL99999"]; ok || len(m) != 12 {
+		t.Errorf("unexpected stations: %d", len(m))
+	}
+	if _, err := parseLMLStations([]byte("<html>not a csv</html>")); err == nil {
+		t.Error("expected error for a non-CSV body")
+	}
+}
+
+func TestParseTKActivities(t *testing.T) {
+	now := time.Date(2026, 9, 25, 10, 0, 0, 0, amsterdam) // Friday
+	body := `{"value":[
+	 {"Nummer":"2026A00001","Soort":"Werkbezoek","Onderwerp":"Brussel","Status":"Gepland","Aanvangstijd":"2026-09-25T10:00:00+02:00"},
+	 {"Nummer":"2026A00002","Soort":"Inbreng schriftelijk overleg","Onderwerp":"x","Status":"Gepland","Aanvangstijd":"2026-09-25T12:00:00+02:00"},
+	 {"Nummer":"2026A00003","Soort":"Notaoverleg","Onderwerp":"Defensienota (geannuleerd)","Status":"Geannuleerd","Aanvangstijd":"2026-09-25T14:30:00+02:00"},
+	 {"Nummer":"2026A00005","Soort":"Plenair debat (wetgeving)","Onderwerp":"Postwet","Status":"Gepland","Aanvangstijd":"2026-09-29T14:00:00+02:00"},
+	 {"Nummer":"2026A00004","Soort":"Commissiedebat","Onderwerp":"Politie","Voortouwafkorting":"J&V","Status":"Gepland","Aanvangstijd":"2026-09-29T10:00:00+02:00"},
+	 {"Nummer":"bad","Soort":"Commissiedebat","Onderwerp":"x","Aanvangstijd":"2026-09-29T10:00:00+02:00"}
+	]}`
+	day, acts, err := parseTKActivities([]byte(body), now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if day != "2026-09-29" || len(acts) != 2 || acts[0].Number != "2026A00004" || acts[0].Committee != "J&V" {
+		t.Fatalf("next sitting day: %s %+v", day, acts)
+	}
+	if acts[1].URL != "https://www.tweedekamer.nl/debat_en_vergadering/plenaire_vergaderingen/details/activiteit?id=2026A00005" ||
+		acts[0].URL != "https://www.tweedekamer.nl/debat_en_vergadering/commissievergaderingen/details?id=2026A00004" {
+		t.Errorf("urls: %s | %s", acts[0].URL, acts[1].URL)
+	}
+	// a meeting today that still takes place: today is shown, cancelled ones included and marked
+	body2 := strings.Replace(body, `"Soort":"Werkbezoek","Onderwerp":"Brussel"`, `"Soort":"Commissiedebat","Onderwerp":"Brussel"`, 1)
+	day, acts, _ = parseTKActivities([]byte(body2), now)
+	if day != "2026-09-25" || len(acts) != 2 || !acts[1].Cancelled || acts[1].Subject != "Defensienota" {
+		t.Errorf("today: %s %+v", day, acts)
+	}
+}
+
+func TestParseTKVotes(t *testing.T) {
+	body := `{"value":[
+	 {"BesluitSoort":"Stemmen - aangenomen","GewijzigdOp":"2026-09-25T08:00:00Z","Zaak":[{"Nummer":"2026Z19805","Soort":"Motie","Onderwerp":"Motie van de leden A en B over C","Document":[{"DocumentNummer":"2026D45844"}]}],
+	  "Agendapunt":{"Activiteit":{"Datum":"2026-09-24T00:00:00+02:00"}}},
+	 {"BesluitSoort":"Stemmen - verworpen","GewijzigdOp":"2026-09-24T08:00:00Z","Zaak":[{"Nummer":"2026Z19970","Soort":"Motie","Onderwerp":"Motie van het lid F","Document":[]}]},
+	 {"BesluitSoort":"Stemmen - aangenomen","GewijzigdOp":"2026-09-24T08:00:00Z","Zaak":[]}
+	]}`
+	v, err := parseTKVotes([]byte(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(v) != 2 || v[0].Result != "aangenomen" || v[1].Result != "verworpen" ||
+		v[0].URL != "https://www.tweedekamer.nl/kamerstukken/detail?id=2026Z19805&did=2026D45844" ||
+		v[1].URL != "https://www.tweedekamer.nl/kamerstukken/detail?id=2026Z19970" || !v[0].Date.Equal(time.Date(2026, 9, 23, 22, 0, 0, 0, time.UTC)) {
+		t.Errorf("votes: %+v", v)
 	}
 }
 
