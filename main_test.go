@@ -348,6 +348,8 @@ func TestConfigInvalid(t *testing.T) {
 		"air too fast":      validConfig + "\nair: { interval: 1m }\n",
 		"trains http":       validConfig + "\ntrains: { url: \"http://x.example/\" }\n",
 		"politics too fast": validConfig + "\npolitics: { interval: 1m }\n",
+		"ransomware bad cc": validConfig + "\nransomware: { countries: [Nederland] }\n",
+		"ransomware no cc":  validConfig + "\nransomware: { countries: [] }\n",
 	}
 	for name, y := range cases {
 		if _, err := parseConfig([]byte(y)); err == nil {
@@ -1060,7 +1062,7 @@ func TestSecurityHeadersOnEveryRoute(t *testing.T) {
 	a := newTestApp(t, validConfig+"\nfeatures: { show_images: true, proxy_images: true }\n")
 	h := a.routes("/")
 	routes := map[string]int{
-		"/": 200, "/api/catalog": 200, "/api/news": 200, "/api/threats": 200, "/api/advisories": 200, "/api/breaches": 200, "/api/outages": 200, "/api/energy": 200, "/api/air": 200, "/api/trains": 200, "/api/politics": 200, "/api/air?lat=x&lon=5": 400, "/healthz": 200,
+		"/": 200, "/api/catalog": 200, "/api/news": 200, "/api/threats": 200, "/api/advisories": 200, "/api/breaches": 200, "/api/outages": 200, "/api/energy": 200, "/api/air": 200, "/api/trains": 200, "/api/politics": 200, "/api/air?lat=x&lon=5": 400, "/api/today": 200, "/api/ransomware": 200, "/healthz": 200,
 		"/api/weather?lat=abc&lon=5": 400, "/api/geocode?q=a": 400, "/api/img?u=aHR0cHM6Ly9ldmls&s=forged": 403,
 		"/manifest.webmanifest": 200, "/icon-192.png": 200, "/sw.js": 200, "/metrics": 404, "/nope": 404, "/api/news/../../etc/passwd": 404,
 	}
@@ -1733,6 +1735,169 @@ func TestParseLMLStations(t *testing.T) {
 	}
 	if _, err := parseLMLStations([]byte("<html>not a csv</html>")); err == nil {
 		t.Error("expected error for a non-CSV body")
+	}
+}
+
+func TestDutchHolidays(t *testing.T) {
+	for y, want := range map[int]string{2024: "2024-03-31", 2025: "2025-04-20", 2026: "2026-04-05", 2027: "2027-03-28"} {
+		if got := easter(y).Format("2006-01-02"); got != want {
+			t.Errorf("easter %d: %s, want %s", y, got, want)
+		}
+	}
+	find := func(y int, name string) string {
+		for _, h := range dutchHolidays(y) {
+			if h.Name == name {
+				return h.Date
+			}
+		}
+		return ""
+	}
+	if find(2025, "Koningsdag") != "2025-04-26" || find(2026, "Koningsdag") != "2026-04-27" {
+		t.Errorf("Koningsdag moves to the 26th when the 27th is a Sunday: %s %s", find(2025, "Koningsdag"), find(2026, "Koningsdag"))
+	}
+	if find(2026, "Hemelvaartsdag") != "2026-05-14" || find(2026, "Tweede Pinksterdag") != "2026-05-25" || len(dutchHolidays(2026)) != 11 {
+		t.Errorf("2026: %+v", dutchHolidays(2026))
+	}
+}
+
+func TestMoonPhases(t *testing.T) {
+	near := func(got time.Time, want string) bool {
+		w, _ := time.Parse(time.RFC3339, want)
+		d := got.Sub(w)
+		return d > -2*time.Hour && d < 2*time.Hour
+	}
+	// eclipses: the exact moments are well known
+	m := moonInfo(time.Date(2024, 4, 8, 12, 0, 0, 0, time.UTC))
+	if !near(m.NextNew, "2024-04-08T18:21:00Z") || m.Phase != "new" {
+		t.Errorf("new moon of the 8 April 2024 eclipse: %v %s", m.NextNew, m.Phase)
+	}
+	m = moonInfo(time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC))
+	if !near(m.NextFull, "2026-03-03T11:38:00Z") {
+		t.Errorf("full moon of the 3 March 2026 eclipse: %v", m.NextFull)
+	}
+	m = moonInfo(time.Date(2026, 8, 5, 0, 0, 0, 0, time.UTC))
+	if !near(m.NextNew, "2026-08-12T17:37:00Z") || m.Phase != "last-quarter" && m.Phase != "waning-crescent" {
+		t.Errorf("new moon of the 12 August 2026 eclipse: %v %s", m.NextNew, m.Phase)
+	}
+	if m := moonInfo(time.Date(2026, 3, 3, 11, 0, 0, 0, time.UTC)); m.Phase != "full" || m.Illumination < 0.98 || m.Moment == nil || !near(*m.Moment, "2026-03-03T11:38:00Z") {
+		t.Errorf("at full moon: %+v", m)
+	}
+	// 10 hours after the full moon: still "full", and the moment is the one just passed (not next month's)
+	if m := moonInfo(time.Date(2026, 3, 3, 21, 30, 0, 0, time.UTC)); m.Phase != "full" || m.Moment == nil || !near(*m.Moment, "2026-03-03T11:38:00Z") || m.NextFull.Month() != time.April {
+		t.Errorf("after full moon: %+v", m)
+	}
+	if m := moonInfo(time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC)); m.Moment != nil {
+		t.Errorf("a week later there is no principal moment: %+v", m)
+	}
+}
+
+func TestNextClockChange(t *testing.T) {
+	d, dir, ok := nextClockChange(time.Date(2026, 9, 25, 12, 0, 0, 0, amsterdam))
+	if !ok || d.Format("2006-01-02") != "2026-10-25" || dir != "back" {
+		t.Errorf("autumn: %v %s %v", d, dir, ok)
+	}
+	if _, _, ok := nextClockChange(time.Date(2026, 12, 1, 12, 0, 0, 0, amsterdam)); ok {
+		t.Error("December: the March change is more than 60 days away")
+	}
+	d, dir, ok = nextClockChange(time.Date(2027, 3, 1, 12, 0, 0, 0, amsterdam))
+	if !ok || d.Format("2006-01-02") != "2027-03-28" || dir != "forward" {
+		t.Errorf("spring: %v %s %v", d, dir, ok)
+	}
+	if _, _, ok := nextClockChange(time.Date(2026, 10, 25, 5, 0, 0, 0, amsterdam)); ok {
+		t.Error("after the change on the same day it is no longer upcoming")
+	}
+}
+
+func TestParseSchoolHolidays(t *testing.T) {
+	body := `[{"content":[{"schoolyear":"2026-2027","vacations":[
+	 {"type":"Herfstvakantie ","regions":[{"region":"noord","startdate":"2026-10-10T00:00:00.000Z","enddate":"2026-10-18T21:59:00.000Z"},
+	   {"region":"midden","startdate":"2026-10-17T00:00:00.000Z","enddate":"2026-10-25T22:59:00.000Z"},{"region":"zuid","startdate":"2026-10-17T00:00:00.000Z","enddate":"2026-10-25T22:59:00.000Z"}]},
+	 {"type":"Kerstvakantie","regions":[{"region":"heel Nederland","startdate":"2026-12-19T00:00:00.000Z","enddate":"2027-01-03T22:59:00.000Z"}]}]}]},
+	 {"content":[{"schoolyear":"2025-2026","vacations":[{"type":"Zomervakantie","regions":[{"region":"noord","startdate":"2026-07-04T00:00:00.000Z","enddate":"2026-08-16T21:59:00.000Z"}]}]}]}]`
+	v, err := parseSchoolHolidays([]byte(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	all := v.(map[string][]SchoolHoliday)
+	if len(all["noord"]) != 3 || all["noord"][0].Type != "Zomervakantie" || all["midden"][1].Type != "Kerstvakantie" || all["zuid"][0].Start != "2026-10-17" || all["noord"][1].End != "2026-10-18" {
+		t.Fatalf("parsed: %+v", all)
+	}
+	now := schoolNow(all, "2026-10-12")
+	if h := now["noord"]["holiday"].(SchoolHoliday); h.Type != "Herfstvakantie" || now["noord"]["current"] != true {
+		t.Errorf("noord during autumn holiday: %+v", now["noord"])
+	}
+	if h := now["midden"]["holiday"].(SchoolHoliday); h.Start != "2026-10-17" || now["midden"]["current"] != false {
+		t.Errorf("midden before autumn holiday: %+v", now["midden"])
+	}
+	if _, err := parseSchoolHolidays([]byte(`[]`)); err == nil {
+		t.Error("empty feed: expected error")
+	}
+}
+
+// Every panel with a status entry in /healthz must also have a scheduled job (a feed without
+// a job would stay "pending" forever).
+func TestEveryFeedHasAJob(t *testing.T) {
+	a := newTestApp(t, validConfig+"\nkeys: { ns_api_key: k }\n")
+	keys := map[string]bool{}
+	for _, j := range append(a.threatJobs(a.config()), a.p2kJobs(a.config())...) {
+		keys[j.Key] = true
+	}
+	for _, f := range a.otherFeeds(a.config()) {
+		if !keys[f.ID] {
+			t.Errorf("feed %s has no job", f.ID)
+		}
+	}
+}
+
+func TestRansomwareCounts(t *testing.T) {
+	a := newTestApp(t, validConfig)
+	now := time.Now().UTC()
+	var v []RansomVictim
+	for i := 0; i < 20; i++ { // one claim every 10 days: 3 within 30 days, 20 within 200 days
+		v = append(v, RansomVictim{Name: fmt.Sprintf("org%d", i), Group: []string{"lockbit5", "qilin"}[i%2], Country: "NL", Discovered: now.AddDate(0, 0, -10*i-1)})
+	}
+	a.threats.ok("rw:NL", RansomData{Victims: v, Total: 20}, "", "")
+	rec := get(a.routes("/"), "GET", "/api/ransomware", nil)
+	var d struct {
+		Last7, Last30, Last365 int
+		Victims                []RansomVictim
+		TopGroups              []struct {
+			Name  string
+			Count int
+		} `json:"top_groups"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &d); err != nil {
+		t.Fatal(err)
+	}
+	if d.Last7 != 1 || d.Last30 != 3 || d.Last365 != 20 || len(d.Victims) != 8 || len(d.TopGroups) != 2 || d.TopGroups[0].Count != 5 {
+		t.Errorf("counts: 7d %d 30d %d 365d %d, %d shown, groups %+v", d.Last7, d.Last30, d.Last365, len(d.Victims), d.TopGroups)
+	}
+}
+
+func TestParseRansomware(t *testing.T) {
+	now := time.Date(2026, 9, 25, 12, 0, 0, 0, time.UTC)
+	body := `[
+	 {"post_title":"www.roancampingholidays.com","website":"www.roancampingholidays.com","activity":"Hospitality","group_name":"incransom","country":"NL",
+	  "discovered":"2026-09-18T12:42:56.146503+00:00","description":"Roan Luxury Camping ...","post_url":"http://incblog.onion/blog/1"},
+	 {"post_title":"Adviesbureau De Beuckelaer BV","website":"","activity":"Professional Services","group_name":"BrainCipher","country":"NL","discovered":"2026-08-31T19:53:18.536093+00:00"},
+	 {"post_title":"x","website":"abc.onion","activity":"Other","group_name":"lockbit5","country":"NL","discovered":"2026-09-20T10:00:00+00:00"},
+	 {"post_title":"Old BV","website":"old.nl","activity":"Other","group_name":"lockbit3","country":"NL","discovered":"2021-09-28T05:41:05+00:00"}
+	]`
+	v, err := parseRansomware([]byte(body), "NL", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := v.(RansomData)
+	if d.Total != 4 || len(d.Victims) != 3 || d.Victims[0].Name != "x" || d.Victims[0].Website != "" || d.Victims[1].Group != "incransom" ||
+		d.Victims[2].GroupURL != "https://www.ransomware.live/group/braincipher" || d.Victims[1].Sector != "Hospitality" {
+		t.Errorf("victims: %+v", d.Victims)
+	}
+	out, _ := json.Marshal(d)
+	if strings.Contains(string(out), "onion") || strings.Contains(string(out), "Luxury") {
+		t.Errorf("leak-site links or descriptions must not be passed on: %s", out)
+	}
+	if _, err := parseRansomware([]byte(`{"message": "1 per 1 minute"}`), "NL", now); err == nil || !strings.Contains(err.Error(), "1 per 1 minute") {
+		t.Errorf("rate-limit reply must be an error: %v", err)
 	}
 }
 

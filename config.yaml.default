@@ -113,6 +113,22 @@ politics:
   base: "https://gegevensmagazijn.tweedekamer.nl/OData/v4/2.0"
   interval: 30m                   # min. 10m
 
+# Vandaag: date and week, public holidays, school holidays per region, moon phase and the next clock change.
+# Holidays, moon and clock are calculated by the app; school holidays come from Rijksoverheid (daily).
+today:
+  enabled: true
+  school_url: "https://opendata.rijksoverheid.nl/v1/infotypes/schoolholidays?output=json"
+
+# Ransomware NL: organisations claimed by ransomware groups on their leak sites, from ransomware.live.
+# The free API (v2) needs no key but is for personal use only and allows 1 request per minute per endpoint;
+# business use needs their (free) PRO key under separate terms. Only name, website, sector, group and date are
+# shown; descriptions (which can quote stolen data) and links to leak sites are never passed on.
+ransomware:
+  enabled: true
+  base: "https://api.ransomware.live/v2"
+  countries: [NL]                 # ISO codes, e.g. [NL, BE]; one request per country per interval
+  interval: 1h                    # min. 10m
+
 alerts:
   nctv: { enabled: true, url: "https://www.nctv.nl/onderwerpen/d/dtn", interval: 6h }
   knmi: true
@@ -170,6 +186,8 @@ refresh:
   air: 15m
   trains: 3m
   politics: 15m
+  today: 60m
+  ransomware: 30m
   outages: 10m
   ap: 30m
   health: 30m

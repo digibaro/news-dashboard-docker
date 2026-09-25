@@ -1674,6 +1674,19 @@ func (a *App) threatJobs(cfg *Config) []Job {
 				},
 				func(b []byte) (any, error) { return parseNSDisruptions(b, time.Now()) }, nil)})
 	}
+	if cfg.Ransomware.Enabled {
+		for _, cc := range cfg.Ransomware.Countries {
+			cc := cc
+			u := strings.TrimSuffix(cfg.Ransomware.Base, "/") + "/countryvictims/" + cc
+			jobs = append(jobs, Job{Key: "rw:" + cc, Sig: u, Interval: cfg.Ransomware.Interval.D(),
+				Run: a.fetchJob("rw:"+cc, func() string { return u }, "application/json", nil,
+					func(b []byte) (any, error) { return parseRansomware(b, cc, time.Now()) }, nil)})
+		}
+	}
+	if cfg.Today.Enabled {
+		jobs = append(jobs, Job{Key: "rijk:schoolholidays", Sig: cfg.Today.SchoolURL, Interval: 24 * time.Hour,
+			Run: a.fetchJob("rijk:schoolholidays", func() string { return a.config().Today.SchoolURL }, "application/json", nil, parseSchoolHolidays, nil)})
+	}
 	if cfg.Politics.Enabled {
 		jobs = append(jobs, Job{Key: "tk:politics", Sig: cfg.Politics.Base, Interval: cfg.Politics.Interval.D(), Run: a.runPolitics})
 	}
@@ -3612,4 +3625,384 @@ func (a *App) handlePolitics(w http.ResponseWriter, r *http.Request) {
 		e["data"] = v
 	}
 	writeJSON(w, r, http.StatusOK, 60, e)
+}
+
+// ---------------------------------------------------------------------------
+// Vandaag: date and ISO week, Dutch public holidays, school holidays per region
+// (Rijksoverheid open data, fetched daily), moon phase and the next clock change.
+// Holidays, moon and clock are calculated here; only school holidays are fetched.
+
+type Holiday struct {
+	Name string `json:"name"`
+	Date string `json:"date"` // YYYY-MM-DD
+}
+
+// easter returns Easter Sunday (Gregorian calendar, anonymous algorithm).
+func easter(year int) time.Time {
+	a, b, c := year%19, year/100, year%100
+	d, e := b/4, b%4
+	f := (b + 8) / 25
+	g := (b - f + 1) / 3
+	h := (19*a + b - d - g + 15) % 30
+	i, k := c/4, c%4
+	l := (32 + 2*e + 2*i - h - k) % 7
+	m := (a + 11*h + 22*l) / 451
+	month := (h + l - 7*m + 114) / 31
+	day := (h+l-7*m+114)%31 + 1
+	return time.Date(year, time.Month(month), day, 0, 0, 0, 0, amsterdam)
+}
+
+// dutchHolidays: the national public holidays of a year, in date order.
+func dutchHolidays(year int) []Holiday {
+	e := easter(year)
+	d := func(t time.Time) string { return t.Format("2006-01-02") }
+	day := func(m time.Month, dd int) time.Time { return time.Date(year, m, dd, 0, 0, 0, 0, amsterdam) }
+	king := day(time.April, 27)
+	if king.Weekday() == time.Sunday {
+		king = day(time.April, 26)
+	}
+	list := []Holiday{
+		{"Nieuwjaarsdag", d(day(time.January, 1))},
+		{"Goede Vrijdag", d(e.AddDate(0, 0, -2))},
+		{"Eerste Paasdag", d(e)},
+		{"Tweede Paasdag", d(e.AddDate(0, 0, 1))},
+		{"Koningsdag", d(king)},
+		{"Bevrijdingsdag", d(day(time.May, 5))},
+		{"Hemelvaartsdag", d(e.AddDate(0, 0, 39))},
+		{"Eerste Pinksterdag", d(e.AddDate(0, 0, 49))},
+		{"Tweede Pinksterdag", d(e.AddDate(0, 0, 50))},
+		{"Eerste Kerstdag", d(day(time.December, 25))},
+		{"Tweede Kerstdag", d(day(time.December, 26))},
+	}
+	sort.SliceStable(list, func(i, j int) bool { return list[i].Date < list[j].Date })
+	return list
+}
+
+// moonPhaseTime: the time of a new moon (phase 0) or full moon (phase 0.5) for lunation k
+// (k = 0 around 6 January 2000), after Meeus, Astronomical Algorithms ch. 49 (main terms,
+// accurate to a few minutes).
+func moonPhaseTime(k float64, full bool) time.Time {
+	if full {
+		k += 0.5
+	}
+	t := k / 1236.85
+	rad := math.Pi / 180
+	jde := 2451550.09766 + 29.530588861*k + 0.00015437*t*t - 0.00000015*t*t*t
+	m := (2.5534 + 29.10535670*k - 0.0000014*t*t) * rad
+	mp := (201.5643 + 385.81693528*k + 0.0107582*t*t) * rad
+	f := (160.7108 + 390.67050284*k - 0.0016118*t*t) * rad
+	om := (124.7746 - 1.56375588*k + 0.0020672*t*t) * rad
+	e := 1 - 0.002516*t - 0.0000074*t*t
+	var c float64
+	if full {
+		c = -0.40614*math.Sin(mp) + 0.17302*e*math.Sin(m) + 0.01614*math.Sin(2*mp) + 0.01043*math.Sin(2*f) +
+			0.00734*e*math.Sin(mp-m) - 0.00515*e*math.Sin(mp+m) + 0.00209*e*e*math.Sin(2*m) - 0.00111*math.Sin(mp-2*f) -
+			0.00057*math.Sin(mp+2*f) + 0.00056*e*math.Sin(2*mp+m) - 0.00042*math.Sin(3*mp) + 0.00042*e*math.Sin(m+2*f) +
+			0.00038*e*math.Sin(m-2*f) - 0.00024*e*math.Sin(2*mp-m) - 0.00017*math.Sin(om)
+	} else {
+		c = -0.40720*math.Sin(mp) + 0.17241*e*math.Sin(m) + 0.01608*math.Sin(2*mp) + 0.01039*math.Sin(2*f) +
+			0.00739*e*math.Sin(mp-m) - 0.00514*e*math.Sin(mp+m) + 0.00208*e*e*math.Sin(2*m) - 0.00111*math.Sin(mp-2*f) -
+			0.00057*math.Sin(mp+2*f) + 0.00056*e*math.Sin(2*mp+m) - 0.00042*math.Sin(3*mp) + 0.00042*e*math.Sin(m+2*f) +
+			0.00038*e*math.Sin(m-2*f) - 0.00024*e*math.Sin(2*mp-m) - 0.00017*math.Sin(om)
+	}
+	jde += c
+	// JDE (dynamical time) to UTC: ΔT is about 70 s in the 2020s, small enough to ignore here.
+	return time.Unix(int64((jde-2440587.5)*86400), 0).UTC()
+}
+
+type MoonInfo struct {
+	Phase        string     `json:"phase"` // new | waxing-crescent | first-quarter | waxing-gibbous | full | waning-gibbous | last-quarter | waning-crescent
+	Illumination float64    `json:"illumination"`
+	NextFull     time.Time  `json:"next_full"`
+	NextNew      time.Time  `json:"next_new"`
+	Moment       *time.Time `json:"moment,omitempty"` // exact new/full moon when within a day of now
+}
+
+func moonInfo(now time.Time) MoonInfo {
+	const syn = 29.530588861
+	k := math.Floor((float64(now.Unix())/86400 + 2440587.5 - 2451550.09766) / syn)
+	prevNew := moonPhaseTime(k, false)
+	for prevNew.After(now) {
+		k--
+		prevNew = moonPhaseTime(k, false)
+	}
+	nextNew := moonPhaseTime(k+1, false)
+	for !nextNew.After(now) {
+		k++
+		prevNew, nextNew = nextNew, moonPhaseTime(k+1, false)
+	}
+	full := moonPhaseTime(k, true)
+	nextFull := full
+	if !full.After(now) {
+		nextFull = moonPhaseTime(k+1, true)
+	}
+	age := now.Sub(prevNew).Hours() / 24
+	frac := age / nextNew.Sub(prevNew).Hours() * 24
+	names := []string{"new", "waxing-crescent", "first-quarter", "waxing-gibbous", "full", "waning-gibbous", "last-quarter", "waning-crescent"}
+	idx := int(math.Floor(frac*8+0.5)) % 8
+	// within ~a day of the exact moment, name the principal phase and give its time
+	var moment *time.Time
+	switch {
+	case math.Abs(now.Sub(prevNew).Hours()) < 24:
+		idx, moment = 0, &prevNew
+	case math.Abs(nextNew.Sub(now).Hours()) < 24:
+		idx, moment = 0, &nextNew
+	case math.Abs(full.Sub(now).Hours()) < 24:
+		idx, moment = 4, &full
+	}
+	return MoonInfo{Phase: names[idx], Illumination: math.Round((1-math.Cos(2*math.Pi*frac))/2*100) / 100, NextFull: nextFull, NextNew: nextNew, Moment: moment}
+}
+
+// nextClockChange: the next switch between summer and winter time within 60 days.
+func nextClockChange(now time.Time) (time.Time, string, bool) {
+	lastSunday := func(y int, m time.Month) time.Time {
+		t := time.Date(y, m+1, 1, 0, 0, 0, 0, amsterdam).AddDate(0, 0, -1)
+		for t.Weekday() != time.Sunday {
+			t = t.AddDate(0, 0, -1)
+		}
+		return t
+	}
+	y := now.In(amsterdam).Year()
+	for _, c := range []struct {
+		t   time.Time
+		dir string
+	}{{lastSunday(y, time.March), "forward"}, {lastSunday(y, time.October), "back"}, {lastSunday(y+1, time.March), "forward"}} {
+		switch at := c.t.Add(time.Duration(2+boolInt(c.dir == "back")) * time.Hour); {
+		case at.After(now) && at.Sub(now) <= 60*24*time.Hour:
+			return c.t, c.dir, true
+		}
+	}
+	return time.Time{}, "", false
+}
+
+func boolInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+type SchoolHoliday struct {
+	Type  string `json:"type"`
+	Start string `json:"start"` // first day, YYYY-MM-DD (Amsterdam)
+	End   string `json:"end"`   // last day
+}
+
+// parseSchoolHolidays reads the Rijksoverheid school-holiday feed into lists per region
+// (noord, midden, zuid); "heel Nederland" entries are added to all three.
+func parseSchoolHolidays(body []byte) (any, error) {
+	var years []struct {
+		Content []struct {
+			Vacations []struct {
+				Type    string `json:"type"`
+				Regions []struct {
+					Region    string    `json:"region"`
+					StartDate time.Time `json:"startdate"`
+					EndDate   time.Time `json:"enddate"`
+				} `json:"regions"`
+			} `json:"vacations"`
+		} `json:"content"`
+	}
+	if err := json.Unmarshal(body, &years); err != nil {
+		return nil, fmt.Errorf("schoolvakanties: %w", err)
+	}
+	out := map[string][]SchoolHoliday{"noord": {}, "midden": {}, "zuid": {}}
+	n := 0
+	for _, y := range years {
+		for _, c := range y.Content {
+			for _, v := range c.Vacations {
+				typ := truncate(plainText(v.Type), 60)
+				for _, r := range v.Regions {
+					if r.StartDate.IsZero() || r.EndDate.Before(r.StartDate) {
+						continue
+					}
+					h := SchoolHoliday{Type: typ, Start: r.StartDate.In(amsterdam).Format("2006-01-02"), End: r.EndDate.In(amsterdam).Format("2006-01-02")}
+					reg := strings.ToLower(strings.TrimSpace(r.Region))
+					for _, name := range []string{"noord", "midden", "zuid"} {
+						if reg == name || strings.Contains(reg, "heel nederland") {
+							out[name] = append(out[name], h)
+							n++
+						}
+					}
+				}
+			}
+		}
+	}
+	if n == 0 {
+		return nil, errors.New("schoolvakanties: no holidays in the feed")
+	}
+	for k := range out {
+		sort.Slice(out[k], func(i, j int) bool { return out[k][i].Start < out[k][j].Start })
+	}
+	return out, nil
+}
+
+// schoolNow: per region the holiday going on today, else the next one.
+func schoolNow(all map[string][]SchoolHoliday, today string) map[string]map[string]any {
+	out := map[string]map[string]any{}
+	for reg, list := range all {
+		for _, h := range list {
+			if h.End < today {
+				continue
+			}
+			out[reg] = map[string]any{"holiday": h, "current": h.Start <= today}
+			break
+		}
+	}
+	return out
+}
+
+func (a *App) handleToday(w http.ResponseWriter, r *http.Request) {
+	if !a.config().Today.Enabled {
+		writeJSON(w, r, http.StatusOK, 60, map[string]any{"enabled": false})
+		return
+	}
+	now := time.Now()
+	local := now.In(amsterdam)
+	today := local.Format("2006-01-02")
+	_, week := local.ISOWeek()
+	var todays, next []Holiday
+	for _, y := range []int{local.Year(), local.Year() + 1} {
+		for _, h := range dutchHolidays(y) {
+			switch {
+			case h.Date == today:
+				todays = append(todays, h)
+			case h.Date > today && len(next) < 2:
+				next = append(next, h)
+			}
+		}
+	}
+	resp := map[string]any{"enabled": true, "date": today, "week": week, "holidays_today": todays, "holidays_next": next, "moon": moonInfo(now)}
+	if d, dir, ok := nextClockChange(now); ok {
+		resp["clock_change"] = map[string]string{"date": d.Format("2006-01-02"), "direction": dir}
+	}
+	school := a.feedEntry("rijk:schoolholidays")
+	if v, ok := a.threats.get("rijk:schoolholidays").Data.(map[string][]SchoolHoliday); ok {
+		school["regions"] = schoolNow(v, today)
+	}
+	resp["school"] = school
+	writeJSON(w, r, http.StatusOK, 300, resp)
+}
+
+// ---------------------------------------------------------------------------
+// Ransomware NL: organisations claimed by ransomware groups on their leak sites, per
+// country, from ransomware.live (free API v2: personal use, 1 request per minute per
+// endpoint). Only name, website, sector, group and date are kept: descriptions can
+// quote stolen data, and links to the groups' .onion sites are never passed on.
+
+type RansomVictim struct {
+	Name       string    `json:"name"`
+	Website    string    `json:"website,omitempty"`
+	Sector     string    `json:"sector,omitempty"`
+	Group      string    `json:"group"`
+	GroupURL   string    `json:"group_url"`
+	Country    string    `json:"country"`
+	Discovered time.Time `json:"discovered"`
+}
+
+type RansomData struct {
+	Victims []RansomVictim `json:"victims"` // newest first, all of the last 12 months (trimmed in the handler)
+	Total   int            `json:"total"`   // all claims ransomware.live lists for the country
+}
+
+var rwCountryRe = regexp.MustCompile(`^[A-Z]{2}$`)
+
+func parseRansomware(body []byte, country string, now time.Time) (any, error) {
+	if b := bytes.TrimSpace(body); len(b) > 0 && b[0] == '{' { // {"message": "1 per 1 minute"}: rate limit or error
+		var m struct {
+			Message string `json:"message"`
+		}
+		_ = json.Unmarshal(b, &m)
+		return nil, fmt.Errorf("ransomware.live: %s", firstNonEmpty(truncate(plainText(m.Message), 80), "unexpected response"))
+	}
+	var list []struct {
+		PostTitle  string `json:"post_title"`
+		Website    string `json:"website"`
+		Activity   string `json:"activity"`
+		Group      string `json:"group_name"`
+		Country    string `json:"country"`
+		Discovered string `json:"discovered"`
+	}
+	if err := json.Unmarshal(body, &list); err != nil {
+		return nil, fmt.Errorf("ransomware.live: %w", err)
+	}
+	d := RansomData{Victims: []RansomVictim{}, Total: len(list)}
+	cutoff := now.AddDate(-1, 0, 0)
+	for _, v := range list {
+		t, ok := parseDate(v.Discovered)
+		if !ok || t.Before(cutoff) || t.After(now.Add(time.Hour)) {
+			continue
+		}
+		name := truncate(plainText(v.PostTitle), 100)
+		group := truncate(plainText(v.Group), 40)
+		if name == "" || group == "" {
+			continue
+		}
+		site := strings.ToLower(truncate(plainText(v.Website), 80))
+		if strings.Contains(site, ".onion") || strings.ContainsAny(site, " /") {
+			site = ""
+		}
+		d.Victims = append(d.Victims, RansomVictim{Name: name, Website: site, Sector: truncate(plainText(v.Activity), 40), Group: group,
+			GroupURL: "https://www.ransomware.live/group/" + url.PathEscape(strings.ToLower(group)), Country: country, Discovered: t.UTC()})
+	}
+	sort.SliceStable(d.Victims, func(i, j int) bool { return d.Victims[i].Discovered.After(d.Victims[j].Discovered) })
+	return d, nil
+}
+
+func (a *App) handleRansomware(w http.ResponseWriter, r *http.Request) {
+	cfg := a.config()
+	if !cfg.Ransomware.Enabled {
+		writeJSON(w, r, http.StatusOK, 60, map[string]any{"enabled": false})
+		return
+	}
+	now := time.Now()
+	var all []RansomVictim
+	var sources []map[string]any
+	for _, c := range cfg.Ransomware.Countries {
+		key := "rw:" + c
+		e := a.feedEntry(key)
+		e["country"], e["url"] = c, "https://www.ransomware.live/country/"+c
+		if v, ok := a.threats.get(key).Data.(RansomData); ok {
+			all = append(all, v.Victims...)
+			e["total"] = v.Total
+		}
+		sources = append(sources, e)
+	}
+	sort.SliceStable(all, func(i, j int) bool { return all[i].Discovered.After(all[j].Discovered) })
+	count := func(days int) int {
+		n, cut := 0, now.AddDate(0, 0, -days)
+		for _, v := range all {
+			if v.Discovered.After(cut) {
+				n++
+			}
+		}
+		return n
+	}
+	groups := map[string]int{}
+	for _, v := range all {
+		if v.Discovered.After(now.AddDate(0, 0, -90)) {
+			groups[v.Group]++
+		}
+	}
+	type gc struct {
+		Name  string `json:"name"`
+		URL   string `json:"url"`
+		Count int    `json:"count"`
+	}
+	var top []gc
+	for g, n := range groups {
+		top = append(top, gc{g, "https://www.ransomware.live/group/" + url.PathEscape(strings.ToLower(g)), n})
+	}
+	sort.Slice(top, func(i, j int) bool {
+		return top[i].Count > top[j].Count || (top[i].Count == top[j].Count && top[i].Name < top[j].Name)
+	})
+	if len(top) > 3 {
+		top = top[:3]
+	}
+	last7, last30, last365 := count(7), count(30), count(365) // before the list is trimmed for display
+	if len(all) > 8 {
+		all = all[:8]
+	}
+	writeJSON(w, r, http.StatusOK, 300, map[string]any{"enabled": true, "sources": sources, "victims": all,
+		"last7": last7, "last30": last30, "last365": last365, "top_groups": top})
 }

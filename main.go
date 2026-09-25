@@ -245,6 +245,18 @@ type Config struct {
 		Base     string   `yaml:"base"`
 		Interval Duration `yaml:"interval"`
 	} `yaml:"politics"`
+	// Today: Vandaag panel (holidays, moon and clock are calculated; school holidays fetched).
+	Today struct {
+		Enabled   bool   `yaml:"enabled"`
+		SchoolURL string `yaml:"school_url"`
+	} `yaml:"today"`
+	// Ransomware: Ransomware NL panel (ransomware.live API v2; free for personal use).
+	Ransomware struct {
+		Enabled   bool     `yaml:"enabled"`
+		Base      string   `yaml:"base"`
+		Countries []string `yaml:"countries"`
+		Interval  Duration `yaml:"interval"`
+	} `yaml:"ransomware"`
 	// Breaches: the Datalekken panel (Have I Been Pwned breach list, no key needed).
 	Breaches struct {
 		Enabled          bool     `yaml:"enabled"`
@@ -305,6 +317,8 @@ func defaultConfig() *Config {
 	c.Air.StationsURL = "https://data.rivm.nl/data/luchtmeetnet/Metadata/luchtmeetnet_meetlocaties.csv"
 	c.Trains.Enabled, c.Trains.URL, c.Trains.Interval = true, "https://gateway.apiportal.ns.nl/disruptions/v3?isActive=true", Duration(5*time.Minute)
 	c.Politics.Enabled, c.Politics.Base, c.Politics.Interval = true, "https://gegevensmagazijn.tweedekamer.nl/OData/v4/2.0", Duration(30*time.Minute)
+	c.Today.Enabled, c.Today.SchoolURL = true, "https://opendata.rijksoverheid.nl/v1/infotypes/schoolholidays?output=json"
+	c.Ransomware.Enabled, c.Ransomware.Base, c.Ransomware.Countries, c.Ransomware.Interval = true, "https://api.ransomware.live/v2", []string{"NL"}, Duration(time.Hour)
 	c.Breaches.Enabled = true
 	c.Breaches.URL = "https://haveibeenpwned.com/api/v3/breaches"
 	c.Breaches.Interval = Duration(3 * time.Hour)
@@ -371,13 +385,14 @@ var defaultRefresh = map[string]time.Duration{
 	"traffic": 5 * time.Minute, "alarms": 2 * time.Minute, "threats": 15 * time.Minute,
 	"advisories": 30 * time.Minute, "outages": 10 * time.Minute, "ap": 30 * time.Minute, "breaches": 30 * time.Minute,
 	"energy": 30 * time.Minute, "air": 15 * time.Minute, "trains": 3 * time.Minute, "politics": 15 * time.Minute,
+	"today": 60 * time.Minute, "ransomware": 30 * time.Minute,
 	"health": 30 * time.Minute,
 }
 
 func (c *Config) validate() error {
 	for k, v := range c.Refresh {
 		if _, ok := defaultRefresh[k]; !ok {
-			return fmt.Errorf("refresh.%s: unknown panel (known: news, weather, alerts, traffic, alarms, energy, air, trains, politics, threats, advisories, breaches, outages, ap, health)", k)
+			return fmt.Errorf("refresh.%s: unknown panel (known: news, weather, alerts, traffic, alarms, energy, air, trains, politics, today, ransomware, threats, advisories, breaches, outages, ap, health)", k)
 		}
 		if v.D() < time.Minute || v.D() > 24*time.Hour {
 			return fmt.Errorf("refresh.%s: %s is outside 1m..24h", k, v.D())
@@ -483,6 +498,20 @@ func (c *Config) validate() error {
 	}
 	if c.Trains.Enabled && (c.Trains.Interval.D() < 2*time.Minute || !httpsURL(c.Trains.URL)) {
 		fail("trains: interval must be at least 2m and url an https URL")
+	}
+	if c.Ransomware.Enabled {
+		if c.Ransomware.Interval.D() < 10*time.Minute || !httpsURL(c.Ransomware.Base) || len(c.Ransomware.Countries) == 0 || len(c.Ransomware.Countries) > 5 {
+			fail("ransomware: interval must be at least 10m, base an https URL, and 1–5 countries")
+		}
+		for i, cc := range c.Ransomware.Countries {
+			c.Ransomware.Countries[i] = strings.ToUpper(strings.TrimSpace(cc))
+			if !rwCountryRe.MatchString(c.Ransomware.Countries[i]) {
+				fail("ransomware.countries: %q is not an ISO country code such as NL", cc)
+			}
+		}
+	}
+	if c.Today.Enabled && !httpsURL(c.Today.SchoolURL) {
+		fail("today.school_url must be an https URL")
 	}
 	if c.Politics.Enabled && (c.Politics.Interval.D() < 10*time.Minute || !httpsURL(c.Politics.Base)) {
 		fail("politics: interval must be at least 10m and base an https URL")
@@ -997,6 +1026,8 @@ func (a *App) routes(basePath string) http.Handler {
 	handle("GET /api/air", a.handleAir)
 	handle("GET /api/trains", a.handleTrains)
 	handle("GET /api/politics", a.handlePolitics)
+	handle("GET /api/today", a.handleToday)
+	handle("GET /api/ransomware", a.handleRansomware)
 	handle("GET /api/alarms", a.handleAlarms)
 	handle("GET /healthz", a.handleHealth)
 	handle("GET /metrics", a.handleMetrics)
@@ -1194,6 +1225,8 @@ func (a *App) handleCatalog(w http.ResponseWriter, r *http.Request) {
 		"air":              cfg.Air.Enabled,
 		"trains":           cfg.Trains.Enabled,
 		"politics":         cfg.Politics.Enabled,
+		"today":            cfg.Today.Enabled,
+		"ransomware":       cfg.Ransomware.Enabled,
 		"alarms":           map[string]any{"enabled": cfg.Alarms.Enabled, "city": cfg.Alarms.City},
 		"alerts":           map[string]bool{"nctv": cfg.Alerts.NCTV.Enabled, "knmi": cfg.Alerts.KNMI},
 		"presets":          cfg.Presets,
@@ -1364,6 +1397,14 @@ func (a *App) otherFeeds(cfg *Config) []FeedStatus {
 	}
 	if cfg.Politics.Enabled {
 		add("tk:politics", "Tweede Kamer · agenda en stemmingen", "daily")
+	}
+	if cfg.Today.Enabled {
+		add("rijk:schoolholidays", "Rijksoverheid · schoolvakanties", "daily")
+	}
+	if cfg.Ransomware.Enabled {
+		for _, cc := range cfg.Ransomware.Countries {
+			add("rw:"+cc, "ransomware.live · "+cc, "breach")
+		}
 	}
 	if cfg.Outages.Enabled {
 		for _, p := range cfg.Outages.Providers {
@@ -1787,7 +1828,7 @@ func (a *App) handleImage(w http.ResponseWriter, r *http.Request) {
 // inside the 80 % safe zone.
 func pwaAssets(indexETag string) map[string]*staticAsset {
 	manifest, _ := json.Marshal(map[string]any{
-		"name": "Nieuwsdashboard", "short_name": "Nieuws", "lang": "nl",
+		"name": "Nieuws Hub", "short_name": "Nieuws Hub", "lang": "nl",
 		"description": "Nieuws, weer en actuele cyberdreigingen op één pagina.",
 		"start_url":   "./", "scope": "./", "display": "standalone",
 		"background_color": "#000000", "theme_color": "#0f1115",

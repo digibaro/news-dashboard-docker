@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="referrer" content="no-referrer">
-<title>Nieuwsdashboard</title>
+<title>Nieuws Hub</title>
 <meta name="description" content="Nieuws, weer en actuele cyberdreigingen op één pagina.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230f1115'/%3E%3Cpath d='M8 11h16M8 16h16M8 21h10' stroke='%23fff' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
 <script>
@@ -610,6 +610,26 @@ table.tt { width: 100%; border-collapse: collapse; font-size: 12px; }
   [data-mode="kiosk"] #news::-webkit-scrollbar, [data-mode="kiosk"] #side::-webkit-scrollbar { display: none; }
 }
 
+/* ---------- Vandaag ---------- */
+.tday { margin: 0 0 8px; font-size: 15px; }
+.trow { display: flex; gap: 8px; align-items: baseline; margin: 5px 0; font-size: 13px; color: var(--text-2); }
+.trow .ic { flex: none; width: 1.3em; text-align: center; }
+.trow b { color: var(--text); font-weight: 650; }
+.school { list-style: none; margin: 4px 0 0; padding: 0; font-size: 13px; }
+.school li { display: grid; grid-template-columns: 4.5em 1fr; gap: 8px; padding: 4px 0 4px 8px; border-top: 1px solid var(--line); border-left: 3px solid transparent; }
+.school li:first-child { border-top: 0; }
+.school li.mine { border-left-color: var(--accent); }
+.school li.mine .rg { font-weight: 650; color: var(--text); }
+.school .rg { color: var(--text-2); }
+.school .tag { margin-left: 6px; vertical-align: 1px; }
+.vsk { height: 255px; }
+@media (max-width: 1099px) { .vsk { height: 293px; } }
+@media (max-width: 699px) { .vsk { height: 310px; } }
+
+/* ---------- Ransomware ---------- */
+.rwsk { height: 420px; }
+.muted-inline { color: var(--text-3); font-size: 12px; }
+
 /* ---------- Datalekken ---------- */
 .bgrp h3 { margin: 8px 0 4px; font-size: 12px; font-weight: 650; color: var(--text-2); text-transform: uppercase; letter-spacing: .03em; }
 .bgrp:first-child h3 { margin-top: 0; }
@@ -759,7 +779,7 @@ textarea.json {
 </div>
 <header class="top" id="top">
   <div class="top-in">
-    <h1 class="brand" translate="no"><a href="./">Nieuwsdashboard</a></h1>
+    <h1 class="brand" translate="no"><a href="./">Nieuws Hub</a></h1>
     <time class="clock" id="clock"></time>
     <a class="wx-mini" id="wx-mini" href="#panel-weather" hidden></a>
     <div class="search" role="search">
@@ -835,6 +855,13 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.7.0</h3>
+    <ul>
+      <li>Nieuwe naam: Nieuws Hub.</li>
+      <li>Nieuw paneel Vandaag: weeknummer, zon en maan, de volgende feestdag, de klok en de schoolvakanties per regio.</li>
+      <li>Nieuw paneel Ransomware NL: claims van ransomwaregroepen tegen Nederlandse organisaties.</li>
+      <li>Energieprijzen: laat op de dag lopen de goedkoopste uren door tot morgen.</li>
+    </ul>
     <h3>Versie 1.6.1</h3>
     <ul>
       <li>Treinstoringen gecontroleerd met echte NS-gegevens: nettere titels, geen dubbele oorzaak, en bij werkzaamheden de periode.</li>
@@ -894,6 +921,13 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.7.0</h3>
+    <ul>
+      <li>New name: Nieuws Hub.</li>
+      <li>New panel Today: week number, sun and moon, the next public holiday, the clocks and school holidays per region.</li>
+      <li>New panel Ransomware NL: claims by ransomware groups against Dutch organisations.</li>
+      <li>Energy prices: late in the day the cheapest hours can run into tomorrow.</li>
+    </ul>
     <h3>Version 1.6.1</h3>
     <ul>
       <li>Train disruptions checked against live NS data: tidier titles, no repeated cause, and the period for engineering works.</li>
@@ -1096,6 +1130,7 @@ const TZ = 'Europe/Amsterdam';
 const KEY = 'ndb:prefs', SEEN_KEY = 'ndb:seen', READ_KEY = 'ndb:read', SAVED_KEY = 'ndb:saved';
 const PANELS = {
   weather: 'Weer',
+  today: 'Vandaag',
   air: 'Luchtkwaliteit',
   traffic: 'Verkeer',
   trains: 'Treinstoringen',
@@ -1105,6 +1140,7 @@ const PANELS = {
   threats: 'Cyberdreigingen',
   advisories: 'Security-adviezen',
   breaches: 'Datalekken',
+  ransomware: 'Ransomware NL',
   outages: 'Storingen',
   ap: 'Autoriteit Persoonsgegevens acties',
   health: 'Gezondheid',
@@ -1518,6 +1554,78 @@ const EN = {
   "NS · treinstoringen": "NS · train disruptions",
   "Tweede Kamer · agenda en stemmingen": "House of Representatives · agenda and votes",
   "Weeralarm, alarmeringen en dreigingsniveau": "Weather warnings, emergency alerts and threat level",
+  // Vandaag, Ransomware NL
+  " ({p}% verlicht) · precies om {when}": " ({p}% lit) · exactly at {when}",
+  "Ransomware NL": "Ransomware NL",
+  "week {n}": "week {n}",
+  "vandaag": "today",
+  "morgen": "tomorrow",
+  "over {n} dagen": "in {n} days",
+  "Vandaag kon niet worden geladen ({err}).": "Today could not be loaded ({err}).",
+  "Dit paneel staat uit in config.yaml (today.enabled).": "This panel is disabled in config.yaml (today.enabled).",
+  " · morgen {n} min korter": " · {n} min shorter tomorrow",
+  " · morgen {n} min langer": " · {n} min longer tomorrow",
+  "Zon op {rise}, onder {set} · {h} u {m} min daglicht": "Sunrise {rise}, sunset {set} · {h} h {m} min of daylight",
+  "volle maan": "full moon",
+  "nieuwe maan": "new moon",
+  " ({p}% verlicht) · {what} {when}": " ({p}% lit) · {what} {when}",
+  "Nieuwe maan": "New moon",
+  "Wassende maansikkel": "Waxing crescent",
+  "Eerste kwartier": "First quarter",
+  "Wassende maan": "Waxing gibbous",
+  "Volle maan": "Full moon",
+  "Afnemende maan": "Waning gibbous",
+  "Laatste kwartier": "Last quarter",
+  "Afnemende maansikkel": "Waning crescent",
+  "Volgende feestdag: ": "Next public holiday: ",
+  "Klok: {when} een uur terug (wintertijd)": "Clocks go back an hour on {when} (winter time)",
+  "Klok: {when} een uur vooruit (zomertijd)": "Clocks go forward an hour on {when} (summer time)",
+  "Schoolvakanties": "School holidays",
+  "Noord": "North",
+  "Midden": "Middle",
+  "Zuid": "South",
+  " (jouw regio)": " (your region)",
+  "Regio van je weerlocatie": "Region of your weather location",
+  "t/m {end}": "until {end}",
+  "nu": "now",
+  "Schoolvakanties konden niet worden opgehaald; er wordt automatisch opnieuw geprobeerd.": "School holidays could not be loaded; retrying automatically.",
+  " (schoolvakanties) · zon: Open-Meteo · feestdagen en maan: berekend": " (school holidays) · sun: Open-Meteo · holidays and moon: calculated",
+  "Nieuwjaarsdag": "New Year's Day",
+  "Goede Vrijdag": "Good Friday",
+  "Eerste Paasdag": "Easter Sunday",
+  "Tweede Paasdag": "Easter Monday",
+  "Koningsdag": "King's Day",
+  "Bevrijdingsdag": "Liberation Day",
+  "Hemelvaartsdag": "Ascension Day",
+  "Eerste Pinksterdag": "Whit Sunday",
+  "Tweede Pinksterdag": "Whit Monday",
+  "Eerste Kerstdag": "Christmas Day",
+  "Tweede Kerstdag": "Boxing Day",
+  "Herfstvakantie": "Autumn holiday",
+  "Kerstvakantie": "Christmas holiday",
+  "Voorjaarsvakantie": "Spring holiday",
+  "Meivakantie": "May holiday",
+  "Zomervakantie": "Summer holiday",
+  "Volgende feestdag: {name}, {when}": "Next public holiday: {name}, {when}",
+  "{type} (regio {rg}) t/m {end}": "{type} (region {rg}) until {end}",
+  "{type} (regio {rg}) vanaf {start}": "{type} (region {rg}) from {start}",
+  "noord": "north",
+  "midden": "middle",
+  "zuid": "south",
+  "Ransomware-gegevens konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.": "Ransomware data could not be loaded ({err}). Retrying automatically.",
+  "Dit paneel staat uit in config.yaml (ransomware.enabled).": "This panel is disabled in config.yaml (ransomware.enabled).",
+  "ransomware.live is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.": "ransomware.live is unreachable ({err}); retrying automatically.",
+  "Ransomware-gegevens worden voor het eerst opgehaald.": "Ransomware data is being fetched for the first time.",
+  " claims in de afgelopen 30 dagen · ": " claims in the last 30 days · ",
+  " in 12 maanden": " in 12 months",
+  "Meest actief (90 dagen): ": "Most active (90 days): ",
+  "groep ": "group ",
+  "Geen claims in de afgelopen 12 maanden.": "No claims in the last 12 months.",
+  "Claims van criminele groepen op hun leksites, niet geverifieerd. Een vermelding betekent niet dat er echt gegevens zijn gestolen.": "Claims made by criminal groups on their leak sites, not verified. A listing does not mean data was actually stolen.",
+  " · gratis API voor persoonlijk gebruik": " · free API for personal use",
+  "Ransomware: {n} claims in 7 dagen": "Ransomware: {n} claims in 7 days",
+  "laatste: {name}": "latest: {name}",
+  "Rijksoverheid · schoolvakanties": "Dutch government · school holidays",
 };
 
 // Sentences the server composes from parts (rain summary, directions, source names).
@@ -1610,6 +1718,8 @@ function buildFormatters() {
     warn: D({ weekday: 'short', hour: '2-digit', minute: '2-digit' }), wday: D({ weekday: 'short', day: 'numeric' }),
     utcDay: new Intl.DateTimeFormat(locale(), { timeZone: 'UTC', day: 'numeric', month: 'short' }), num: new Intl.NumberFormat(locale()),
     date: new Intl.DateTimeFormat(locale(), { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' }),
+    wdm: D({ weekday: 'short', day: 'numeric', month: 'short' }),
+    wdmUTC: new Intl.DateTimeFormat(locale(), { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' }),
     compact: new Intl.NumberFormat(locale(), { notation: 'compact', maximumFractionDigits: 1 }),
   });
   try { fmt.region = new Intl.DisplayNames([lang], { type: 'region' }); } catch { fmt.region = null; }
@@ -2146,6 +2256,8 @@ const freshOf = {
   ap: () => { const s = panelData.ap?.status; return s && { ts: s.fetched_at, max: 65, stale: !!s.error }; },
   alarms: () => { const d = panelData.alarms?.data; return d?.enabled && { ts: d.fetched_at, max: 6, stale: !!d.stale }; },
   traffic: () => { const d = panelData.traffic?.data; return d?.enabled && { ts: d.fetched_at, max: 15, stale: !!d.error }; },
+  today: () => { const d = panelData.today?.data?.school; return d?.fetched_at && { ts: d.fetched_at, max: 2 * 1440 + 60, stale: !!d.error }; },
+  ransomware: () => { const d = panelData.ransomware?.data; return d?.enabled && { ts: oldest(d.sources), max: 130, stale: d.sources?.some(s => s.error) }; },
   energy: () => { const d = panelData.energy?.data; return d?.enabled && { ts: d.fetched_at, max: 130, stale: !!d.error }; },
   air: () => { const d = panelData.air?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 70, stale: !!d.error }; },
   trains: () => { const d = panelData.trains?.data; return d?.key && d.fetched_at && { ts: d.fetched_at, max: 12, stale: !!d.error }; },
@@ -2165,6 +2277,8 @@ const panelRenderers = {
   breaches: renderBreaches,
   energy: renderEnergy,
   air: renderAir,
+  today: renderToday,
+  ransomware: renderRansomware,
   trains: renderTrains,
   politics: renderPolitics,
   health: renderHealth,
@@ -2208,6 +2322,7 @@ async function loadWeather() {
   panelData.weather = next;
   renderPanel('weather');
   renderWxMini();
+  if (panelData.today) renderPanel('today'); // sunrise and sunset come from the weather data
 }
 function warnWindow(w) {
   const on = w.onset ? new Date(w.onset) : null, off = w.expires ? new Date(w.expires) : null;
@@ -2970,10 +3085,12 @@ function renderEnergy(body) {
         onclick: () => { energyDay = id; renderPanel('energy'); $('#panel-energy .advf [aria-pressed="true"]')?.focus(); } }))));
   }
   if (list.length) {
-    const rest = energyDay === 'today' ? list.filter(p => +p.date + 36e5 > now) : list;
+    // "today": the rest of today and, once known, tomorrow (late in the evening the best 3 hours are often after midnight)
+    const rest = energyDay === 'today' ? days.all.filter(p => +p.date + 36e5 > now) : list;
     const win = cheapestWindow(rest, 3);
     out.push(energyChart(list, win, now));
-    if (win) out.push(h('p', { class: 'eline' }, t('Goedkoopste 3 uur: '), h('b', { text: hourSpan(win.from, 3) }), t(' (gemiddeld {p})', { p: eur(win.avg) })));
+    const tomorrowWin = win && energyDay === 'today' && dayKey(win.from) !== dayKey(new Date());
+    if (win) out.push(h('p', { class: 'eline' }, t('Goedkoopste 3 uur: '), h('b', { text: (tomorrowWin ? t('morgen') + ' ' : '') + hourSpan(win.from, 3) }), t(' (gemiddeld {p})', { p: eur(win.avg) })));
     const hi = list.reduce((a, p) => (p.p > a.p ? p : a), list[0]), lo = list.reduce((a, p) => (p.p < a.p ? p : a), list[0]);
     out.push(h('p', { class: 'eline', text: t('Laagste {lo} om {lt} · hoogste {hi} om {ht}', { lo: eur(lo.p), lt: fmt.time.format(lo.date), hi: eur(hi.p), ht: fmt.time.format(hi.date) }) }));
   }
@@ -3130,6 +3247,118 @@ function renderPolitics(body) {
   body.replaceChildren(...out);
 }
 
+// ---------------------------------------------------------------- vandaag
+async function loadToday() {
+  try { panelData.today = { data: await api('api/today') }; }
+  catch (e) { panelData.today = { ...(panelData.today || {}), error: e }; }
+  renderPanel('today');
+}
+const MOON = { new: ['🌑', 'nieuwe maan'], 'waxing-crescent': ['🌒', 'wassende maansikkel'], 'first-quarter': ['🌓', 'eerste kwartier'],
+  'waxing-gibbous': ['🌔', 'wassende maan'], full: ['🌕', 'volle maan'], 'waning-gibbous': ['🌖', 'afnemende maan'],
+  'last-quarter': ['🌗', 'laatste kwartier'], 'waning-crescent': ['🌘', 'afnemende maansikkel'] };
+// School holiday regions by province (Gelderland is split; most of it is "midden").
+const SCHOOL_REGION = { Groningen: 'noord', Friesland: 'noord', 'Fryslân': 'noord', Drenthe: 'noord', Overijssel: 'noord', Flevoland: 'noord',
+  'Noord-Holland': 'noord', Utrecht: 'midden', 'Zuid-Holland': 'midden', Gelderland: 'midden', 'Noord-Brabant': 'zuid', Limburg: 'zuid', Zeeland: 'zuid' };
+const dateOnly = s => new Date(s + 'T12:00:00Z');
+const daysUntil = s => Math.round((dateOnly(s) - dateOnly(dayKey(new Date()))) / 864e5);
+const inDays = n => n === 0 ? t('vandaag') : n === 1 ? t('morgen') : t('over {n} dagen', { n });
+function renderToday(body) {
+  const st = panelData.today;
+  if (!st) { body.replaceChildren(h('div', { class: 'tsk vsk', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:85%' }))); return; }
+  const d = st.data;
+  if (!d) { body.replaceChildren(h('p', { class: 'pnote', text: t('Vandaag kon niet worden geladen ({err}).', { err: tr(st.error?.message) }) })); return; }
+  if (!d.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (today.enabled).' })); return; }
+  const out = [h('p', { class: 'tday' }, h('b', { text: fmt.day.format(dateOnly(d.date)) }), ' · ', t('week {n}', { n: d.week }))];
+  const row = (ic, ...kids) => h('p', { class: 'trow' }, h('span', { class: 'ic', 'aria-hidden': 'true', text: ic }), h('span', null, ...kids));
+  for (const hd of d.holidays_today || []) out.push(row('🎉', h('b', { text: tr(hd.name) })));
+  const wx = panelData.weather?.data?.daily;
+  if (wx?.[0]?.sunrise) {
+    const rise = new Date(wx[0].sunrise * 1000), set = new Date(wx[0].sunset * 1000), len = Math.round((set - rise) / 6e4);
+    let delta = '';
+    if (wx[1]?.sunrise) {
+      const diff = Math.round((wx[1].sunset - wx[1].sunrise) / 60) - len;
+      if (diff) delta = t(diff < 0 ? ' · morgen {n} min korter' : ' · morgen {n} min langer', { n: Math.abs(diff) });
+    }
+    out.push(row('☀️', t('Zon op {rise}, onder {set} · {h} u {m} min daglicht', { rise: fmt.time.format(rise), set: fmt.time.format(set), h: Math.floor(len / 60), m: len % 60 }) + delta));
+  }
+  const m = d.moon;
+  if (m) {
+    const [ic, name] = MOON[m.phase] || MOON.full, nf = new Date(m.next_full), nn = new Date(m.next_new);
+    const at = d => `${fmt.wdm.format(d)} ${fmt.time.format(d)}`, pct = Math.round(m.illumination * 100);
+    const next = nf < nn ? [t('volle maan'), nf] : [t('nieuwe maan'), nn];
+    out.push(row(ic, h('b', { text: t(name[0].toUpperCase() + name.slice(1)) }),
+      m.moment ? t(' ({p}% verlicht) · precies om {when}', { p: pct, when: at(new Date(m.moment)) })
+        : t(' ({p}% verlicht) · {what} {when}', { p: pct, what: next[0], when: at(next[1]) })));
+  }
+  const nx = (d.holidays_next || [])[0];
+  if (nx) out.push(row('📅', t('Volgende feestdag: '), h('b', { text: tr(nx.name) }), `, ${fmt.wdmUTC.format(dateOnly(nx.date))} (${inDays(daysUntil(nx.date))})`));
+  if (d.clock_change) {
+    const c = d.clock_change;
+    out.push(row('🕑', t(c.direction === 'back' ? 'Klok: {when} een uur terug (wintertijd)' : 'Klok: {when} een uur vooruit (zomertijd)', { when: fmt.wdmUTC.format(dateOnly(c.date)) }) + ` (${inDays(daysUntil(c.date))})`));
+  }
+  const sch = d.school;
+  const mine = SCHOOL_REGION[prefs.weather?.region || catalog?.weather_location?.region] || null;
+  if (sch?.regions) {
+    out.push(h('p', { class: 'trow' }, h('span', { class: 'ic', 'aria-hidden': 'true', text: '🎒' }), h('b', { text: t('Schoolvakanties') })));
+    out.push(h('ul', { class: 'school' }, ['noord', 'midden', 'zuid'].map(rg => {
+      const x = sch.regions[rg];
+      const label = h('span', { class: 'rg' }, t(rg[0].toUpperCase() + rg.slice(1)), rg === mine ? h('span', { class: 'sr-only', text: t(' (jouw regio)') }) : null);
+      if (!x) return h('li', { class: rg === mine ? 'mine' : null }, label, h('span', { text: '–' }));
+      const hol = x.holiday;
+      return h('li', { class: rg === mine ? 'mine' : null, title: rg === mine ? t('Regio van je weerlocatie') : null }, label,
+        h('span', null, tr(hol.type), ' ', x.current ? t('t/m {end}', { end: fmt.wdmUTC.format(dateOnly(hol.end)) })
+          : `${fmt.wdmUTC.format(dateOnly(hol.start))} – ${fmt.wdmUTC.format(dateOnly(hol.end))} (${inDays(daysUntil(hol.start))})`,
+          x.current ? h('span', { class: 'tag ok', text: t('nu') }) : null));
+    })));
+  } else if (sch?.error) {
+    out.push(row('🎒', t('Schoolvakanties konden niet worden opgehaald; er wordt automatisch opnieuw geprobeerd.')));
+  }
+  out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://www.rijksoverheid.nl/onderwerpen/schoolvakanties', 'Rijksoverheid'), t(' (schoolvakanties) · zon: Open-Meteo · feestdagen en maan: berekend')));
+  body.replaceChildren(...out);
+}
+
+// ---------------------------------------------------------------- ransomware (ransomware.live)
+async function loadRansomware() {
+  try { panelData.ransomware = { data: await api('api/ransomware') }; }
+  catch (e) { panelData.ransomware = { ...(panelData.ransomware || {}), error: e }; }
+  renderPanel('ransomware');
+}
+const SECTOR_NL = { Healthcare: 'zorg', Manufacturing: 'industrie', Hospitality: 'horeca en toerisme', 'Professional Services': 'zakelijke dienstverlening',
+  'Retail & E-Commerce': 'detailhandel en webwinkels', Education: 'onderwijs', Government: 'overheid', 'Public Sector': 'publieke sector', Technology: 'ICT',
+  'Transportation & Logistics': 'transport en logistiek', 'Construction': 'bouw', 'Financial Services': 'financiële dienstverlening', Finance: 'financiën',
+  'Energy & Utilities': 'energie en nutsbedrijven', Agriculture: 'landbouw', 'Agriculture and Food Production': 'landbouw en voedsel', Legal: 'juridisch',
+  'Real Estate': 'vastgoed', Telecommunication: 'telecom', 'Consumer Services': 'consumentendiensten', Business: 'zakelijk', Other: 'overig', 'Not Found': 'onbekend' };
+const sectorName = x => lang === 'en' ? x : (SECTOR_NL[x] || x);
+function renderRansomware(body) {
+  const st = panelData.ransomware;
+  if (!st) { body.replaceChildren(h('div', { class: 'tsk rwsk', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:90%' }))); return; }
+  const r = st.data;
+  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('Ransomware-gegevens konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
+  if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (ransomware.enabled).' })); return; }
+  const src = r.sources || [];
+  if (!src.some(x => x.fetched_at)) {
+    const err = src.find(x => x.error)?.error;
+    body.replaceChildren(h('p', { class: 'pnote', text: err ? t('ransomware.live is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err }) : t('Ransomware-gegevens worden voor het eerst opgehaald.') }));
+    return;
+  }
+  const out = [], multi = src.length > 1;
+  out.push(h('p', { class: 'eline' }, h('b', { text: String(r.last30) }), t(' claims in de afgelopen 30 dagen · '), h('b', { text: String(r.last365) }), t(' in 12 maanden')));
+  if (r.top_groups?.length) out.push(h('p', { class: 'eline' }, t('Meest actief (90 dagen): '),
+    r.top_groups.map((g, i) => [i ? ' · ' : '', extLink(g.url, g.name), ` (${g.count})`])));
+  if (r.victims?.length) {
+    out.push(h('ul', { class: 'plist' }, r.victims.slice(0, 6).map(v => h('li', null,
+      h('b', { translate: 'no', text: v.name }),
+      v.website && v.website !== v.name.toLowerCase() ? h('span', { translate: 'no', class: 'muted-inline', text: ' · ' + v.website }) : null,
+      h('div', { class: 'm' }, v.sector ? h('span', { text: sectorName(v.sector) }) : null, h('span', null, t('groep '), extLink(v.group_url, v.group)),
+        h('span', { text: fmt.short.format(new Date(v.discovered)) + (multi ? ' · ' + v.country : '') }))))));
+  } else {
+    out.push(h('p', { class: 'pnote', text: t('Geen claims in de afgelopen 12 maanden.') }));
+  }
+  out.push(h('p', { class: 'pnote', text: t('Claims van criminele groepen op hun leksites, niet geverifieerd. Een vermelding betekent niet dat er echt gegevens zijn gestolen.') }));
+  out.push(h('p', { class: 'pfoot' }, t('Bron: '), src.map((x, i) => [i ? ' · ' : '', extLink(x.url, 'ransomware.live' + (multi ? ' ' + x.country : ''))]), t(' · gratis API voor persoonlijk gebruik')));
+  body.replaceChildren(...out);
+}
+
 // ---------------------------------------------------------------- overzicht (digest) & kiosk
 const urlMode = new URLSearchParams(location.search).get('mode');
 let viewMode = 'normal', digestQueued = false, kioskTimer = null, kioskPauseUntil = 0, wakeLock = null;
@@ -3168,6 +3397,18 @@ function renderDigest() {
       warn ? h('p', { text: t('Code {lvl}: {type}', { lvl: tr(LEVEL_NL[warn.level]), type: tr(warn.type).toLowerCase() }) }) : null,
       tm ? h('p', { text: t('Morgen {min} tot {max}, {desc}', { min: deg(tm.min), max: deg(tm.max), desc: tr(tm.desc).toLowerCase() }) }) : null]));
   }
+  const td = panelData.today?.data;
+  if (panelOn('today') && td?.enabled) {
+    const nx = (td.holidays_next || [])[0], lines = [];
+    for (const hd of td.holidays_today || []) lines.push(h('p', null, '🎉 ', h('b', { text: tr(hd.name) })));
+    if (nx) lines.push(h('p', { text: t('Volgende feestdag: {name}, {when}', { name: tr(nx.name), when: fmt.wdmUTC.format(dateOnly(nx.date)) }) }));
+    const mine = SCHOOL_REGION[prefs.weather?.region || catalog?.weather_location?.region];
+    const sx = mine && td.school?.regions?.[mine];
+    if (sx) lines.push(h('p', { text: sx.current ? t('{type} (regio {rg}) t/m {end}', { type: tr(sx.holiday.type), rg: t(mine), end: fmt.wdmUTC.format(dateOnly(sx.holiday.end)) })
+      : t('{type} (regio {rg}) vanaf {start}', { type: tr(sx.holiday.type), rg: t(mine), start: fmt.wdmUTC.format(dateOnly(sx.holiday.start)) }) }));
+    if (td.clock_change) lines.push(h('p', { text: t(td.clock_change.direction === 'back' ? 'Klok: {when} een uur terug (wintertijd)' : 'Klok: {when} een uur vooruit (zomertijd)', { when: fmt.wdmUTC.format(dateOnly(td.clock_change.date)) }) }));
+    cards.push(dCard('today', 'Vandaag', [h('p', null, h('span', { class: 'big', text: t('week {n}', { n: td.week }) })), ...lines]));
+  }
   const stories = topStories(7);
   cards.push(dCard('news', 'Belangrijkste nieuws', stories.length ? h('ul', { translate: 'no' }, stories.map(it => li(extLink(it.url, it.title),
     [srcName(it.source), it.related?.length ? t('+{n} bronnen', { n: it.related.length }) : null, fmt.time.format(it.date)].filter(Boolean).join(' · '))))
@@ -3202,7 +3443,10 @@ function renderDigest() {
   const br = panelData.breaches?.data?.data;
   for (const b of [...(br?.nl || []), ...(br?.other || [])].filter(b => Date.now() - new Date(b.added) < 7 * 864e5).slice(0, 3))
     sec.push(li(h('span', { translate: 'no' }, extLink(b.url, b.title)), t('Datalek · {n} accounts', { n: fmt.compact.format(b.count) })));
-  if ((panelOn('advisories') || panelOn('breaches')) && (panelData.advisories || panelData.breaches))
+  const rw = panelData.ransomware?.data;
+  if (panelOn('ransomware') && rw?.enabled && rw.sources?.some(x => x.fetched_at))
+    sec.push(li(h('b', { text: t('Ransomware: {n} claims in 7 dagen', { n: rw.last7 }) }), rw.victims?.[0] ? t('laatste: {name}', { name: rw.victims[0].name }) : null));
+  if ((panelOn('advisories') || panelOn('breaches') || panelOn('ransomware')) && (panelData.advisories || panelData.breaches || panelData.ransomware))
     cards.push(dCard(panelOn('advisories') ? 'advisories' : 'breaches', 'Veiligheid', sec.length ? h('ul', null, sec) : h('p', { text: t('Geen hoge security-adviezen (48 uur) en geen nieuwe datalekken (7 dagen).') })));
   const pol = panelData.politics?.data?.data;
   if (panelOn('politics') && pol) {
@@ -3790,7 +4034,7 @@ async function init() {
   buildChips();
   if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
   await Promise.allSettled([loadNews({ replace: true }), loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(),
-    loadBreaches(), loadOutages(), loadHealthPanel(), loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics()]);
+    loadBreaches(), loadOutages(), loadHealthPanel(), loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware()]);
   kioskFit(); // the header and top bar have their final height now
   // intervals from config.yaml (refresh:), in seconds; defaults if the server is older
   const R = (k, def) => Math.max(60, catalog?.refresh?.[k] || def * 60) * 1000;
@@ -3807,6 +4051,8 @@ async function init() {
   every(R('air', 15), loadAir);
   every(R('trains', 3), loadTrains);
   every(R('politics', 15), loadPolitics);
+  every(R('today', 60), loadToday);
+  every(R('ransomware', 30), loadRansomware);
   every(R('outages', 10), loadOutages);
   every(R('health', 30), loadHealthPanel);
   setInterval(tick, 15e3);

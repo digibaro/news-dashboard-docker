@@ -1,4 +1,6 @@
-# Nieuwsdashboard
+# Nieuws Hub
+
+*Nieuws Hub* is the name shown in the app. The program, container and repository keep their technical names (`nieuwsdashboard`, `news-dashboard-docker`).
 
 A fast, privacy-friendly **single-page news dashboard in Dutch, with an English interface**. It combines:
 
@@ -12,6 +14,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
   - Autoriteit Persoonsgegevens enforcement news
 - **Security advisories**: NCSC-NL, with the `[kans/schade]` rating parsed into badges, plus optional CERT-EU, CISA, BSI and MSRC.
 - **Top bar:** the current KNMI weather code, the number of P2000 alerts in the last hour per service for a configured area (default Den Haag), and the NCTV terrorism threat level.
+- **Vandaag:** date and week number, sunrise and sunset, moon phase, the next public holiday, the next clock change, and school holidays for regio Noord, Midden and Zuid (the visitor's region highlighted).
 - **Luchtkwaliteit:** the air quality index (1–11) and NO₂, PM2.5, PM10 and O₃ from the nearest Luchtmeetnet station. The place is chosen per visitor (default: their weather location).
 - **Treinstoringen:** current rail disruptions and engineering works from the NS Disruptions API (needs a free key).
 - **Energieprijzen:** today's and tomorrow's hourly electricity prices and the gas price (EnergyZero), with a chart and the cheapest 3 hours.
@@ -19,6 +22,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Verkeer:** jams, accidents and road closures from NDW open data (Rijkswaterstaat), with readable road names.
 - **Alarmeringen:** the latest P2000 alerts for your city from Zwaailicht.nl, grouped as Brandweer, Ambulance, Politie and Lifeliner (at most 2 each). The city is chosen per visitor under Instellingen.
 - **Datalekken:** the latest 3 Dutch and 3 other data breaches at organisations, from Have I Been Pwned: number of accounts, leak date, and what data leaked.
+- **Ransomware NL:** organisations claimed by ransomware groups on their leak sites (ransomware.live), with counts, the most active groups and the latest claims. No links to leak sites and no descriptions.
 - **Storingen:** status of Microsoft Azure, Microsoft 365, AWS and Cloudflare. Any service with an Atlassian Statuspage or RSS status feed can be added in `config.yaml`.
 - **Gezondheid:** RIVM news filtered to health alerts (infectious diseases, vaccination, heat, smog).
 - **Themes**: Licht / Donker (true black) / Auto.
@@ -128,11 +132,13 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 | `fetch` | `user_agent` (**put your site and e-mail here**), default refresh `interval`, `timeout`, `max_concurrent` (max 2 per host is fixed) |
 | `cache` | `max_items_per_source`, `max_age`, `snapshot_path` (empty = no disk writes, see below) |
 | `features` | `show_images` (keep feed images), `proxy_images` (serve them through `/api/img`, see below), `geolocation` (ip-api lookups), `allow_custom_feeds` (reserved, see below) |
-| `refresh` | how often an open browser tab asks the server for new data, per panel: `news`, `alerts`, `weather`, `air`, `traffic`, `trains`, `alarms`, `energy`, `politics`, `threats`, `advisories`, `breaches`, `outages`, `ap`, `health` (1m–24h, see below) |
+| `refresh` | how often an open browser tab asks the server for new data, per panel: `news`, `alerts`, `weather`, `today`, `air`, `traffic`, `trains`, `alarms`, `energy`, `politics`, `threats`, `advisories`, `breaches`, `ransomware`, `outages`, `ap`, `health` (1m–24h, see below) |
 | `keys` | `abusech_auth_key` (optional), `ns_api_key` (Treinstoringen) |
 | `energy` | Energieprijzen: `enabled`, `url`, `interval` (min. 15m), `vat` (0.21), `electricity_extra` / `gas_extra` (€ added per kWh / m³, e.g. energy tax and markup; default 0) |
 | `air` | Luchtkwaliteit: `enabled`, `base` (Luchtmeetnet API), `stations_url` (RIVM station list, CSV), `interval` (min. 15m) |
 | `trains` | Treinstoringen: `enabled`, `url` (NS Disruptions API v3), `interval` (min. 2m). Needs `keys.ns_api_key` |
+| `today` | Vandaag: `enabled`, `school_url` (Rijksoverheid school holidays) |
+| `ransomware` | Ransomware NL: `enabled`, `base` (ransomware.live API v2), `countries` (ISO codes, default `[NL]`, max. 5), `interval` (min. 10m) |
 | `politics` | Politiek vandaag: `enabled`, `base` (Tweede Kamer OData), `interval` (min. 10m) |
 | `weather` | default `location` (`name`, `lat`, `lon`, `region` = province for warnings, `country`), `interval`, MeteoAlarm feed URLs |
 | `threats` | `enabled`, `interval` (min. 15m, ISC's request), `daily_interval`, `cisa_kev` |
@@ -174,6 +180,8 @@ There are two separate rates:
 | News | 5m | per source, `fetch.default_interval` 10m (some 15–30m) |
 | Top bar (NCTV, KNMI, P2000 counts) | 3m | NCTV 6h, KNMI 10m, counts 3m |
 | Weather | 15m | forecast 15m, rain 5m, warnings 10m |
+| Vandaag | 60m | school holidays daily (the rest is calculated) |
+| Ransomware NL | 30m | 1h per country |
 | Luchtkwaliteit | 15m | index 30m, station list daily |
 | Traffic | 5m | 5m |
 | Treinstoringen | 3m | 5m |
@@ -452,6 +460,8 @@ The server fetches everything; browsers only talk to the dashboard itself.
 | [Luchtmeetnet](https://www.luchtmeetnet.nl/) / [RIVM](https://data.rivm.nl/data/luchtmeetnet/) | Luchtkwaliteit | The index (every 30 min, ≈3 requests for all stations) and pollutants (on demand, cached 30 min) from the Luchtmeetnet API. Station locations come from RIVM's `luchtmeetnet_meetlocaties.csv`, one file checked daily, so no per-station API calls: the API answers bursts with HTTP 429. RIVM: "a free service from which no rights can be derived"; attribution shown. |
 | [NS API portal](https://apiportal.ns.nl/) | Treinstoringen | Disruptions API v3. Free, but needs registration and a subscription key; the NS API terms apply. |
 | [Tweede Kamer open data](https://opendata.tweedekamer.nl/) | Politiek vandaag | Official OData API, no key. No explicit licence found on the portal (checked September 2026), attribution shown. |
+| [Rijksoverheid open data](https://opendata.rijksoverheid.nl/) | Vandaag | School holidays per region, fetched daily. Public holidays, moon phases (Meeus' algorithm, accurate to minutes) and clock changes are calculated by the app. |
+| [ransomware.live](https://www.ransomware.live/) | Ransomware NL | Free API v2: no key, **personal use only**, 1 request per minute per endpoint (polled hourly per country). Business use needs their free PRO key under separate terms. These are claims made by criminal groups, not verified; the panel says so. Descriptions (which can quote stolen data) and links to leak sites are never passed on. |
 | [Have I Been Pwned](https://haveibeenpwned.com/) | Datalekken | The public breach list (`/api/v3/breaches`): no API key, and no visitor data is sent. Licensed **CC BY 4.0** (attribution shown in the panel). Fetched every 3 h. Left out: unverified, fabricated, retired, spam lists, malware and stealer logs, entries without a domain, and (unless `include_sensitive: true`) sensitive breaches. HIBP has no country field, so "Dutch" means a `.nl` domain or a description mentioning Dutch/the Netherlands. |
 | [Zwaailicht.nl](https://zwaailicht.nl/blog/rss-feeds-p2000-meldingen) | P2000 alerts | Public Atom feeds per city (`/feed/meldingen/<city>.xml`), refreshed every minute. House numbers are left out by Zwaailicht. Fetched only for cities visitors actually choose, and cached 2 min per city. **Not for emergencies: call 112.** |
 
@@ -551,6 +561,8 @@ All JSON responses:
 | `GET /api/air?lat=&lon=` | Luchtkwaliteit: nearest station (`name`, `distance_km`, `url`), `lki` (`value` 1–11, `at`) and `components` (NO2, PM25, PM10, O3 in µg/m³) |
 | `GET /api/trains` | Treinstoringen: `key` (false without an NS key), `calamities`, `disruptions`, `maintenance` (active now, max 5) and `maintenance_total` |
 | `GET /api/politics` | Politiek vandaag: `day`, `activities` (time, kind, subject, committee, cancelled, url) and the latest `votes` (result, kind, subject, date, url) |
+| `GET /api/today` | Vandaag: `date`, `week`, `holidays_today`, `holidays_next`, `moon` (`phase`, `illumination`, `next_full`, `next_new`, `moment`), `clock_change`, `school.regions` (noord/midden/zuid: current or next holiday) |
+| `GET /api/ransomware` | Ransomware NL: `last7` / `last30` / `last365` counts, `top_groups` (90 days), the 8 newest `victims` (name, website, sector, group, date) and per-country `sources` |
 | `GET /api/breaches` | Datalekken: the latest 3 Dutch (`nl`) and 3 other (`other`) breaches with `title`, `domain`, `url`, `breach_date`, `added`, `count`, `data_classes`, plus `total`/`shown` |
 | `GET /api/outages` | per provider: status (`ok`/`minor`/`major`) and incidents |
 | `GET /api/advisories?sources=&limit=` | normalised advisories: `{id, source, title, url, published, updated, severity, probability, impact, cves, products, exploited}` |
@@ -596,6 +608,17 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.7.0
+- **New name:** the app is now called **Nieuws Hub** (browser tab, header and installed app). The program, container and repository keep their technical names.
+- **New panel Vandaag** (after Weer):
+  - the date and week number, sunrise and sunset with the change in day length, and the moon phase with the next full or new moon
+  - the next public holiday and the next clock change
+  - school holidays for regio Noord, Midden and Zuid, with the visitor's region highlighted
+- **New panel Ransomware NL** (after Datalekken): claims by ransomware groups against Dutch organisations (ransomware.live), with counts for 30 days and 12 months, the most active groups and the latest claims. Countries are configurable.
+- **Energieprijzen:** late in the day, the cheapest 3 hours can run into tomorrow ("morgen 12:00–15:00").
+- **Overview:** a Vandaag card, and the ransomware count in the Veiligheid card.
+- New config sections `today` and `ransomware`, and their `refresh` keys.
 
 ### 1.6.2
 - **`env_file: .env` in `docker-compose.yml.default`:** every variable in `.env` reaches the container, so new keys no longer need an extra line in your own compose file. Add the `env_file:` block to your existing `docker-compose.yml` once (see the template). It needs Docker Compose 2.24 or newer.
