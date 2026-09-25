@@ -1657,6 +1657,12 @@ func (a *App) threatJobs(cfg *Config) []Job {
 	if cfg.Traffic.Enabled {
 		jobs = append(jobs, Job{Key: "ndw:traffic", Sig: cfg.Traffic.URL, Interval: cfg.Traffic.Interval.D(), Run: a.runTraffic})
 	}
+	if cfg.Breaches.Enabled {
+		sensitive := cfg.Breaches.IncludeSensitive
+		jobs = append(jobs, Job{Key: "hibp:breaches", Sig: fmt.Sprint(cfg.Breaches.URL, sensitive), Interval: cfg.Breaches.Interval.D(),
+			Run: a.fetchJob("hibp:breaches", func() string { return a.config().Breaches.URL }, "application/json", nil,
+				func(b []byte) (any, error) { return parseBreaches(b, sensitive, time.Now()) }, nil)})
+	}
 	if cfg.Outages.Enabled {
 		for _, p := range cfg.Outages.Providers {
 			if !p.IsEnabled() {
@@ -2411,6 +2417,114 @@ func (a *App) handleTraffic(w http.ResponseWriter, r *http.Request) {
 		resp["data"] = v
 	}
 	writeJSON(w, r, http.StatusOK, 60, resp)
+}
+
+// ---------------------------------------------------------------------------
+// Datalekken: the latest company breaches from Have I Been Pwned (CC BY 4.0).
+// The public breach list needs no key. Spam lists, malware/stealer logs,
+// fabricated, retired, unverified and (by default) sensitive entries are left
+// out, as are entries without a domain: what remains are breaches of an organisation.
+// "NL" = a .nl domain, or the description mentions Dutch / the Netherlands.
+
+type Breach struct {
+	Name        string    `json:"name"`
+	Title       string    `json:"title"`
+	Domain      string    `json:"domain"`
+	URL         string    `json:"url"`
+	BreachDate  string    `json:"breach_date,omitempty"` // YYYY-MM-DD
+	Added       time.Time `json:"added"`
+	Count       int64     `json:"count"`
+	DataClasses []string  `json:"data_classes,omitempty"`
+	Summary     string    `json:"summary,omitempty"`
+}
+
+type BreachData struct {
+	NL     []Breach `json:"nl"`
+	Other  []Breach `json:"other"`
+	Total  int      `json:"total"`  // entries in the HIBP list
+	Shown  int      `json:"shown"`  // entries left after the filters
+	Latest string   `json:"latest"` // newest AddedDate in the list, for the freshness line
+}
+
+var (
+	breachNLRe     = regexp.MustCompile(`(?i)\b(dutch|netherlands|nederland)\b`)
+	breachNameRe   = regexp.MustCompile(`^[A-Za-z0-9._-]{1,80}$`)
+	breachDateRe   = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
+	breachPerGroup = 3
+)
+
+func parseBreaches(body []byte, includeSensitive bool, now time.Time) (any, error) {
+	var list []struct {
+		Name, Title, Domain, BreachDate, Description     string
+		AddedDate                                        time.Time
+		PwnCount                                         int64
+		DataClasses                                      []string
+		IsVerified, IsFabricated, IsSensitive, IsRetired bool
+		IsSpamList, IsMalware, IsStealerLog              bool
+	}
+	if err := json.Unmarshal(body, &list); err != nil {
+		return nil, fmt.Errorf("hibp: %w", err)
+	}
+	if len(list) == 0 {
+		return nil, errors.New("hibp: empty breach list")
+	}
+	d := BreachData{NL: []Breach{}, Other: []Breach{}, Total: len(list)}
+	var keep []Breach
+	nl := map[string]bool{}
+	for _, b := range list {
+		if b.AddedDate.After(now.Add(24*time.Hour)) || !breachNameRe.MatchString(b.Name) {
+			continue
+		}
+		if s := b.AddedDate.UTC().Format(time.RFC3339); s > d.Latest {
+			d.Latest = s
+		}
+		if !b.IsVerified || b.IsFabricated || b.IsRetired || b.IsSpamList || b.IsMalware || b.IsStealerLog ||
+			(b.IsSensitive && !includeSensitive) || strings.TrimSpace(b.Domain) == "" {
+			continue
+		}
+		desc := plainText(b.Description)
+		domain := strings.ToLower(strings.TrimSpace(b.Domain))
+		x := Breach{Name: b.Name, Title: truncate(plainText(firstNonEmpty(b.Title, b.Name)), 100), Domain: truncate(plainText(domain), 80),
+			URL: "https://haveibeenpwned.com/Breach/" + url.PathEscape(b.Name), Added: b.AddedDate.UTC(), Count: max(b.PwnCount, 0),
+			Summary: truncate(desc, 300)}
+		if breachDateRe.MatchString(b.BreachDate) {
+			x.BreachDate = b.BreachDate
+		}
+		for _, c := range b.DataClasses {
+			if len(x.DataClasses) == 6 {
+				break
+			}
+			if c = truncate(plainText(c), 40); c != "" {
+				x.DataClasses = append(x.DataClasses, c)
+			}
+		}
+		keep = append(keep, x)
+		nl[b.Name] = strings.HasSuffix(domain, ".nl") || breachNLRe.MatchString(desc)
+	}
+	d.Shown = len(keep)
+	sort.SliceStable(keep, func(i, j int) bool { return keep[i].Added.After(keep[j].Added) })
+	for _, x := range keep {
+		if nl[x.Name] && len(d.NL) < breachPerGroup {
+			d.NL = append(d.NL, x)
+		} else if !nl[x.Name] && len(d.Other) < breachPerGroup {
+			d.Other = append(d.Other, x)
+		}
+	}
+	return d, nil
+}
+
+func (a *App) handleBreaches(w http.ResponseWriter, r *http.Request) {
+	cfg := a.config()
+	if !cfg.Breaches.Enabled {
+		writeJSON(w, r, http.StatusOK, 60, map[string]any{"enabled": false})
+		return
+	}
+	e := a.feedEntry("hibp:breaches")
+	e["enabled"] = true
+	if v, ok := a.threats.get("hibp:breaches").Data.(BreachData); ok {
+		e["data"] = v
+	}
+	writeJSON(w, r, http.StatusOK, 300, e)
 }
 
 // ---------------------------------------------------------------------------

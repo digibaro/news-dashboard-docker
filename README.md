@@ -2,7 +2,7 @@
 
 A fast, privacy-friendly **single-page news dashboard in Dutch, with an English interface**. It combines:
 
-- **News** from about 80 selectable RSS/Atom feeds: NL, regional, tech & security, finance, sport, international and Belgium.
+- **News** from about 80 selectable RSS/Atom feeds: NL, regional, tech & security, data breaches, finance, sport, international and Belgium.
 - **Weather** for a configurable location: Open-Meteo forecast, Buienradar rain for the next 2 hours, and KNMI/KMI warnings via MeteoAlarm.
 - **Live cyber threats**:
   - SANS ISC/DShield top ports, 30-day attacker trend and top source IPs
@@ -14,6 +14,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Top bar:** the NCTV terrorism threat level, the current KNMI weather code, and the number of P2000 alerts in the last hour per service for a configured area (default Den Haag).
 - **Verkeer:** jams, accidents and road closures from NDW open data (Rijkswaterstaat), with readable road names.
 - **Alarmeringen:** the latest P2000 alerts for your city from Zwaailicht.nl, grouped as Brandweer, Ambulance, Politie and Lifeliner (at most 2 each). The city is chosen per visitor under Instellingen.
+- **Datalekken:** the latest 3 Dutch and 3 other data breaches at organisations, from Have I Been Pwned: number of accounts, leak date, and what data leaked.
 - **Storingen:** status of Microsoft Azure, Microsoft 365, AWS and Cloudflare. Any service with an Atlassian Statuspage or RSS status feed can be added in `config.yaml`.
 - **Gezondheid:** RIVM news filtered to health alerts (infectious diseases, vaccination, heat, smog).
 - **Themes**: Licht / Donker (true black) / Auto.
@@ -91,13 +92,14 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 | `fetch` | `user_agent` (**put your site and e-mail here**), default refresh `interval`, `timeout`, `max_concurrent` (max 2 per host is fixed) |
 | `cache` | `max_items_per_source`, `max_age`, `snapshot_path` (empty = no disk writes, see below) |
 | `features` | `show_images` (keep feed images), `proxy_images` (serve them through `/api/img`, see below), `geolocation` (ip-api lookups), `allow_custom_feeds` (reserved, see below) |
-| `refresh` | how often an open browser tab asks the server for new data, per panel: `news`, `alerts`, `weather`, `traffic`, `alarms`, `threats`, `advisories`, `outages`, `ap`, `health` (1m–24h, see below) |
+| `refresh` | how often an open browser tab asks the server for new data, per panel: `news`, `alerts`, `weather`, `traffic`, `alarms`, `threats`, `advisories`, `breaches`, `outages`, `ap`, `health` (1m–24h, see below) |
 | `keys` | `abusech_auth_key` (optional) |
 | `weather` | default `location` (`name`, `lat`, `lon`, `region` = province for warnings, `country`), `interval`, MeteoAlarm feed URLs |
 | `threats` | `enabled`, `interval` (min. 15m, ISC's request), `daily_interval`, `cisa_kev` |
 | `alerts` | top bar: `nctv` (`enabled`, `url`, `interval`, min. 1h) and `knmi` (`true`/`false`) |
 | `traffic` | `enabled`, `interval` (min. 2m), `url` (NDW DATEX II publication), `vild_base` (where the VILD location tables live) |
 | `alarms` | `enabled`, `city` (default city slug, e.g. `den-haag`), `base` (feed URL prefix), `interval` (cache per city, min. 1m); `counts` for the top bar: `label`, `cities` (one or more slugs, e.g. a whole safety region), `interval` (1m–10m) |
+| `breaches` | Datalekken panel: `enabled`, `url` (HIBP breach list), `interval` (min. 1h, default 3h), `include_sensitive` (default `false`) |
 | `outages` | `enabled`, `interval` (min. 5m), `providers`: `id`, `name`, `url`, `homepage`, `format` (`statuspage` / `rss` / `m365`) |
 | `advisories` | advisory feeds: `format: ncsc` (parses the NCSC title) or `rss` (any feed, severity from keywords) |
 | `categories`, `sources` | news categories (`short` = chip label; `name_en`/`short_en` for the English interface) and feeds (`region` = province, for the "Mijn regio" preset) |
@@ -135,6 +137,7 @@ There are two separate rates:
 | Alarmeringen | 2m | 2m per city |
 | Cyberdreigingen | 15m | 15m (ISC minimum), 30-day summary 1h |
 | Security advisories | 30m | 15m |
+| Datalekken | 30m | 3h (≈ 1 MB list) |
 | Storingen | 10m | 10m |
 | AP actions, Gezondheid | 30m | 30m |
 
@@ -387,6 +390,7 @@ The server fetches everything; browsers only talk to the dashboard itself.
 | [NDW](https://www.ndw.nu/) | traffic | Open data (Rijkswaterstaat, provinces, municipalities), polled every 5 min (≈ 260 KB). ANWB has no public API, and its site is not scraped. Road names come from NDW's VILD location table: only its ~400 KB table is read from the 42 MB zip with HTTP range requests, kept in memory and refreshed weekly or when NDW switches versions. |
 | Azure, Microsoft 365, AWS, Cloudflare | outages | The providers' public status feeds. Microsoft 365 uses the JSON behind status.cloud.microsoft (consumer services, undocumented). The health of your own tenant would need Microsoft Graph with an app registration. |
 | [RIVM](https://www.rivm.nl/) | health alerts | Public RSS. |
+| [Have I Been Pwned](https://haveibeenpwned.com/) | Datalekken | The public breach list (`/api/v3/breaches`): no API key, and no visitor data is sent. Licensed **CC BY 4.0** (attribution shown in the panel). Fetched every 3 h. Left out: unverified, fabricated, retired, spam lists, malware and stealer logs, entries without a domain, and (unless `include_sensitive: true`) sensitive breaches. HIBP has no country field, so "Dutch" means a `.nl` domain or a description mentioning Dutch/the Netherlands. |
 | [Zwaailicht.nl](https://zwaailicht.nl/blog/rss-feeds-p2000-meldingen) | P2000 alerts | Public Atom feeds per city (`/feed/meldingen/<city>.xml`), refreshed every minute. House numbers are left out by Zwaailicht. Fetched only for cities visitors actually choose, and cached 2 min per city. **Not for emergencies: call 112.** |
 
 **Grid operators (Stedin, Enexis, Liander)** publish outages only as web pages or through internal app APIs, not as open data (checked September 2026). They are therefore not included; see the `# TODO` in `config.yaml`.
@@ -473,6 +477,7 @@ All JSON responses:
 | `GET /api/alerts` | top bar: NCTV level (`level`, `name`, `since`) and KNMI summary (`level`, `active`, `onset`, `types`, `areas`) |
 | `GET /api/traffic` | jams (road, direction, from/to, delay), accidents, closure count, VILD version |
 | `GET /api/alarms?city=` | P2000 alerts for a city slug (default from config): per service at most 2, with urgency, units and detail; Lifeliner falls back to national when the city has none |
+| `GET /api/breaches` | Datalekken: the latest 3 Dutch (`nl`) and 3 other (`other`) breaches with `title`, `domain`, `url`, `breach_date`, `added`, `count`, `data_classes`, plus `total`/`shown` |
 | `GET /api/outages` | per provider: status (`ok`/`minor`/`major`) and incidents |
 | `GET /api/advisories?sources=&limit=` | normalised advisories: `{id, source, title, url, published, updated, severity, probability, impact, cves, products, exploited}` |
 | `GET /healthz` | `{"status":"ok", …}` + per-source status for news (`sources`) and threat/advisory feeds (`feeds`) |
@@ -517,6 +522,14 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.5.0
+- **Datalekken panel:** the latest 3 Dutch and 3 other data breaches at organisations from Have I Been Pwned (CC BY 4.0), below Security-adviezen.
+  - Each shows the number of accounts, the domain, when the breach happened and when it was added, and the kinds of data leaked (in Dutch or English).
+  - Links go to the breach page on HIBP.
+  - Spam lists, malware/stealer logs, fabricated, unverified and sensitive breaches are left out.
+- New config section `breaches:` and `refresh.breaches`.
+- **New news category Datalekken:** DataBreaches.net (new), plus The Record, SecurityWeek, The Hacker News and Autoriteit Persoonsgegevens (moved from Tech).
 
 ### 1.4.0
 - **English interface:** Nederlands / English / Auto (browser language).

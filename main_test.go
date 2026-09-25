@@ -329,18 +329,20 @@ func TestConfigValid(t *testing.T) {
 
 func TestConfigInvalid(t *testing.T) {
 	cases := map[string]string{
-		"unknown field":    validConfig + "\nbogus: 1\n",
-		"bad duration":     validConfig + "\ncache: { max_age: soon }\n",
-		"duplicate id":     validConfig + `  - { id: a, name: "A2", category: nl, url: "https://a.example/2" }` + "\n",
-		"unknown category": validConfig + `  - { id: b, name: "B", category: xx, url: "https://b.example/" }` + "\n",
-		"bad id":           validConfig + `  - { id: "B C", name: "B", category: nl, url: "https://b.example/" }` + "\n",
-		"non-http url":     validConfig + `  - { id: b, name: "B", category: nl, url: "file:///etc/passwd" }` + "\n",
-		"short interval":   validConfig + `  - { id: b, name: "B", category: nl, url: "https://b.example/", interval: 10s }` + "\n",
-		"bad max_age":      validConfig + `  - { id: b, name: "B", category: nl, url: "https://b.example/", max_age: 10m }` + "\n",
-		"bad proxy":        validConfig + "\nserver: { trusted_proxies: [nope] }\n",
-		"bad lat":          validConfig + "\nweather: { location: { name: x, lat: 123, lon: 5 } }\n",
-		"refresh too fast": validConfig + "\nrefresh: { news: 10s }\n",
-		"refresh unknown":  validConfig + "\nrefresh: { nieuws: 5m }\n",
+		"unknown field":     validConfig + "\nbogus: 1\n",
+		"bad duration":      validConfig + "\ncache: { max_age: soon }\n",
+		"duplicate id":      validConfig + `  - { id: a, name: "A2", category: nl, url: "https://a.example/2" }` + "\n",
+		"unknown category":  validConfig + `  - { id: b, name: "B", category: xx, url: "https://b.example/" }` + "\n",
+		"bad id":            validConfig + `  - { id: "B C", name: "B", category: nl, url: "https://b.example/" }` + "\n",
+		"non-http url":      validConfig + `  - { id: b, name: "B", category: nl, url: "file:///etc/passwd" }` + "\n",
+		"short interval":    validConfig + `  - { id: b, name: "B", category: nl, url: "https://b.example/", interval: 10s }` + "\n",
+		"bad max_age":       validConfig + `  - { id: b, name: "B", category: nl, url: "https://b.example/", max_age: 10m }` + "\n",
+		"bad proxy":         validConfig + "\nserver: { trusted_proxies: [nope] }\n",
+		"bad lat":           validConfig + "\nweather: { location: { name: x, lat: 123, lon: 5 } }\n",
+		"refresh too fast":  validConfig + "\nrefresh: { news: 10s }\n",
+		"refresh unknown":   validConfig + "\nrefresh: { nieuws: 5m }\n",
+		"breaches too fast": validConfig + "\nbreaches: { interval: 10m }\n",
+		"breaches http":     validConfig + "\nbreaches: { url: \"http://example.com/b\" }\n",
 	}
 	for name, y := range cases {
 		if _, err := parseConfig([]byte(y)); err == nil {
@@ -1029,7 +1031,7 @@ func TestSecurityHeadersOnEveryRoute(t *testing.T) {
 	a := newTestApp(t, validConfig+"\nfeatures: { show_images: true, proxy_images: true }\n")
 	h := a.routes("/")
 	routes := map[string]int{
-		"/": 200, "/api/catalog": 200, "/api/news": 200, "/api/threats": 200, "/api/advisories": 200, "/healthz": 200,
+		"/": 200, "/api/catalog": 200, "/api/news": 200, "/api/threats": 200, "/api/advisories": 200, "/api/breaches": 200, "/api/outages": 200, "/healthz": 200,
 		"/api/weather?lat=abc&lon=5": 400, "/api/geocode?q=a": 400, "/api/img?u=aHR0cHM6Ly9ldmls&s=forged": 403,
 		"/manifest.webmanifest": 200, "/icon-192.png": 200, "/sw.js": 200, "/metrics": 404, "/nope": 404, "/api/news/../../etc/passwd": 404,
 	}
@@ -1506,6 +1508,73 @@ func TestTrafficNDWAndVILD(t *testing.T) {
 	}
 	if acc := d.Accidents[0]; acc.Road != "A27" || acc.To != "Werkendam" || acc.Kind != "Ongeval" {
 		t.Errorf("accident: %+v", acc)
+	}
+}
+
+func TestParseBreaches(t *testing.T) {
+	now := time.Date(2026, 9, 25, 12, 0, 0, 0, time.UTC)
+	e := func(name, domain, added, desc string, flags ...string) string {
+		f := map[string]bool{"IsVerified": true}
+		for _, x := range flags {
+			f[x] = !f[x]
+		}
+		b, _ := json.Marshal(map[string]any{"Name": name, "Title": name + " <b>x</b>", "Domain": domain, "BreachDate": "2026-01-02",
+			"AddedDate": added, "PwnCount": 1234, "Description": desc, "DataClasses": []string{"Email addresses", "Passwords"},
+			"IsVerified": f["IsVerified"], "IsSpamList": f["IsSpamList"], "IsMalware": f["IsMalware"], "IsSensitive": f["IsSensitive"],
+			"IsFabricated": f["IsFabricated"], "IsStealerLog": f["IsStealerLog"], "IsRetired": f["IsRetired"]})
+		return string(b)
+	}
+	body := "[" + strings.Join([]string{
+		e("Odido", "odido.nl", "2026-02-26T10:00:00Z", "Dutch telco"),
+		e("Welhof", "welhof.com", "2025-01-22T10:00:00Z", `A <a href="x">parking provider</a> in the Netherlands`),
+		e("Ticketcounter", "ticketcounter.nl", "2021-03-01T10:00:00Z", "tickets"),
+		e("OldNL", "old.nl", "2019-01-01T10:00:00Z", "old"),
+		e("Emotet", "", "2026-09-01T10:00:00Z", "Dutch police botnet", "IsMalware"),
+		e("NLSpam", "spam.nl", "2026-09-02T10:00:00Z", "spam", "IsSpamList"),
+		e("HookersNL", "hookers.nl", "2026-09-03T10:00:00Z", "adult", "IsSensitive"),
+		e("Unverified", "unv.com", "2026-09-04T10:00:00Z", "who knows", "IsVerified"),
+		e("NoDomain", "", "2026-09-05T10:00:00Z", "collection"),
+		e("Future", "future.com", "2026-12-01T10:00:00Z", "clock skew"),
+		e("Chess2026", "chess.com", "2026-09-13T10:00:00Z", "chess"),
+		e("McKesson", "mckesson.com", "2026-09-10T10:00:00Z", "health"),
+		e("Carhartt", "carhartt.com", "2026-08-25T10:00:00Z", "clothes"),
+		e("Questel", "questel.com", "2026-09-01T10:00:00Z", "ip"),
+		e("Bad Name/../x", "bad.com", "2026-09-20T10:00:00Z", "invalid name"),
+	}, ",") + "]"
+	v, err := parseBreaches([]byte(body), false, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := v.(BreachData)
+	names := func(l []Breach) (out []string) {
+		for _, b := range l {
+			out = append(out, b.Name)
+		}
+		return
+	}
+	if got := strings.Join(names(d.NL), ","); got != "Odido,Welhof,Ticketcounter" {
+		t.Errorf("NL: %s", got)
+	}
+	if got := strings.Join(names(d.Other), ","); got != "Chess2026,McKesson,Questel" {
+		t.Errorf("other: %s", got)
+	}
+	if d.Total != 15 || d.Shown != 8 {
+		t.Errorf("total %d shown %d", d.Total, d.Shown)
+	}
+	o := d.NL[0]
+	if o.Title != "Odido x" || o.URL != "https://haveibeenpwned.com/Breach/Odido" || o.Count != 1234 || o.BreachDate != "2026-01-02" ||
+		len(o.DataClasses) != 2 || strings.Contains(d.NL[1].Summary, "<") {
+		t.Errorf("entry: %+v", o)
+	}
+	// sensitive entries only when configured
+	v, _ = parseBreaches([]byte(body), true, now)
+	if got := names(v.(BreachData).NL); got[0] != "HookersNL" {
+		t.Errorf("include_sensitive: %v", got)
+	}
+	for _, bad := range []string{"", "[]", "{}", "<html>"} {
+		if _, err := parseBreaches([]byte(bad), false, now); err == nil {
+			t.Errorf("%q: expected error", bad)
+		}
 	}
 }
 

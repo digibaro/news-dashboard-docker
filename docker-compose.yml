@@ -5,8 +5,8 @@ services:
     build:
       context: .
       args:
-        VERSION: "1.4.0"
-    image: nieuwsdashboard:1.4.0
+        VERSION: "1.5.0"
+    image: nieuwsdashboard:1.5.0
     container_name: nieuwsdashboard
     restart: unless-stopped
     ports:

@@ -216,6 +216,13 @@ type Config struct {
 			Interval Duration `yaml:"interval"`
 		} `yaml:"counts"`
 	} `yaml:"alarms"`
+	// Breaches: the Datalekken panel (Have I Been Pwned breach list, no key needed).
+	Breaches struct {
+		Enabled          bool     `yaml:"enabled"`
+		URL              string   `yaml:"url"`
+		Interval         Duration `yaml:"interval"`
+		IncludeSensitive bool     `yaml:"include_sensitive"` // e.g. adult sites; off by default
+	} `yaml:"breaches"`
 	Outages struct {
 		Enabled   bool           `yaml:"enabled"`
 		Interval  Duration       `yaml:"interval"`
@@ -264,6 +271,9 @@ func defaultConfig() *Config {
 	for k, v := range defaultRefresh {
 		c.Refresh[k] = Duration(v)
 	}
+	c.Breaches.Enabled = true
+	c.Breaches.URL = "https://haveibeenpwned.com/api/v3/breaches"
+	c.Breaches.Interval = Duration(3 * time.Hour)
 	c.Outages.Enabled = true
 	c.Outages.Interval = Duration(10 * time.Minute)
 	c.Threats.Enabled = true
@@ -324,14 +334,14 @@ var idRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,47}$`)
 var defaultRefresh = map[string]time.Duration{
 	"news": 5 * time.Minute, "weather": 15 * time.Minute, "alerts": 3 * time.Minute,
 	"traffic": 5 * time.Minute, "alarms": 2 * time.Minute, "threats": 15 * time.Minute,
-	"advisories": 30 * time.Minute, "outages": 10 * time.Minute, "ap": 30 * time.Minute,
+	"advisories": 30 * time.Minute, "outages": 10 * time.Minute, "ap": 30 * time.Minute, "breaches": 30 * time.Minute,
 	"health": 30 * time.Minute,
 }
 
 func (c *Config) validate() error {
 	for k, v := range c.Refresh {
 		if _, ok := defaultRefresh[k]; !ok {
-			return fmt.Errorf("refresh.%s: unknown panel (known: news, weather, alerts, traffic, alarms, threats, advisories, outages, ap, health)", k)
+			return fmt.Errorf("refresh.%s: unknown panel (known: news, weather, alerts, traffic, alarms, threats, advisories, breaches, outages, ap, health)", k)
 		}
 		if v.D() < time.Minute || v.D() > 24*time.Hour {
 			return fmt.Errorf("refresh.%s: %s is outside 1m..24h", k, v.D())
@@ -425,6 +435,14 @@ func (c *Config) validate() error {
 			if !citySlugRe.MatchString(city) {
 				fail("alarms.counts.cities: %q is not a city slug (e.g. den-haag)", city)
 			}
+		}
+	}
+	if c.Breaches.Enabled {
+		if c.Breaches.Interval.D() < time.Hour {
+			fail("breaches.interval must be at least 1h (the list is about 1 MB and changes a few times a week)")
+		}
+		if !isHTTPURL(c.Breaches.URL) || !strings.HasPrefix(c.Breaches.URL, "https://") {
+			fail("breaches.url must be an https URL")
 		}
 	}
 	if c.Outages.Interval.D() < 5*time.Minute {
@@ -895,6 +913,7 @@ func (a *App) routes(basePath string) http.Handler {
 	handle("GET /api/alerts", a.handleAlerts)
 	handle("GET /api/traffic", a.handleTraffic)
 	handle("GET /api/outages", a.handleOutages)
+	handle("GET /api/breaches", a.handleBreaches)
 	handle("GET /api/alarms", a.handleAlarms)
 	handle("GET /healthz", a.handleHealth)
 	handle("GET /metrics", a.handleMetrics)
@@ -1087,6 +1106,7 @@ func (a *App) handleCatalog(w http.ResponseWriter, r *http.Request) {
 		"threats":          cfg.Threats.Enabled,
 		"traffic":          cfg.Traffic.Enabled,
 		"outages":          cfg.Outages.Enabled,
+		"breaches":         cfg.Breaches.Enabled,
 		"alarms":           map[string]any{"enabled": cfg.Alarms.Enabled, "city": cfg.Alarms.City},
 		"alerts":           map[string]bool{"nctv": cfg.Alerts.NCTV.Enabled, "knmi": cfg.Alerts.KNMI},
 		"presets":          cfg.Presets,
@@ -1241,6 +1261,9 @@ func (a *App) otherFeeds(cfg *Config) []FeedStatus {
 	}
 	if cfg.Traffic.Enabled {
 		add("ndw:traffic", "NDW · verkeer", "traffic")
+	}
+	if cfg.Breaches.Enabled {
+		add("hibp:breaches", "Have I Been Pwned · datalekken", "breach")
 	}
 	if cfg.Outages.Enabled {
 		for _, p := range cfg.Outages.Providers {

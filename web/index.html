@@ -525,6 +525,16 @@ table.tt { width: 100%; border-collapse: collapse; font-size: 12px; }
 .agroup .m .un { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .alsk { display: grid; gap: 12px; align-content: start; height: 420px; }
 
+/* ---------- Datalekken ---------- */
+.bgrp h3 { margin: 8px 0 4px; font-size: 12px; font-weight: 650; color: var(--text-2); text-transform: uppercase; letter-spacing: .03em; }
+.bgrp:first-child h3 { margin-top: 0; }
+.bgrp .plist .tag { margin-left: 6px; vertical-align: 1px; }
+.bgrp .m { flex-wrap: wrap; row-gap: 0; }
+.bgrp .m span + span::before { content: "·"; margin-right: 8px; }
+.bgrp .bdc { margin-top: 2px; font-size: 12px; color: var(--text-2); }
+.bsk { height: 520px; } .bsk .sk { height: 480px; } /* loading placeholder ≈ 2 × 3 breaches */
+@media (max-width: 699px) { .bsk { height: 690px; } .bsk .sk { height: 650px; } }
+
 /* ---------- Outages ---------- */
 .outs { list-style: none; margin: 0; padding: 0; }
 .out { padding: 7px 0; border-top: 1px solid var(--line); }
@@ -734,6 +744,11 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.5.0</h3>
+    <ul>
+      <li>Nieuw paneel Datalekken: de laatste 3 Nederlandse en 3 andere datalekken bij organisaties, van Have I Been Pwned. Met aantal accounts, datum en welke gegevens zijn gelekt.</li>
+      <li>Nieuwe nieuwscategorie Datalekken: DataBreaches.net, The Record, SecurityWeek, The Hacker News en de Autoriteit Persoonsgegevens.</li>
+    </ul>
     <h3>Versie 1.4.0</h3>
     <ul>
       <li>English: kies Nederlands, English of Auto (taal van je browser), bovenin of onder Instellingen → Weergave. Nieuwsberichten blijven in hun eigen taal.</li>
@@ -778,6 +793,11 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.5.0</h3>
+    <ul>
+      <li>New panel Data breaches: the latest 3 Dutch and 3 other data breaches at organisations, from Have I Been Pwned. With number of accounts, dates and what data leaked.</li>
+      <li>New news category Data breaches: DataBreaches.net, The Record, SecurityWeek, The Hacker News and the Dutch Data Protection Authority.</li>
+    </ul>
     <h3>Version 1.4.0</h3>
     <ul>
       <li>English: choose Nederlands, English or Auto (your browser language) at the top or under Settings → Display. News items stay in their own language.</li>
@@ -950,6 +970,7 @@ const PANELS = {
   alarms: 'Alarmeringen',
   threats: 'Cyberdreigingen',
   advisories: 'Security-adviezen',
+  breaches: 'Datalekken',
   outages: 'Storingen',
   ap: 'Autoriteit Persoonsgegevens acties',
   health: 'Gezondheid',
@@ -1121,6 +1142,16 @@ const EN = {
   // health & AP
   ' · alleen meldingen over infectieziekten, vaccinatie, hitte en smog': ' · only alerts about infectious diseases, vaccination, heat and smog',
   'Geen actuele gezondheidsmeldingen van het RIVM in de afgelopen twee maanden.': 'No current health alerts from RIVM in the last two months.',
+  // data breaches
+  'Datalekken': 'Data breaches', 'Elders': 'Elsewhere', 'nieuw': 'new', '{n} accounts': '{n} accounts', 'gelekt {d}': 'breached {d}', 'gemeld {d}': 'added {d}',
+  'Geen Nederlandse datalekken gevonden.': 'No Dutch data breaches found.', 'Geen datalekken gevonden.': 'No data breaches found.',
+  'Alleen geverifieerde lekken bij organisaties; zonder spamlijsten, malware en gevoelige sites.': 'Only verified breaches at organisations; no spam lists, malware or sensitive sites.',
+  'Datalekken konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.': 'Data breaches could not be loaded ({err}). Retrying automatically.',
+  'Have I Been Pwned is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.': 'Have I Been Pwned is unreachable ({err}); retrying automatically.',
+  'Have I Been Pwned niet bereikbaar sinds {t}; je ziet de laatst opgehaalde lijst.': 'Have I Been Pwned unreachable since {t}; showing the last list fetched.',
+  'De lijst met datalekken wordt voor het eerst opgehaald.': 'The list of data breaches is being fetched for the first time.',
+  'Dit paneel staat uit in config.yaml (breaches.enabled).': 'This panel is disabled in config.yaml (breaches.enabled).',
+  'Have I Been Pwned · datalekken': 'Have I Been Pwned · data breaches',
   'RIVM-berichten konden niet worden opgehaald; er wordt automatisch opnieuw geprobeerd.': 'RIVM news could not be loaded; retrying automatically.',
   'De bron “rivm” staat uit in config.yaml.': 'The source “rivm” is disabled in config.yaml.', 'De bron “ap” staat uit in config.yaml.': 'The source “ap” is disabled in config.yaml.',
   'Boete': 'Fine', 'Last onder dwangsom': 'Penalty order', 'Berisping': 'Reprimand', 'Autoriteit Persoonsgegevens': 'Dutch Data Protection Authority',
@@ -1306,6 +1337,7 @@ const loc = (o, f) => (lang === 'en' && o?.[f + '_en']) || (lang === 'en' ? trTe
 
 // ---------------------------------------------------------------- dates (always Europe/Amsterdam)
 const fmt = {
+  date: null, compact: null, // set by buildFormatters()
   key: new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }),
 };
 function buildFormatters() {
@@ -1316,6 +1348,8 @@ function buildFormatters() {
     clock: D({ weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
     warn: D({ weekday: 'short', hour: '2-digit', minute: '2-digit' }), wday: D({ weekday: 'short', day: 'numeric' }),
     utcDay: new Intl.DateTimeFormat(locale(), { timeZone: 'UTC', day: 'numeric', month: 'short' }), num: new Intl.NumberFormat(locale()),
+    date: new Intl.DateTimeFormat(locale(), { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' }),
+    compact: new Intl.NumberFormat(locale(), { notation: 'compact', maximumFractionDigits: 1 }),
   });
   try { fmt.region = new Intl.DisplayNames([lang], { type: 'region' }); } catch { fmt.region = null; }
 }
@@ -1847,6 +1881,7 @@ const freshOf = {
   ap: () => { const s = panelData.ap?.status; return s && { ts: s.fetched_at, max: 65, stale: !!s.error }; },
   alarms: () => { const d = panelData.alarms?.data; return d?.enabled && { ts: d.fetched_at, max: 6, stale: !!d.stale }; },
   traffic: () => { const d = panelData.traffic?.data; return d?.enabled && { ts: d.fetched_at, max: 15, stale: !!d.error }; },
+  breaches: () => { const d = panelData.breaches?.data; return d?.enabled && { ts: d.fetched_at, max: 400, stale: !!d.error }; },
   outages: () => { const d = panelData.outages?.data; return d?.enabled && { ts: oldest(d.providers), max: 25, stale: d.providers?.some(p => p.error) }; },
   health: () => { const s = panelData.health?.status; return s && { ts: s.fetched_at, max: 65, stale: !!s.error }; },
 };
@@ -1858,6 +1893,7 @@ const panelRenderers = {
   traffic: renderTraffic,
   alarms: renderAlarms,
   outages: renderOutages,
+  breaches: renderBreaches,
   health: renderHealth,
   ap: renderAP,
 };
@@ -2530,6 +2566,73 @@ function renderOutages(body) {
     h('p', { class: 'pfoot', text: 'Bronnen: de officiële statuspagina’s. Netbeheerders (Stedin, Enexis, Liander) publiceren storingen niet als open data en ontbreken daarom.' }));
 }
 
+// ---------------------------------------------------------------- datalekken (Have I Been Pwned)
+async function loadBreaches() {
+  try { panelData.breaches = { data: await api('api/breaches') }; }
+  catch (e) { panelData.breaches = { ...(panelData.breaches || {}), error: e }; }
+  renderPanel('breaches');
+}
+// HIBP names the leaked data in English; the Dutch interface shows the common ones in Dutch.
+const DATA_NL = {
+  'Email addresses': 'e-mailadressen', 'Passwords': 'wachtwoorden', 'Names': 'namen', 'Phone numbers': 'telefoonnummers',
+  'Physical addresses': 'adressen', 'Dates of birth': 'geboortedata', 'Genders': 'geslacht', 'IP addresses': 'IP-adressen',
+  'Usernames': 'gebruikersnamen', 'Geographic locations': 'locaties', 'Bank account numbers': 'bankrekeningnummers',
+  'Partial credit card data': 'deels creditcardgegevens', 'Credit cards': 'creditcards', 'Purchases': 'aankopen',
+  'Job titles': 'functies', 'Employers': 'werkgevers', 'Salutations': 'aanhef', 'Spoken languages': 'talen',
+  'Government issued IDs': 'identiteitsbewijzen', 'Passport numbers': 'paspoortnummers', 'Social media profiles': 'socialemediaprofielen',
+  'Website activity': 'websiteactiviteit', 'Device information': 'apparaatgegevens', 'Browser user agent details': 'browsergegevens',
+  'Nationalities': 'nationaliteiten', 'Ages': 'leeftijden', 'Customer service messages': 'klantenservicegesprekken',
+  'Auth tokens': 'inlogtokens', 'Security questions and answers': 'beveiligingsvragen', 'Private messages': 'privéberichten',
+  'Health insurance information': 'zorgverzekeringsgegevens', 'Medical records': 'medische gegevens', 'Marital statuses': 'burgerlijke staat',
+  'Income levels': 'inkomens', 'Education levels': 'opleidingsniveaus', 'Vehicle details': 'voertuiggegevens', 'Payment histories': 'betaalgeschiedenis',
+  'Bios': 'profielteksten', 'Avatars': 'avatars', 'Ethnicities': 'etniciteit', 'Account balances': 'saldi', 'Email messages': 'e-mails',
+  'Instant messenger identities': 'chataccounts', 'Family structure': 'gezinssamenstelling', 'Support tickets': 'supporttickets',
+  'Drinking habits': 'drinkgewoonten', 'Latitude and longitude pairs': 'coördinaten', 'Age groups': 'leeftijdsgroepen',
+  'Job applications': 'sollicitaties', 'Credit status information': 'kredietgegevens', 'Profile photos': "profielfoto's",
+  'Partial dates of birth': 'deels geboortedata', 'Historical passwords': 'oude wachtwoorden', "Family members' names": 'namen van familieleden',
+  'Display names': 'weergavenamen', 'Chat logs': 'chatgesprekken', 'Financial transactions': 'financiële transacties',
+  'Loyalty program details': 'klantenkaartgegevens', 'Personal health data': 'gezondheidsgegevens', 'Time zones': 'tijdzones',
+  "Driver's licenses": 'rijbewijzen', 'Customer service records': 'klantenservicegegevens', 'Citizenship statuses': 'staatsburgerschap',
+  'Occupations': 'beroepen', 'Academic records': 'studiegegevens', 'Social connections': 'sociale connecties', 'Password hints': 'wachtwoordhints',
+  'Cryptocurrency wallet addresses': 'cryptowalletadressen', 'Employment statuses': 'arbeidssituatie', 'Payment methods': 'betaalmethoden',
+  'Loan information': 'leninggegevens', 'Credit card CVV': 'CVC-codes', 'Partial phone numbers': 'deels telefoonnummers', 'Nicknames': 'bijnamen',
+};
+const dataClass = c => lang === 'en' ? c : (DATA_NL[c] || c);
+function breachItem(b) {
+  const link = extLink(b.url, b.title);
+  if (b.summary) link.title = b.summary;
+  const isNew = Date.now() - new Date(b.added) < 7 * 864e5;
+  return h('li', null,
+    h('span', { translate: 'no' }, link),
+    isNew ? h('span', { class: 'tag sev-high', text: t('nieuw') }) : null,
+    h('div', { class: 'm' },
+      h('span', { text: t('{n} accounts', { n: fmt.compact.format(b.count) }) }),
+      b.domain ? h('span', { translate: 'no', text: b.domain }) : null,
+      b.breach_date ? h('span', { text: t('gelekt {d}', { d: fmt.date.format(new Date(b.breach_date + 'T12:00:00Z')) }) }) : null,
+      h('span', { text: t('gemeld {d}', { d: fmt.date.format(new Date(b.added)) }) })),
+    b.data_classes?.length ? h('div', { class: 'bdc', text: b.data_classes.map(dataClass).join(', ') }) : null);
+}
+function renderBreaches(body) {
+  const st = panelData.breaches;
+  if (!st) { body.replaceChildren(h('div', { class: 'tsk bsk', 'aria-hidden': 'true' }, h('span', { class: 'sk' }))); return; }
+  const r = st.data;
+  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('Datalekken konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
+  if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (breaches.enabled).' })); return; }
+  const d = r.data, out = [];
+  if (!d) {
+    out.push(h('p', { class: 'pnote', text: r.error ? t('Have I Been Pwned is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: r.error }) : t('De lijst met datalekken wordt voor het eerst opgehaald.') }));
+  } else {
+    if (r.error && r.error_since) out.push(h('p', { class: 'pnote', text: t('Have I Been Pwned niet bereikbaar sinds {t}; je ziet de laatst opgehaalde lijst.', { t: since(new Date(r.error_since)) }) }));
+    for (const [title, list, none] of [['Nederland', d.nl, 'Geen Nederlandse datalekken gevonden.'], ['Elders', d.other, 'Geen datalekken gevonden.']]) {
+      out.push(h('div', { class: 'bgrp' }, h('h3', { text: title }),
+        list?.length ? h('ul', { class: 'plist' }, list.map(breachItem)) : h('p', { class: 'pnote', text: none })));
+    }
+  }
+  out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://haveibeenpwned.com/', 'Have I Been Pwned'), ' (CC BY 4.0)', h('br'),
+    t('Alleen geverifieerde lekken bij organisaties; zonder spamlijsten, malware en gevoelige sites.')));
+  body.replaceChildren(...out);
+}
+
 // ---------------------------------------------------------------- health (RIVM, alerts only)
 // Health alerts: infectious diseases, outbreaks, vaccination, heat and smog. Other RIVM news is left out.
 const HEALTH_RE = /(uitbraak|besmet|infectie|virus|bacteri|vaccin|prik tegen|griep|influenza|mazelen|kinkhoest|legionella|salmonella|listeria|mpox|covid|corona|westnijl|vogelgriep|zoonose|epidemie|pandemie|hepatitis|tuberculose|\btbc\b|dengue|malaria|q-koorts|polio|difterie|rodehond|pokken|resisten|hitteplan|\bhitte\b|smog|\bozon)/;
@@ -2803,7 +2906,7 @@ function renderStatus() {
   const feeds = d.feeds || [];
   groups.push({ title: 'Cyberdreigingen', rows: feeds.filter(f => f.kind === 'threat').map(f => ({ name: f.name, s: f })) });
   groups.push({ title: 'Security-adviezen', rows: feeds.filter(f => f.kind === 'advisory').map(f => ({ name: f.name, s: f })) });
-  for (const [kind, title] of [['alert', 'Bovenbalk'], ['traffic', 'Verkeer'], ['outage', 'Storingen']]) {
+  for (const [kind, title] of [['alert', 'Bovenbalk'], ['traffic', 'Verkeer'], ['breach', 'Datalekken'], ['outage', 'Storingen']]) {
     groups.push({ title, rows: feeds.filter(f => f.kind === kind).map(f => ({ name: f.name, s: f })) });
   }
   const all = groups.flatMap(g => g.rows);
@@ -3039,7 +3142,7 @@ async function init() {
   buildChips();
   if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
   await Promise.allSettled([loadNews({ replace: true }), loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(),
-    loadOutages(), loadHealthPanel(), loadAP()]);
+    loadBreaches(), loadOutages(), loadHealthPanel(), loadAP()]);
   // intervals from config.yaml (refresh:), in seconds; defaults if the server is older
   const R = (k, def) => Math.max(60, catalog?.refresh?.[k] || def * 60) * 1000;
   every(R('news', 5), () => loadNews());
@@ -3050,6 +3153,7 @@ async function init() {
   every(R('alerts', 3), loadAlerts);
   every(R('traffic', 5), loadTraffic);
   every(R('alarms', 2), loadAlarms);
+  every(R('breaches', 30), loadBreaches);
   every(R('outages', 10), loadOutages);
   every(R('health', 30), loadHealthPanel);
   setInterval(tick, 15e3);
