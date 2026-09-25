@@ -386,6 +386,30 @@ func TestRefreshConfig(t *testing.T) {
 	}
 }
 
+func TestConfigWarnings(t *testing.T) {
+	c, err := parseConfig([]byte(validConfig))
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Fetch.UserAgent = "Nieuwsdashboard/1.0 (+https://nieuws.digibaro.net; beheer@digibaro.net)"
+	warn, info := configWarnings(c)
+	if len(warn) != 1 || !strings.Contains(warn[0], "NS API key") || len(info) != 1 || !strings.Contains(info[0], "abuse.ch") {
+		t.Errorf("defaults: warn %q info %q", warn, info)
+	}
+	c.Keys.NSAPIKey, c.Keys.AbusechAuthKey = "k", "k"
+	c.Fetch.UserAgent = "Nieuwsdashboard/1.0 (+https://example.nl; contact@example.nl)"
+	warn, info = configWarnings(c)
+	if len(warn) != 1 || !strings.Contains(warn[0], "user_agent") || len(info) != 0 {
+		t.Errorf("example user agent: warn %q info %q", warn, info)
+	}
+	c.Fetch.UserAgent = "Nieuwsdashboard/1.0 (+https://nieuws.digibaro.net; beheer@digibaro.net)"
+	c.Trains.Enabled = false
+	c.Keys.NSAPIKey = ""
+	if warn, _ = configWarnings(c); len(warn) != 0 {
+		t.Errorf("trains disabled, own user agent: %q", warn)
+	}
+}
+
 func TestBasePathNormalised(t *testing.T) {
 	c, err := parseConfig([]byte(validConfig + "\nserver: { base_path: nieuws }\n"))
 	if err != nil {

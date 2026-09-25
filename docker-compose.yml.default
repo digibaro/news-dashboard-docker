@@ -20,6 +20,12 @@ services:
       - no-new-privileges:true
     mem_limit: 128m
     pids_limit: 64
+    # Every variable in .env (next to this file) is passed into the container, so a new key such as
+    # NS_API_KEY only needs a line in .env. The lines under environment: below take precedence and
+    # add defaults. required: false = no error when there is no .env (Docker Compose 2.24 or newer).
+    env_file:
+      - path: .env
+        required: false
     environment:
       NDB_LISTEN: "0.0.0.0:8080"
       # SANS ISC requires a User-Agent with contact details: set your own site and e-mail.

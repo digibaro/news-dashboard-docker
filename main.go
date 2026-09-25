@@ -712,6 +712,32 @@ func (a *App) applyConfig(cfg *Config) {
 	a.sched.Set(append(jobs, a.p2kJobs(cfg)...))
 }
 
+// configWarnings lists settings that are probably missing: logged at startup and after a reload,
+// so an administrator sees them in `docker logs` / journalctl instead of only in a panel.
+func configWarnings(c *Config) (warn, info []string) {
+	if c.Trains.Enabled && c.Keys.NSAPIKey == "" {
+		warn = append(warn, "Treinstoringen: no NS API key set (keys.ns_api_key or NS_API_KEY); the panel shows a setup note. "+
+			"With Docker, check that the variable reaches the container (env_file or an environment: line)")
+	}
+	if ua := strings.ToLower(c.Fetch.UserAgent); strings.Contains(ua, "example.nl") || strings.Contains(ua, "example.com") {
+		warn = append(warn, "fetch.user_agent still contains the example contact; SANS ISC asks for your own site and e-mail (fetch.user_agent or NDB_USER_AGENT)")
+	}
+	if c.Threats.Enabled && c.Keys.AbusechAuthKey == "" {
+		info = append(info, "abuse.ch: no Auth-Key set (optional; keys.abusech_auth_key or ABUSECH_AUTH_KEY)")
+	}
+	return warn, info
+}
+
+func logConfigWarnings(c *Config) {
+	warn, info := configWarnings(c)
+	for _, m := range warn {
+		slog.Warn("config: " + m)
+	}
+	for _, m := range info {
+		slog.Info("config: " + m)
+	}
+}
+
 func (a *App) reload(reason string) {
 	cfg, err := loadConfig(a.cfgPath)
 	if err != nil {
@@ -725,6 +751,7 @@ func (a *App) reload(reason string) {
 	}
 	a.applyConfig(cfg)
 	slog.Info("config reloaded", "reason", reason, "sources", len(cfg.Sources))
+	logConfigWarnings(cfg)
 }
 
 // watchConfig reloads on SIGHUP and when the file's mtime changes (checked every 60 s).
@@ -828,6 +855,7 @@ func run(cfgPath string) error {
 	go func() { errc <- srv.ListenAndServe() }()
 	slog.Info("nieuwsdashboard started", "version", version, "listen", cfg.Server.Listen,
 		"base_path", cfg.Server.BasePath, "sources", len(cfg.Sources))
+	logConfigWarnings(cfg)
 
 	select {
 	case err := <-errc:

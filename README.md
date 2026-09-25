@@ -69,11 +69,39 @@ It is built as **one Go binary with the frontend embedded, plus one `config.yaml
 git clone https://github.com/digibaro/news-dashboard-docker.git nieuwsdashboard && cd nieuwsdashboard
 cp config.yaml.default config.yaml                  # your own settings; not tracked by git
 cp docker-compose.yml.default docker-compose.yml    # your own ports/limits; not tracked by git
-# SANS ISC requires a User-Agent with contact details:
-export NDB_USER_AGENT="Nieuwsdashboard/1.0 (+https://nieuws.example.nl; beheer@example.nl)"
-export ABUSECH_AUTH_KEY=""          # optional, free key from https://auth.abuse.ch/
+# Keys and your contact details go in .env (not tracked by git); every line reaches the container:
+cat > .env <<'ENV'
+NDB_USER_AGENT=Nieuwsdashboard/1.0 (+https://nieuws.example.nl; beheer@example.nl)
+ABUSECH_AUTH_KEY=
+NS_API_KEY=
+ENV
+chmod 600 .env
 docker compose up -d --build
 ```
+
+- **`NDB_USER_AGENT`:** SANS ISC requires a User-Agent with your own site and e-mail.
+- **`ABUSECH_AUTH_KEY`:** optional; a free key from <https://auth.abuse.ch/>.
+- **`NS_API_KEY`:** for Treinstoringen; a free key from <https://apiportal.ns.nl>.
+
+The compose file loads `.env` with `env_file`, so a new variable only needs a line in `.env`. This needs Docker Compose 2.24 or newer; check with `docker compose version`. After editing `.env`, run `docker compose up -d`: `restart` keeps the old environment.
+
+**Local changes without editing the compose file:** put them in `docker-compose.override.yml`, which `docker compose` merges automatically and git ignores. Your `docker-compose.yml` can then stay an unchanged copy of the template. Example: another port and an external proxy network:
+
+```yaml
+services:
+  nieuwsdashboard:
+    ports: !override          # replace the template's ports; without !override both would be published
+      - "8082:8080"
+    networks:
+      - default
+      - proxy_frontend
+
+networks:
+  proxy_frontend:
+    external: true
+```
+
+**Missing settings are logged at startup:** a missing NS key and the example User-Agent as warnings, a missing abuse.ch key as info. Check with `docker logs nieuwsdashboard 2>&1 | grep config:`.
 
 Open <http://localhost:8080>. The first fetch round takes about 20–30 seconds.
 
@@ -568,6 +596,11 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.6.2
+- **`env_file: .env` in `docker-compose.yml.default`:** every variable in `.env` reaches the container, so new keys no longer need an extra line in your own compose file. Add the `env_file:` block to your existing `docker-compose.yml` once (see the template). It needs Docker Compose 2.24 or newer.
+- **Startup warnings:** a missing NS key and the example User-Agent are logged as warnings at startup and after a config reload; a missing abuse.ch key is logged as info.
+- **Quick start:** keys and contact details go in `.env` instead of shell exports.
 
 ### 1.6.1
 - **Treinstoringen checked against live NS data:** the NS API format matches the parser. Display fixes:
