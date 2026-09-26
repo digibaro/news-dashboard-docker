@@ -1062,7 +1062,7 @@ func TestSecurityHeadersOnEveryRoute(t *testing.T) {
 	a := newTestApp(t, validConfig+"\nfeatures: { show_images: true, proxy_images: true }\n")
 	h := a.routes("/")
 	routes := map[string]int{
-		"/": 200, "/api/catalog": 200, "/api/news": 200, "/api/threats": 200, "/api/advisories": 200, "/api/breaches": 200, "/api/outages": 200, "/api/energy": 200, "/api/air": 200, "/api/trains": 200, "/api/politics": 200, "/api/air?lat=x&lon=5": 400, "/api/today": 200, "/api/ransomware": 200, "/api/pollen?lat=x&lon=5": 400, "/api/utilities": 200, "/api/quakes": 200, "/healthz": 200,
+		"/": 200, "/api/catalog": 200, "/api/news": 200, "/api/threats": 200, "/api/advisories": 200, "/api/breaches": 200, "/api/outages": 200, "/api/energy": 200, "/api/air": 200, "/api/trains": 200, "/api/politics": 200, "/api/air?lat=x&lon=5": 400, "/api/today": 200, "/api/ransomware": 200, "/api/pollen?lat=x&lon=5": 400, "/api/utilities": 200, "/api/quakes": 200, "/api/economy": 200, "/api/markets": 200, "/healthz": 200,
 		"/api/weather?lat=abc&lon=5": 400, "/api/geocode?q=a": 400, "/api/img?u=aHR0cHM6Ly9ldmls&s=forged": 403,
 		"/manifest.webmanifest": 200, "/icon-192.png": 200, "/sw.js": 200, "/metrics": 404, "/nope": 404, "/api/news/../../etc/passwd": 404,
 	}
@@ -1988,6 +1988,53 @@ func TestParseIODAEvents(t *testing.T) {
 	}
 	if !tls12Hosts["api.ioda.inetintel.cc.gatech.edu"] {
 		t.Error("IODA must use the TLS 1.2 client")
+	}
+}
+
+func TestParseEconomy(t *testing.T) {
+	es := `{"label":"HICP","value":{"0":2.5,"1":3.0,"2":2.8},"dimension":{"time":{"category":{"index":{"2026-07":1,"2026-06":0,"2026-08":2}}}}}`
+	p, err := parseEurostat([]byte(es))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(p) != 3 || p[0].Period != "2026-06" || p[2].Value != 2.8 {
+		t.Errorf("eurostat: %+v", p)
+	}
+	if _, err := parseEurostat([]byte(`{"error":[{"status":400,"label":"INVALID_QUERY"}]}`)); err == nil {
+		t.Error("eurostat error: expected error")
+	}
+	ecb := "KEY,FREQ,REF_AREA,CURRENCY,PROVIDER_FM,INSTRUMENT_FM,PROVIDER_FM_ID,DATA_TYPE_FM,TIME_PERIOD,OBS_VALUE\n" +
+		"FM.D.U2.EUR.4F.KR.DFR.LEV,D,U2,EUR,4F,KR,DFR,LEV,2026-09-26,2.5\nFM.D.U2.EUR.4F.KR.DFR.LEV,D,U2,EUR,4F,KR,DFR,LEV,2026-09-15,2.25\n"
+	q, err := parseECBCSV([]byte(ecb))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(q) != 2 || q[1].Period != "2026-09-26" || q[1].Value != 2.5 || q[0].Value != 2.25 {
+		t.Errorf("ecb: %+v", q)
+	}
+	if _, err := parseECBCSV([]byte("<html>no</html>")); err == nil {
+		t.Error("ecb non-CSV: expected error")
+	}
+}
+
+func TestParseSpark(t *testing.T) {
+	body := `{"ADYEN.AS":{"timestamp":[1790319600],"symbol":"ADYEN.AS","chartPreviousClose":843.5,"close":[875.5],"fulldayChange":32.0,"fulldayChangePercent":3.794,"fulldayPrice":875.5},
+	 "^AEX":{"timestamp":[1790352302],"symbol":"^AEX","chartPreviousClose":1106.83,"close":[1112.09]},
+	 "BAD.AS":{"symbol":"BAD.AS","close":[]},
+	 "OTHER.AS":{"symbol":"OTHER.AS","close":[1],"fulldayPrice":1}}`
+	q, err := parseSpark([]byte(body), map[string]string{"ADYEN.AS": "Adyen", "^AEX": "AEX", "BAD.AS": "Bad"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	by := map[string]Quote{}
+	for _, x := range q {
+		by[x.Symbol] = x
+	}
+	if len(q) != 2 || by["ADYEN.AS"].ChangePct != 3.79 || by["ADYEN.AS"].Name != "Adyen" || by["^AEX"].Price != 1112.09 || by["^AEX"].ChangePct != 0.48 {
+		t.Errorf("spark: %+v", q)
+	}
+	if !marketSymbolRe.MatchString("^STOXX50E") || !marketSymbolRe.MatchString("BZ=F") || !marketSymbolRe.MatchString("BTC-EUR") || marketSymbolRe.MatchString("a b") {
+		t.Error("symbol validation")
 	}
 }
 

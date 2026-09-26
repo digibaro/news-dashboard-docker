@@ -153,6 +153,59 @@ quakes:
   days: 90
   interval: 15m                   # min. 5m
 
+# Economie in cijfers: Eurostat (inflation HICP, unemployment) and the ECB (deposit rate, EUR/USD), no key.
+economy:
+  enabled: true
+  eurostat_base: "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data"
+  ecb_base: "https://data-api.ecb.europa.eu/service/data"
+  interval: 6h                    # monthly and daily figures, 5 requests; min. 1h
+
+# Beurs: Yahoo Finance's unofficial "spark" endpoint (no key, delayed prices, personal use only;
+# it may change or stop without notice). 1 request per 10 symbols.
+markets:
+  enabled: true
+  url: "https://query1.finance.yahoo.com/v8/finance/spark"
+  interval: 15m                   # min. 5m
+  indices:                        # shown in this order; max. 20
+    - { symbol: "^AEX",     name: "AEX" }
+    - { symbol: "^AMX",     name: "AMX" }
+    - { symbol: "^BFX",     name: "BEL 20" }
+    - { symbol: "^GDAXI",   name: "DAX" }
+    - { symbol: "^STOXX50E", name: "Euro Stoxx 50" }
+    - { symbol: "^GSPC",    name: "S&P 500" }
+    - { symbol: "^IXIC",    name: "Nasdaq" }
+    - { symbol: "BZ=F",     name: "Brent-olie ($)" }
+    - { symbol: "GC=F",     name: "Goud ($)" }
+    - { symbol: "BTC-EUR",  name: "Bitcoin (€)" }
+  # Top 3 risers and fallers come from these stocks: the AEX constituents (September 2026).
+  # Euronext reviews the AEX every quarter (March, June, September, December): check the list then.
+  stocks:                         # max. 60
+    - { symbol: "ASML.AS",  name: "ASML" }
+    - { symbol: "SHELL.AS", name: "Shell" }
+    - { symbol: "UNA.AS",   name: "Unilever" }
+    - { symbol: "PRX.AS",   name: "Prosus" }
+    - { symbol: "REN.AS",   name: "RELX" }
+    - { symbol: "INGA.AS",  name: "ING" }
+    - { symbol: "ADYEN.AS", name: "Adyen" }
+    - { symbol: "HEIA.AS",  name: "Heineken" }
+    - { symbol: "WKL.AS",   name: "Wolters Kluwer" }
+    - { symbol: "ASM.AS",   name: "ASM International" }
+    - { symbol: "AD.AS",    name: "Ahold Delhaize" }
+    - { symbol: "PHIA.AS",  name: "Philips" }
+    - { symbol: "NN.AS",    name: "NN Group" }
+    - { symbol: "ABN.AS",   name: "ABN AMRO" }
+    - { symbol: "KPN.AS",   name: "KPN" }
+    - { symbol: "UMG.AS",   name: "Universal Music Group" }
+    - { symbol: "EXO.AS",   name: "Exor" }
+    - { symbol: "AGN.AS",   name: "Aegon" }
+    - { symbol: "AKZA.AS",  name: "Akzo Nobel" }
+    - { symbol: "ASRNL.AS", name: "ASR Nederland" }
+    - { symbol: "BESI.AS",  name: "BE Semiconductor" }
+    - { symbol: "DSFIR.AS", name: "DSM-Firmenich" }
+    - { symbol: "IMCD.AS",  name: "IMCD" }
+    - { symbol: "RAND.AS",  name: "Randstad" }
+    - { symbol: "MT.AS",    name: "ArcelorMittal" }
+
 alerts:
   nctv: { enabled: true, url: "https://www.nctv.nl/onderwerpen/d/dtn", interval: 6h }
   knmi: true
@@ -230,6 +283,8 @@ refresh:
   pollen: 60m
   utilities: 5m
   quakes: 15m
+  economy: 60m
+  markets: 5m
   outages: 10m
   ap: 30m
   health: 30m
@@ -241,6 +296,7 @@ categories:
   - { id: tech,    name: "Tech, privacy & security", short: "Tech", name_en: "Tech, privacy & security" }
   - { id: datalekken, name: "Datalekken",           name_en: "Data breaches" }
   - { id: finance, name: "Financiën & economie",     short: "Economie", name_en: "Finance & economy", short_en: "Economy" }
+  - { id: onderzoek, name: "Onderzoeksjournalistiek", short: "Onderzoek", name_en: "Investigative journalism", short_en: "Investigative" }
   - { id: sport,   name: "Sport" }
   - { id: world,   name: "Internationaal", name_en: "International" }
   - { id: be,      name: "België", name_en: "Belgium" }
@@ -253,6 +309,7 @@ presets:
   - { id: regio,   name: "Mijn regio",      description: "De regionale omroep bij je weerlocatie", name_en: "My region", description_en: "The regional broadcaster for your weather location", region: true }
   - { id: tech,    name: "Tech & security", description: "Tweakers, Security.NL, Bits of Freedom en meer", description_en: "Tweakers, Security.NL, Bits of Freedom and more", sources: [tweakers, security-nl, nos-tech, bits-of-freedom, bleepingcomputer, the-record] }
   - { id: finance, name: "Economie",        description: "Economie en financiële markten", name_en: "Economy", description_en: "Economy and financial markets", sources: [nos-economie, nu-economie, telegraaf-dft, bbc-business] }
+  - { id: onderzoek, name: "Onderzoek",     description: "Follow the Money, Investico, De Groene en meer", name_en: "Investigative", description_en: "Follow the Money, Investico, De Groene and more", sources: [ftm, investico, groene, lighthouse-reports, bellingcat] }
   - { id: sport,   name: "Sport",           description: "Voetbal, wielrennen en ander sportnieuws", description_en: "Football, cycling and other sports news", sources: [nos-sport, nos-voetbal, nu-sport, wielerflits] }
   - { id: world,   name: "Internationaal",  description: "Wereldnieuws van BBC, The Guardian en DW", name_en: "International", description_en: "World news from BBC, The Guardian and DW", sources: [nos-buitenland, bbc-world, guardian-world, dw] }
   - { id: be,      name: "België",          description: "VRT NWS, HLN, De Tijd en Sporza", name_en: "Belgium", description_en: "VRT NWS, HLN, De Tijd and Sporza", sources: [vrt-nws, hln, tijd, sporza] }
@@ -310,6 +367,7 @@ sources:
   - { id: ars-technica,   name: "Ars Technica",   category: tech, url: "https://feeds.arstechnica.com/arstechnica/index", homepage: "https://arstechnica.com", lang: en }
   - { id: bleepingcomputer, name: "BleepingComputer", category: tech, url: "https://www.bleepingcomputer.com/feed/", homepage: "https://www.bleepingcomputer.com", lang: en }
   - { id: krebs,          name: "Krebs on Security", category: tech, url: "https://krebsonsecurity.com/feed/", homepage: "https://krebsonsecurity.com", lang: en }
+  - { id: the-register,   name: "The Register · Security", category: tech, url: "https://www.theregister.com/security/headlines.atom", homepage: "https://www.theregister.com/security/", lang: en }
   - { id: the-verge,      name: "The Verge",      category: tech, url: "https://www.theverge.com/rss/index.xml", homepage: "https://www.theverge.com", lang: en }
   - { id: nos-tech,       name: "NOS Tech",       category: tech, url: "https://feeds.nos.nl/nosnieuwstech", homepage: "https://nos.nl", lang: nl }
   - { id: nu-tech,        name: "NU.nl Tech",     category: tech, url: "https://www.nu.nl/rss/Tech", homepage: "https://www.nu.nl", lang: nl }
@@ -346,6 +404,18 @@ sources:
   - { id: guardian-business, name: "The Guardian · Business", category: finance, url: "https://www.theguardian.com/uk/business/rss", homepage: "https://www.theguardian.com/uk/business", lang: en }
   - { id: economist-finance, name: "The Economist · Finance", category: finance, url: "https://www.economist.com/finance-and-economics/rss.xml", homepage: "https://www.economist.com", lang: en }
   - { id: telegraaf-dft,  name: "Telegraaf DFT",  category: finance, url: "https://www.telegraaf.nl/financieel/rss", homepage: "https://www.telegraaf.nl/financieel", lang: nl }
+
+  # --- Onderzoeksjournalistiek (investigative journalism; verified 2026-09-26) ---
+  # They publish a few stories a week, so max_age keeps 30 days instead of cache.max_age.
+  # Note: ftm.nl often stalls new connections (seen 2026-09-26); the fetcher retries with backoff.
+  - { id: ftm,            name: "Follow the Money", category: onderzoek, url: "https://www.ftm.nl/feed/", homepage: "https://www.ftm.nl", lang: nl, interval: 1h, max_age: 720h }
+  - { id: investico,      name: "Investico",      category: onderzoek, url: "https://www.platform-investico.nl/feed/", homepage: "https://www.platform-investico.nl", lang: nl, interval: 30m, max_age: 720h }
+  - { id: groene,         name: "De Groene Amsterdammer", category: onderzoek, url: "https://www.groene.nl/rss", homepage: "https://www.groene.nl", lang: nl, interval: 30m, max_age: 720h }
+  - { id: lighthouse-reports, name: "Lighthouse Reports", category: onderzoek, url: "https://www.lighthousereports.com/feed/", homepage: "https://www.lighthousereports.com", lang: en, interval: 1h, max_age: 720h }
+  - { id: bellingcat,     name: "Bellingcat",     category: onderzoek, url: "https://www.bellingcat.com/feed/", homepage: "https://www.bellingcat.com", lang: en, interval: 1h, max_age: 720h }
+  # TODO: De Correspondent and Pointer (KRO-NCRV) publish no RSS feed (checked 2026-09-26).
+  - { id: correspondent,  name: "De Correspondent", category: onderzoek, url: "https://decorrespondent.nl/feed", homepage: "https://decorrespondent.nl", lang: nl, enabled: false }
+  - { id: pointer,        name: "Pointer",        category: onderzoek, url: "https://pointer.kro-ncrv.nl/feed", homepage: "https://pointer.kro-ncrv.nl", lang: nl, enabled: false }
 
   # --- Sport ---
   - { id: nos-sport,      name: "NOS Sport",      category: sport, url: "https://feeds.nos.nl/nossportalgemeen", homepage: "https://nos.nl/sport", lang: nl, default_enabled: true }

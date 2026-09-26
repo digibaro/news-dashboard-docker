@@ -20,6 +20,8 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Aardbevingen:** earthquakes in and around the Netherlands from KNMI, with magnitude, depth and induced (gas extraction) events marked.
 - **Kritieke infrastructuur:** current electricity and gas outages at Liander and Stedin (place, status, expected repair time, customers affected), planned work and outages resolved in the last 24 h.
 - **Treinstoringen:** current rail disruptions and engineering works from the NS Disruptions API (needs a free key).
+- **Economie in cijfers:** Dutch inflation (with the euro-area figure and a 12-month trend), unemployment, the ECB deposit rate and the euro in dollars, from Eurostat and the ECB.
+- **Beurs:** the AEX, AMX, BEL 20, DAX, Euro Stoxx 50, S&P 500 and Nasdaq, Brent oil, gold and bitcoin, plus the top 3 risers and fallers of the AEX (delayed prices, Yahoo Finance).
 - **Energieprijzen:** today's and tomorrow's hourly electricity prices and the gas price (EnergyZero), with a chart and the cheapest 3 hours.
 - **Politiek vandaag:** today's debates and committee meetings of the Tweede Kamer (or the next sitting day) and the latest votes.
 - **Verkeer:** jams, accidents and road closures from NDW open data (Rijkswaterstaat), with readable road names.
@@ -146,7 +148,7 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 | `fetch` | `user_agent` (**put your site and e-mail here**), default refresh `interval`, `timeout`, `max_concurrent` (max 2 per host is fixed) |
 | `cache` | `max_items_per_source`, `max_age`, `snapshot_path` (empty = no disk writes, see below) |
 | `features` | `show_images` (keep feed images), `proxy_images` (serve them through `/api/img`, see below), `geolocation` (ip-api lookups), `allow_custom_feeds` (reserved, see below) |
-| `refresh` | how often an open browser tab asks the server for new data, per panel: `news`, `alerts`, `weather`, `today`, `air`, `pollen`, `traffic`, `trains`, `alarms`, `quakes`, `energy`, `politics`, `threats`, `advisories`, `breaches`, `ransomware`, `utilities`, `outages`, `ap`, `health` (1m–24h, see below) |
+| `refresh` | how often an open browser tab asks the server for new data, per panel: `news`, `alerts`, `weather`, `today`, `air`, `pollen`, `traffic`, `trains`, `alarms`, `quakes`, `energy`, `economy`, `markets`, `politics`, `threats`, `advisories`, `breaches`, `ransomware`, `utilities`, `outages`, `ap`, `health` (1m–24h, see below) |
 | `keys` | `abusech_auth_key` (optional), `ns_api_key` (Treinstoringen) |
 | `energy` | Energieprijzen: `enabled`, `url`, `interval` (min. 15m), `vat` (0.21), `electricity_extra` / `gas_extra` (€ added per kWh / m³, e.g. energy tax and markup; default 0) |
 | `air` | Luchtkwaliteit: `enabled`, `base` (Luchtmeetnet API), `stations_url` (RIVM station list, CSV), `interval` (min. 15m) |
@@ -154,6 +156,8 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 | `pollen` | Hooikoorts: `enabled`, `url` (Open-Meteo Air Quality API) |
 | `utilities` | Kritieke infrastructuur: `enabled`, `liander_url` (ArcGIS layer), `stedin_url`, `interval` (min. 2m) |
 | `quakes` | Aardbevingen: `enabled`, `url` (KNMI FDSN), `days` (1–365, default 90), `interval` (min. 5m) |
+| `economy` | Economie in cijfers: `enabled`, `eurostat_base`, `ecb_base`, `interval` (default 6h, min. 1h) |
+| `markets` | Beurs: `enabled`, `url` (Yahoo spark), `interval` (default 15m, min. 5m), `indices` (1–20, shown in order) and `stocks` (max. 60, the source of the top 3 risers and fallers), each `{ symbol, name }`. The default stocks are the AEX constituents; Euronext reviews them every quarter. |
 | `today` | Vandaag: `enabled`, `school_url` (Rijksoverheid school holidays) |
 | `ransomware` | Ransomware NL: `enabled`, `base` (ransomware.live API v2), `countries` (ISO codes, default `[NL]`, max. 5), `interval` (min. 10m) |
 | `politics` | Politiek vandaag: `enabled`, `base` (Tweede Kamer OData), `interval` (min. 10m) |
@@ -206,6 +210,8 @@ There are two separate rates:
 | Traffic | 5m | 5m |
 | Treinstoringen | 3m | 5m |
 | Energieprijzen | 30m | 1h |
+| Economie in cijfers | 60m | 6h (monthly and daily figures) |
+| Beurs | 5m | 15m (prices are delayed ~15 min) |
 | Politiek vandaag | 15m | 30m |
 | Alarmeringen | 2m | 2m per city |
 | Cyberdreigingen | 15m | 15m (ISC minimum), 30-day summary 1h |
@@ -493,6 +499,9 @@ The server fetches everything; browsers only talk to the dashboard itself.
 | [Tweede Kamer open data](https://opendata.tweedekamer.nl/) | Politiek vandaag | Official OData API, no key. No explicit licence found on the portal (checked September 2026), attribution shown. |
 | [Rijksoverheid open data](https://opendata.rijksoverheid.nl/) | Vandaag | School holidays per region, fetched daily. Public holidays, moon phases (Meeus' algorithm, accurate to minutes) and clock changes are calculated by the app. |
 | [Open-Meteo](https://open-meteo.com/) (CAMS) | Hooikoorts | Air Quality API, pollen from the Copernicus Atmosphere Monitoring Service (CC BY 4.0). Levels are indicative thresholds per pollen type (grains/m³, daily maximum), not a medical scale. |
+| [Eurostat](https://ec.europa.eu/eurostat) | Economie in cijfers | HICP inflation (`prc_hicp_minr`) and unemployment (`une_rt_m`, seasonally adjusted), JSON-stat API, no key. Reuse allowed with attribution ([Eurostat copyright notice](https://ec.europa.eu/eurostat/about-us/policies/copyright)). Inflation is the European HICP measure, which can differ slightly from CBS's national CPI. |
+| [ECB Data Portal](https://data.ecb.europa.eu/) | Economie in cijfers | Deposit facility rate and the EUR/USD reference rate, SDMX API, no key; reuse allowed with attribution. |
+| [Yahoo Finance](https://finance.yahoo.com/) | Beurs | **Unofficial** "spark" endpoint without a key: delayed prices, **personal use only** under Yahoo's terms, and it may change or stop without notice. Free official APIs with European stocks either forbid display (Twelve Data free plan) or cover only the US (EODHD demo); Euronext's own data is encrypted and not used. Turn the panel off with `markets.enabled: false` for public or commercial use. |
 | [KNMI](https://www.knmi.nl/nederland-nu/seismologie/aardbevingen) | Aardbevingen | FDSN event service (`rdsa.knmi.nl`), open data; each quake links to its KNMI page. Only earthquakes and induced events; explosions, quarry blasts and sonic booms are left out. |
 | [Liander](https://www.liander.nl/storingen-en-onderhoud) | Kritieke infrastructuur | The public ArcGIS feature service `IStoringen_Productie_V7` (Alliander) behind Liander's outage map: status, cause, expected repair time and a customer count per outage. No explicit licence; attribution shown. |
 | [Stedin](https://web.stedin.net/storingen) | Kritieke infrastructuur | The JSON behind Stedin's outage page (`/api/storingen/places`, undocumented): one overview request plus one per affected place. Enexis, Rendo, Coteq, Westland Infra and the drinking-water companies publish no open outage data (checked September 2026), so they are not in the panel. |
@@ -599,6 +608,8 @@ All JSON responses:
 | `GET /api/politics` | Politiek vandaag: `day`, `activities` (time, kind, subject, committee, cancelled, url) and the latest `votes` (result, kind, subject, date, url) |
 | `GET /api/pollen?lat=&lon=` | Hooikoorts: `days` (3 × daily maximum per pollen type, grains/m³) and `now` |
 | `GET /api/utilities` | Kritieke infrastructuur: per grid operator the `active` and `planned` outages (energy, place, status, reported, estimate, customers) and `resolved_24h` |
+| `GET /api/economy` | Economie in cijfers: `inflation` and `unemployment` (13 months), `inflation_ea`, `rate` with `rate_since`, `eurusd` (last 2 days) |
+| `GET /api/markets` | Beurs: `indices` in config order and `stocks` sorted by daily change (symbol, name, price, change_pct, prev_close, time) |
 | `GET /api/quakes` | Aardbevingen: the quakes of the last `days` (time, place, magnitude, depth, induced, KNMI link) |
 | `GET /api/today` | Vandaag: `date`, `week`, `holidays_today`, `holidays_next`, `moon` (`phase`, `illumination`, `next_full`, `next_new`, `moment`), `clock_change`, `school.regions` (noord/midden/zuid: current or next holiday) |
 | `GET /api/ransomware` | Ransomware NL: `last7` / `last30` / `last365` counts, `top_groups` (90 days), the 8 newest `victims` (name, website, sector, group, date) and per-country `sources` |
@@ -654,6 +665,14 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.9.0
+- **New panel Economie in cijfers** (after Energieprijzen): Dutch inflation with the euro-area figure and a 12-month trend line, unemployment with the change from the previous month, the ECB deposit rate and since when, and the euro in dollars. Sources: Eurostat and the ECB, no key.
+- **New panel Beurs** (after Economie in cijfers): the AEX, AMX, BEL 20, DAX, Euro Stoxx 50, S&P 500, Nasdaq, Brent oil, gold and bitcoin with their daily change, and the top 3 risers and fallers of the AEX. Prices are delayed and come from Yahoo Finance's unofficial endpoint (personal use only; see *Data sources*). Indices and stocks are configurable.
+- **Overview:** a "Beurs en economie" card.
+- **New category Onderzoeksjournalistiek** with Follow the Money, Investico, De Groene Amsterdammer, Lighthouse Reports and Bellingcat, and a preset for it. De Correspondent and Pointer publish no feed and are listed as disabled.
+- **New source The Register** (security headlines) under Tech.
+- New config sections `economy` and `markets`, and their `refresh` keys.
 
 ### 1.8.1
 - **Autoriteit Persoonsgegevens acties and Gezondheid:** only items from the last 31 days. Each panel says so when there are none.

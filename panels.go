@@ -11,6 +11,7 @@ import (
 	"container/list"
 	"context"
 	"encoding/binary"
+	"encoding/csv"
 	"encoding/json"
 	"encoding/xml"
 	"errors"
@@ -1682,6 +1683,12 @@ func (a *App) threatJobs(cfg *Config) []Job {
 				Run: a.fetchJob("rw:"+cc, func() string { return u }, "application/json", nil,
 					func(b []byte) (any, error) { return parseRansomware(b, cc, time.Now()) }, nil)})
 		}
+	}
+	if cfg.Economy.Enabled {
+		jobs = append(jobs, Job{Key: "econ:figures", Sig: cfg.Economy.EurostatBase + "|" + cfg.Economy.ECBBase, Interval: cfg.Economy.Interval.D(), Run: a.runEconomy})
+	}
+	if cfg.Markets.Enabled {
+		jobs = append(jobs, Job{Key: "yahoo:markets", Sig: fmt.Sprint(cfg.Markets.URL, cfg.Markets.Indices, cfg.Markets.Stocks), Interval: cfg.Markets.Interval.D(), Run: a.runMarkets})
 	}
 	if cfg.Utilities.Enabled {
 		jobs = append(jobs, Job{Key: "grid:outages", Sig: cfg.Utilities.LianderURL + "|" + cfg.Utilities.StedinURL, Interval: cfg.Utilities.Interval.D(), Run: a.runUtilities})
@@ -4596,4 +4603,309 @@ func (a *App) runInternet(ctx context.Context) error {
 	}
 	a.threats.ok(key, out, "", "")
 	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Economie in cijfers: Dutch inflation (HICP, with the euro area for comparison) and
+// unemployment from Eurostat, the ECB deposit facility rate and the EUR/USD reference
+// rate from the ECB Data Portal. All open data, no key.
+
+type EconPoint struct {
+	Period string  `json:"period"` // 2026-08, or a date for daily series
+	Value  float64 `json:"value"`
+}
+
+type EconomyData struct {
+	Inflation    []EconPoint `json:"inflation"`              // NL, annual rate of change, last 13 months
+	InflationEA  *EconPoint  `json:"inflation_ea,omitempty"` // euro area, latest month
+	Unemployment []EconPoint `json:"unemployment"`           // NL, seasonally adjusted, last 13 months
+	Rate         *EconPoint  `json:"rate,omitempty"`         // ECB deposit facility rate
+	RateSince    string      `json:"rate_since,omitempty"`   // date of the last change
+	EURUSD       []EconPoint `json:"eurusd"`                 // last two reference rates
+	Errors       []string    `json:"errors,omitempty"`
+}
+
+// parseEurostat reads a single-series JSON-stat response (all dimensions but time fixed).
+func parseEurostat(body []byte) ([]EconPoint, error) {
+	var r struct {
+		Value     map[string]float64 `json:"value"`
+		Dimension struct {
+			Time struct {
+				Category struct {
+					Index map[string]int `json:"index"`
+				} `json:"category"`
+			} `json:"time"`
+		} `json:"dimension"`
+		Error any `json:"error"`
+	}
+	if err := json.Unmarshal(body, &r); err != nil {
+		return nil, fmt.Errorf("eurostat: %w", err)
+	}
+	if r.Error != nil {
+		return nil, fmt.Errorf("eurostat: %s", truncate(fmt.Sprint(r.Error), 100))
+	}
+	var out []EconPoint
+	for period, i := range r.Dimension.Time.Category.Index {
+		if v, ok := r.Value[strconv.Itoa(i)]; ok && v > -100 && v < 1000 {
+			out = append(out, EconPoint{Period: period, Value: v})
+		}
+	}
+	if len(out) == 0 {
+		return nil, errors.New("eurostat: no values")
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Period < out[j].Period })
+	return out, nil
+}
+
+// parseECBCSV reads TIME_PERIOD and OBS_VALUE from an ECB Data Portal CSV response.
+func parseECBCSV(body []byte) ([]EconPoint, error) {
+	rows, err := csv.NewReader(bytes.NewReader(body)).ReadAll()
+	if err != nil || len(rows) < 2 {
+		return nil, fmt.Errorf("ecb: not a CSV response")
+	}
+	ti, vi := -1, -1
+	for i, h := range rows[0] {
+		switch h {
+		case "TIME_PERIOD":
+			ti = i
+		case "OBS_VALUE":
+			vi = i
+		}
+	}
+	if ti < 0 || vi < 0 {
+		return nil, errors.New("ecb: TIME_PERIOD/OBS_VALUE missing")
+	}
+	var out []EconPoint
+	for _, r := range rows[1:] {
+		if len(r) <= ti || len(r) <= vi {
+			continue
+		}
+		if v, err := strconv.ParseFloat(r[vi], 64); err == nil {
+			out = append(out, EconPoint{Period: r[ti], Value: v})
+		}
+	}
+	if len(out) == 0 {
+		return nil, errors.New("ecb: no values")
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Period < out[j].Period })
+	return out, nil
+}
+
+func (a *App) runEconomy(ctx context.Context) error {
+	const key = "econ:figures"
+	cfg := a.config().Economy
+	get := func(u, accept string) ([]byte, error) {
+		resp, err := a.fetcher.Do(ctx, FetchReq{URL: u, Accept: accept})
+		if err != nil {
+			return nil, err
+		}
+		return resp.Body, nil
+	}
+	es := strings.TrimSuffix(cfg.EurostatBase, "/")
+	ecb := strings.TrimSuffix(cfg.ECBBase, "/")
+	d := EconomyData{Inflation: []EconPoint{}, Unemployment: []EconPoint{}, EURUSD: []EconPoint{}}
+	fail := func(what string, err error) { d.Errors = append(d.Errors, what+": "+truncate(err.Error(), 80)) }
+	if b, err := get(es+"/prc_hicp_minr?geo=NL&coicop18=TOTAL&unit=RCH_A&lastTimePeriod=13", "application/json"); err != nil {
+		fail("inflatie", err)
+	} else if p, err := parseEurostat(b); err != nil {
+		fail("inflatie", err)
+	} else {
+		d.Inflation = p
+	}
+	if b, err := get(es+"/prc_hicp_minr?geo=EA&coicop18=TOTAL&unit=RCH_A&lastTimePeriod=1", "application/json"); err == nil {
+		if p, err := parseEurostat(b); err == nil {
+			d.InflationEA = &p[len(p)-1]
+		}
+	}
+	if b, err := get(es+"/une_rt_m?geo=NL&s_adj=SA&age=TOTAL&sex=T&unit=PC_ACT&lastTimePeriod=13", "application/json"); err != nil {
+		fail("werkloosheid", err)
+	} else if p, err := parseEurostat(b); err != nil {
+		fail("werkloosheid", err)
+	} else {
+		d.Unemployment = p
+	}
+	start := time.Now().AddDate(-4, 0, 0).Format("2006-01-02")
+	if b, err := get(ecb+"/FM/D.U2.EUR.4F.KR.DFR.LEV?format=csvdata&startPeriod="+start, "text/csv"); err != nil {
+		fail("rente", err)
+	} else if p, err := parseECBCSV(b); err != nil {
+		fail("rente", err)
+	} else {
+		last := p[len(p)-1]
+		d.Rate = &last
+		d.RateSince = p[0].Period
+		for i := len(p) - 1; i > 0; i-- {
+			if p[i-1].Value != last.Value {
+				d.RateSince = p[i].Period
+				break
+			}
+		}
+	}
+	if b, err := get(ecb+"/EXR/D.USD.EUR.SP00.A?format=csvdata&lastNObservations=2", "text/csv"); err != nil {
+		fail("wisselkoers", err)
+	} else if p, err := parseECBCSV(b); err != nil {
+		fail("wisselkoers", err)
+	} else {
+		d.EURUSD = p
+	}
+	if len(d.Inflation) == 0 && len(d.Unemployment) == 0 && d.Rate == nil && len(d.EURUSD) == 0 {
+		err := fmt.Errorf("economie: no source reachable (%s)", strings.Join(d.Errors, "; "))
+		a.threats.fail(key, err)
+		slog.Warn("fetch failed", "source", key, "err", err)
+		return err
+	}
+	a.threats.ok(key, d, "", "")
+	return nil
+}
+
+func (a *App) handleEconomy(w http.ResponseWriter, r *http.Request) {
+	if !a.config().Economy.Enabled {
+		writeJSON(w, r, http.StatusOK, 60, map[string]any{"enabled": false})
+		return
+	}
+	e := a.feedEntry("econ:figures")
+	e["enabled"] = true
+	if v, ok := a.threats.get("econ:figures").Data.(EconomyData); ok {
+		e["data"] = v
+	}
+	writeJSON(w, r, http.StatusOK, 300, e)
+}
+
+// ---------------------------------------------------------------------------
+// Beurs: indices and the AEX stocks' daily change, for the top 3 risers and fallers.
+// Yahoo Finance's unofficial "spark" endpoint: no key, one request per 10 symbols;
+// undocumented and for personal use (the panel says so). Prices are delayed.
+
+type MarketSymbol struct {
+	Symbol string `yaml:"symbol" json:"symbol"`
+	Name   string `yaml:"name" json:"name"`
+}
+
+type Quote struct {
+	Symbol    string    `json:"symbol"`
+	Name      string    `json:"name"`
+	Price     float64   `json:"price"`
+	ChangePct float64   `json:"change_pct"`
+	PrevClose float64   `json:"prev_close,omitempty"`
+	Time      time.Time `json:"time,omitempty"`
+}
+
+type MarketData struct {
+	Indices []Quote `json:"indices"`
+	Stocks  []Quote `json:"stocks"` // sorted by change, highest first
+}
+
+var marketSymbolRe = regexp.MustCompile(`^\^?[A-Z0-9][A-Z0-9.=-]{0,19}$`)
+
+func parseSpark(body []byte, names map[string]string) ([]Quote, error) {
+	var r map[string]struct {
+		Symbol               string    `json:"symbol"`
+		Timestamp            []int64   `json:"timestamp"`
+		Close                []float64 `json:"close"`
+		ChartPreviousClose   *float64  `json:"chartPreviousClose"`
+		FulldayPrice         *float64  `json:"fulldayPrice"`
+		FulldayChangePercent *float64  `json:"fulldayChangePercent"`
+	}
+	if err := json.Unmarshal(body, &r); err != nil {
+		return nil, fmt.Errorf("yahoo: %w", err)
+	}
+	var out []Quote
+	for sym, v := range r {
+		name, ok := names[sym]
+		if !ok {
+			continue
+		}
+		q := Quote{Symbol: sym, Name: name}
+		switch {
+		case v.FulldayPrice != nil:
+			q.Price = *v.FulldayPrice
+		case len(v.Close) > 0:
+			q.Price = v.Close[len(v.Close)-1]
+		default:
+			continue
+		}
+		if v.ChartPreviousClose != nil && *v.ChartPreviousClose > 0 {
+			q.PrevClose = *v.ChartPreviousClose
+		}
+		switch {
+		case v.FulldayChangePercent != nil:
+			q.ChangePct = *v.FulldayChangePercent
+		case q.PrevClose > 0:
+			q.ChangePct = (q.Price - q.PrevClose) / q.PrevClose * 100
+		}
+		if q.Price <= 0 || math.IsNaN(q.Price) || math.Abs(q.ChangePct) > 90 {
+			continue
+		}
+		q.Price, q.ChangePct = math.Round(q.Price*1e4)/1e4, math.Round(q.ChangePct*100)/100
+		if n := len(v.Timestamp); n > 0 && v.Timestamp[n-1] > 0 {
+			q.Time = time.Unix(v.Timestamp[n-1], 0).UTC()
+		}
+		out = append(out, q)
+	}
+	return out, nil
+}
+
+func (a *App) runMarkets(ctx context.Context) error {
+	const key = "yahoo:markets"
+	cfg := a.config().Markets
+	fetch := func(list []MarketSymbol) ([]Quote, error) {
+		names := map[string]string{}
+		var all []Quote
+		var lastErr error
+		for i := 0; i < len(list); i += 10 {
+			batch := list[i:min(i+10, len(list))]
+			var syms []string
+			for _, s := range batch {
+				names[s.Symbol] = s.Name
+				syms = append(syms, s.Symbol)
+			}
+			u := cfg.URL + "?" + url.Values{"symbols": {strings.Join(syms, ",")}, "range": {"1d"}, "interval": {"5m"}}.Encode()
+			resp, err := a.fetcher.Do(ctx, FetchReq{URL: u, Accept: "application/json"})
+			if err != nil {
+				lastErr = err
+				continue
+			}
+			q, err := parseSpark(resp.Body, names)
+			if err != nil {
+				lastErr = err
+				continue
+			}
+			all = append(all, q...)
+		}
+		if len(all) == 0 && lastErr != nil {
+			return nil, lastErr
+		}
+		return all, nil
+	}
+	idx, err := fetch(cfg.Indices)
+	var stocks []Quote
+	if err == nil {
+		stocks, err = fetch(cfg.Stocks)
+	}
+	if err != nil {
+		err = fmt.Errorf("yahoo: %w", err)
+		a.threats.fail(key, err)
+		slog.Warn("fetch failed", "source", key, "err", err)
+		return err
+	}
+	order := map[string]int{}
+	for i, s := range cfg.Indices {
+		order[s.Symbol] = i
+	}
+	sort.SliceStable(idx, func(i, j int) bool { return order[idx[i].Symbol] < order[idx[j].Symbol] })
+	sort.SliceStable(stocks, func(i, j int) bool { return stocks[i].ChangePct > stocks[j].ChangePct })
+	a.threats.ok(key, MarketData{Indices: idx, Stocks: stocks}, "", "")
+	return nil
+}
+
+func (a *App) handleMarkets(w http.ResponseWriter, r *http.Request) {
+	if !a.config().Markets.Enabled {
+		writeJSON(w, r, http.StatusOK, 60, map[string]any{"enabled": false})
+		return
+	}
+	e := a.feedEntry("yahoo:markets")
+	e["enabled"] = true
+	if v, ok := a.threats.get("yahoo:markets").Data.(MarketData); ok {
+		e["data"] = v
+	}
+	writeJSON(w, r, http.StatusOK, 60, e)
 }

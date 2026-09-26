@@ -626,6 +626,29 @@ table.tt { width: 100%; border-collapse: collapse; font-size: 12px; }
 @media (max-width: 1099px) { .vsk { height: 293px; } }
 @media (max-width: 699px) { .vsk { height: 310px; } }
 
+/* ---------- Economie in cijfers ---------- */
+.egrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.etile { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-width: 0; }
+.etile .el { font-size: 12px; color: var(--text-2); }
+.etile .ev { font-size: 22px; font-weight: 650; line-height: 1.25; }
+.etile .es { font-size: 11px; color: var(--text-3); }
+.espark { display: block; width: 100%; height: 22px; margin-top: 4px; }
+.espark path { fill: none; stroke: var(--accent); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.ecsk { height: 241px; }
+@media (max-width: 1099px) { .ecsk { height: 256px; } }
+
+/* ---------- Beurs ---------- */
+.mkt { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+.mkt li { display: flex; align-items: baseline; gap: 8px; padding: 3px 0; border-top: 1px solid var(--line); }
+.mkt li:first-child { border-top: 0; }
+.mkt .mn { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mkt .mp { font-variant-numeric: tabular-nums; }
+.chg { font-variant-numeric: tabular-nums; font-weight: 600; min-width: 5.5em; text-align: right; }
+.chg.up { color: var(--sev-low); } .chg.down { color: var(--sev-crit); } .chg.flat { color: var(--text-3); }
+.mtop { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 10px; }
+.mtop h3 { margin: 0 0 2px; font-size: 12px; font-weight: 650; color: var(--text-2); text-transform: uppercase; letter-spacing: .03em; }
+.mksk { height: 404px; }
+
 /* ---------- Hooikoorts ---------- */
 .pol { list-style: none; margin: 6px 0 0; padding: 0; font-size: 13px; }
 .pol li { display: grid; grid-template-columns: minmax(5.5em, 1fr) repeat(3, minmax(0, 1fr)); gap: 6px; align-items: center; padding: 4px 0; border-top: 1px solid var(--line); }
@@ -890,6 +913,13 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.9.0</h3>
+    <ul>
+      <li>Nieuw paneel Economie in cijfers: inflatie, werkloosheid, de ECB-rente en de euro in dollar (Eurostat, ECB).</li>
+      <li>Nieuw paneel Beurs: AEX en andere indices, olie, goud en bitcoin, met de 3 grootste stijgers en dalers van de AEX.</li>
+      <li>Nieuwe categorie Onderzoeksjournalistiek: Follow the Money, Investico, De Groene Amsterdammer, Lighthouse Reports en Bellingcat.</li>
+      <li>Nieuwe bron: The Register (security).</li>
+    </ul>
     <h3>Versie 1.8.0</h3>
     <ul>
       <li>Nieuw paneel Hooikoorts: de pollenverwachting voor vandaag, morgen en overmorgen.</li>
@@ -963,6 +993,13 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.9.0</h3>
+    <ul>
+      <li>New panel Economy in figures: inflation, unemployment, the ECB rate and the euro in dollars (Eurostat, ECB).</li>
+      <li>New panel Markets: the AEX and other indices, oil, gold and bitcoin, with the AEX's top 3 risers and fallers.</li>
+      <li>New category Investigative journalism: Follow the Money, Investico, De Groene Amsterdammer, Lighthouse Reports and Bellingcat.</li>
+      <li>New source: The Register (security).</li>
+    </ul>
     <h3>Version 1.8.0</h3>
     <ul>
       <li>New panel Hay fever: the pollen forecast for today, tomorrow and the day after.</li>
@@ -1187,6 +1224,8 @@ const PANELS = {
   alarms: 'Alarmeringen',
   quakes: 'Aardbevingen',
   energy: 'Energieprijzen',
+  economy: 'Economie in cijfers',
+  markets: 'Beurs',
   politics: 'Politiek vandaag',
   threats: 'Cyberdreigingen',
   advisories: 'Security-adviezen',
@@ -1764,6 +1803,42 @@ const EN = {
   "Netbeheerders · stroom- en gasstoringen": "Grid operators · electricity and gas outages",
   "KNMI · aardbevingen": "KNMI · earthquakes",
   "IODA · internetverstoringen": "IODA · internet disruptions",
+  // Economie in cijfers, Beurs
+  "Economie in cijfers": "Economy in figures",
+  "Beurs": "Markets",
+  "Economische cijfers konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.": "Economic figures could not be loaded ({err}). Retrying automatically.",
+  "Dit paneel staat uit in config.yaml (economy.enabled).": "This panel is disabled in config.yaml (economy.enabled).",
+  "Eurostat en de ECB zijn niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.": "Eurostat and the ECB are unreachable ({err}); retrying automatically.",
+  "Economische cijfers worden voor het eerst opgehaald.": "Economic figures are being fetched for the first time.",
+  "Inflatie": "Inflation",
+  "eurozone {v}": "euro area {v}",
+  "Werkloosheid": "Unemployment",
+  "gelijk": "unchanged",
+  "{d} punt hoger": "{d} point higher",
+  "{d} punt lager": "{d} point lower",
+  "ECB-depositorente": "ECB deposit rate",
+  "sinds {date}": "since {date}",
+  "Euro in dollar": "Euro in dollars",
+  "{label}, afgelopen 12 maanden: van {a} naar {b}": "{label}, last 12 months: from {a} to {b}",
+  "Niet alle cijfers konden worden opgehaald; er wordt automatisch opnieuw geprobeerd.": "Not all figures could be loaded; retrying automatically.",
+  " · inflatie en werkloosheid per maand (Europese meetmethode), rente en koers per werkdag": " · inflation and unemployment monthly (European method), rate and exchange rate per working day",
+  "Beurskoersen konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.": "Market prices could not be loaded ({err}). Retrying automatically.",
+  "Dit paneel staat uit in config.yaml (markets.enabled).": "This panel is disabled in config.yaml (markets.enabled).",
+  "Yahoo Finance is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.": "Yahoo Finance is unreachable ({err}); retrying automatically.",
+  "Beurskoersen worden voor het eerst opgehaald.": "Market prices are being fetched for the first time.",
+  "Indices en grondstoffen": "Indices and commodities",
+  "Stijgers (AEX)": "Risers (AEX)",
+  "Dalers (AEX)": "Fallers (AEX)",
+  "Koersen met vertraging · {name} {t} · ": "Delayed prices · {name} {t} · ",
+  " (onofficieel, alleen voor persoonlijk gebruik)": " (unofficial, personal use only)",
+  "Brent-olie ($)": "Brent crude ($)",
+  "Goud ($)": "Gold ($)",
+  "Beurs en economie": "Markets and economy",
+  "inflatie {v}": "inflation {v}",
+  "werkloosheid {v}": "unemployment {v}",
+  "ECB {v}": "ECB {v}",
+  "Eurostat en ECB · economie": "Eurostat and ECB · economy",
+  "Yahoo Finance · beurs": "Yahoo Finance · markets",
 };
 
 // Sentences the server composes from parts (rain summary, directions, source names).
@@ -2395,6 +2470,8 @@ const freshOf = {
   ap: () => { const s = panelData.ap?.status; return s && { ts: s.fetched_at, max: 65, stale: !!s.error }; },
   alarms: () => { const d = panelData.alarms?.data; return d?.enabled && { ts: d.fetched_at, max: 6, stale: !!d.stale }; },
   traffic: () => { const d = panelData.traffic?.data; return d?.enabled && { ts: d.fetched_at, max: 15, stale: !!d.error }; },
+  economy: () => { const d = panelData.economy?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 780, stale: !!d.error }; },
+  markets: () => { const d = panelData.markets?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 40, stale: !!d.error }; },
   pollen: () => { const d = panelData.pollen?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 130, stale: !!d.stale }; },
   utilities: () => { const d = panelData.utilities?.data; return d?.enabled && { ts: oldest(d.operators), max: 15, stale: d.operators?.some(o => o.error) }; },
   quakes: () => { const d = panelData.quakes?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 40, stale: !!d.error }; },
@@ -2422,6 +2499,8 @@ const panelRenderers = {
   today: renderToday,
   ransomware: renderRansomware,
   pollen: renderPollen,
+  economy: renderEconomy,
+  markets: renderMarkets,
   utilities: renderUtilities,
   quakes: renderQuakes,
   trains: renderTrains,
@@ -3640,6 +3719,92 @@ function internetBlock(net) {
       `${fmt.short.format(new Date(x.start))} ${fmt.time.format(new Date(x.start))} · `, h('b', { translate: 'no', text: x.who }), ` · ${durText(x.duration_s)} · ${t(IODA_SRC[x.datasource] || x.datasource)}`))) : null);
 }
 
+// ---------------------------------------------------------------- economie in cijfers (Eurostat, ECB)
+async function loadEconomy() {
+  try { panelData.economy = { data: await api('api/economy') }; }
+  catch (e) { panelData.economy = { ...(panelData.economy || {}), error: e }; }
+  renderPanel('economy');
+}
+const pct1 = v => v.toLocaleString(locale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
+const monthLabel = p => new Intl.DateTimeFormat(locale(), { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(p + '-15T12:00:00Z'));
+function econSpark(points, label) {
+  if (!points || points.length < 3) return null;
+  const vals = points.map(p => p.value), lo = Math.min(...vals), hi = Math.max(...vals), W = 100, H = 22;
+  const x = i => i * W / (vals.length - 1), y = v => H - 2 - (H - 4) * (v - lo) / (hi - lo || 1);
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, class: 'espark', role: 'img', preserveAspectRatio: 'none',
+    'aria-label': t('{label}, afgelopen 12 maanden: van {a} naar {b}', { label, a: pct1(vals[0]), b: pct1(vals.at(-1)) }) });
+  svg.append(svgEl('path', { d: vals.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('') }));
+  return svg;
+}
+function econTile(label, value, sub, extra) {
+  return h('div', { class: 'etile' }, h('div', { class: 'el', text: label }), h('div', { class: 'ev', text: value }), sub ? h('div', { class: 'es', text: sub }) : null, extra || null);
+}
+function renderEconomy(body) {
+  const st = panelData.economy;
+  if (!st) { body.replaceChildren(h('div', { class: 'tsk ecsk', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:85%' }))); return; }
+  const r = st.data;
+  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('Economische cijfers konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
+  if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (economy.enabled).' })); return; }
+  const d = r.data;
+  if (!d) { body.replaceChildren(h('p', { class: 'pnote', text: r.error ? t('Eurostat en de ECB zijn niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: r.error }) : t('Economische cijfers worden voor het eerst opgehaald.') })); return; }
+  const tiles = [];
+  const inf = d.inflation?.at(-1);
+  if (inf) tiles.push(econTile(t('Inflatie'), pct1(inf.value), [monthLabel(inf.period), d.inflation_ea ? t('eurozone {v}', { v: pct1(d.inflation_ea.value) }) : null].filter(Boolean).join(' · '), econSpark(d.inflation, t('Inflatie'))));
+  const un = d.unemployment?.at(-1), unPrev = d.unemployment?.at(-2);
+  if (un) {
+    const diff = unPrev ? Math.round((un.value - unPrev.value) * 10) / 10 : 0;
+    tiles.push(econTile(t('Werkloosheid'), pct1(un.value), [monthLabel(un.period), unPrev ? (diff === 0 ? t('gelijk') : t(diff > 0 ? '{d} punt hoger' : '{d} punt lager', { d: Math.abs(diff).toLocaleString(locale()) })) : null].filter(Boolean).join(' · '), econSpark(d.unemployment, t('Werkloosheid'))));
+  }
+  if (d.rate) tiles.push(econTile(t('ECB-depositorente'), d.rate.value.toLocaleString(locale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%',
+    d.rate_since ? t('sinds {date}', { date: fmt.date.format(dateOnly(d.rate_since)) }) : null));
+  const fx = d.eurusd?.at(-1), fxPrev = d.eurusd?.at(-2);
+  if (fx) {
+    const ch = fxPrev ? (fx.value - fxPrev.value) / fxPrev.value * 100 : null;
+    tiles.push(econTile(t('Euro in dollar'), fx.value.toLocaleString(locale(), { minimumFractionDigits: 4, maximumFractionDigits: 4 }),
+      [fmt.date.format(dateOnly(fx.period)), ch != null ? `${ch >= 0 ? '+' : ''}${ch.toLocaleString(locale(), { maximumFractionDigits: 2 })}%` : null].filter(Boolean).join(' · ')));
+  }
+  const out = [h('div', { class: 'egrid' }, tiles)];
+  if (d.errors?.length) out.push(h('p', { class: 'pnote', text: t('Niet alle cijfers konden worden opgehaald; er wordt automatisch opnieuw geprobeerd.') }));
+  out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://ec.europa.eu/eurostat', 'Eurostat'), ', ', extLink('https://data.ecb.europa.eu/', 'ECB'),
+    t(' · inflatie en werkloosheid per maand (Europese meetmethode), rente en koers per werkdag')));
+  body.replaceChildren(...out);
+}
+
+// ---------------------------------------------------------------- beurs (Yahoo Finance, unofficial)
+async function loadMarkets() {
+  try { panelData.markets = { data: await api('api/markets') }; }
+  catch (e) { panelData.markets = { ...(panelData.markets || {}), error: e }; }
+  renderPanel('markets');
+}
+const price2 = v => v.toLocaleString(locale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function chgEl(v) {
+  const up = v > 0, down = v < 0;
+  return h('span', { class: 'chg ' + (up ? 'up' : down ? 'down' : 'flat') }, h('span', { 'aria-hidden': 'true', text: up ? '▲ ' : down ? '▼ ' : '' }),
+    `${up ? '+' : ''}${v.toLocaleString(locale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`);
+}
+function renderMarkets(body) {
+  const st = panelData.markets;
+  if (!st) { body.replaceChildren(h('div', { class: 'tsk mksk', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:88%' }))); return; }
+  const r = st.data;
+  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('Beurskoersen konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
+  if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (markets.enabled).' })); return; }
+  const d = r.data;
+  if (!d) { body.replaceChildren(h('p', { class: 'pnote', text: r.error ? t('Yahoo Finance is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: r.error }) : t('Beurskoersen worden voor het eerst opgehaald.') })); return; }
+  const out = [];
+  if (d.indices?.length) out.push(h('ul', { class: 'mkt', 'aria-label': t('Indices en grondstoffen') }, d.indices.map(q =>
+    h('li', null, h('span', { class: 'mn', translate: 'no', text: tr(q.name) }), h('span', { class: 'mp', text: price2(q.price) }), chgEl(q.change_pct)))));
+  const stocks = d.stocks || [];
+  if (stocks.length >= 6) {
+    const col = (title, list) => h('div', { class: 'mcol' }, h('h3', { text: title }),
+      h('ul', { class: 'mkt' }, list.map(q => h('li', null, h('span', { class: 'mn', translate: 'no', text: q.name }), chgEl(q.change_pct)))));
+    out.push(h('div', { class: 'mtop' }, col(t('Stijgers (AEX)'), stocks.slice(0, 3)), col(t('Dalers (AEX)'), stocks.slice(-3).reverse())));
+  }
+  const first = d.indices?.[0], last = first?.time && !first.time.startsWith('0001') ? first.time : null;
+  out.push(h('p', { class: 'pfoot' }, last ? t('Koersen met vertraging · {name} {t} · ', { name: first.name, t: fmt.clock.format(new Date(last)) }) : '',
+    t('Bron: '), extLink('https://finance.yahoo.com/', 'Yahoo Finance'), t(' (onofficieel, alleen voor persoonlijk gebruik)')));
+  body.replaceChildren(...out);
+}
+
 // ---------------------------------------------------------------- overzicht (digest) & kiosk
 const urlMode = new URLSearchParams(location.search).get('mode');
 let viewMode = 'normal', digestQueued = false, kioskTimer = null, kioskPauseUntil = 0, wakeLock = null;
@@ -3710,6 +3875,15 @@ function renderDigest() {
     cards.push(dCard('energy', 'Energieprijzen', [cur ? h('p', null, h('span', { class: 'big', text: eur(cur.p) }), ' ', t('per kWh nu')) : null,
       win ? h('p', { text: t('Goedkoopst vandaag: {span} ({p})', { span: hourSpan(win.from, 3), p: eur(win.avg) }) }) : null,
       winT ? h('p', { text: t('Goedkoopst morgen: {span} ({p})', { span: hourSpan(winT.from, 3), p: eur(winT.avg) }) }) : null]));
+  }
+  const mk = panelData.markets?.data?.data, ec = panelData.economy?.data?.data;
+  if ((panelOn('markets') && mk?.indices?.length) || (panelOn('economy') && ec)) {
+    const aex = mk?.indices?.find(q => q.symbol === '^AEX'), st = mk?.stocks || [], lines = [];
+    if (panelOn('markets') && aex) lines.push(h('p', null, h('span', { class: 'big', text: price2(aex.price) }), ' AEX ', chgEl(aex.change_pct)));
+    if (panelOn('markets') && st.length >= 2) lines.push(h('p', { translate: 'no', text: `▲ ${st[0].name} ${st[0].change_pct > 0 ? '+' : ''}${st[0].change_pct.toLocaleString(locale())}% · ▼ ${st.at(-1).name} ${st.at(-1).change_pct.toLocaleString(locale())}%` }));
+    if (panelOn('economy') && ec) lines.push(h('p', { text: [ec.inflation?.at(-1) ? t('inflatie {v}', { v: pct1(ec.inflation.at(-1).value) }) : null, ec.unemployment?.at(-1) ? t('werkloosheid {v}', { v: pct1(ec.unemployment.at(-1).value) }) : null,
+      ec.rate ? t('ECB {v}', { v: ec.rate.value.toLocaleString(locale(), { minimumFractionDigits: 2 }) + '%' }) : null].filter(Boolean).join(' · ') }));
+    cards.push(dCard(panelOn('markets') ? 'markets' : 'economy', 'Beurs en economie', lines));
   }
   const air = panelData.air?.data;
   if (panelOn('air') && air?.lki) {
@@ -4334,7 +4508,7 @@ async function init() {
   buildChips();
   if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
   await Promise.allSettled([loadNews({ replace: true }), loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(),
-    loadBreaches(), loadOutages(), loadHealthPanel(), loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadPollen(), loadUtilities(), loadQuakes()]);
+    loadBreaches(), loadOutages(), loadHealthPanel(), loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(), loadMarkets()]);
   kioskFit(); // the header and top bar have their final height now
   // intervals from config.yaml (refresh:), in seconds; defaults if the server is older
   const R = (k, def) => Math.max(60, catalog?.refresh?.[k] || def * 60) * 1000;
@@ -4356,6 +4530,8 @@ async function init() {
   every(R('pollen', 60), loadPollen);
   every(R('utilities', 5), loadUtilities);
   every(R('quakes', 15), loadQuakes);
+  every(R('economy', 60), loadEconomy);
+  every(R('markets', 5), loadMarkets);
   every(R('outages', 10), loadOutages);
   every(R('health', 30), loadHealthPanel);
   setInterval(tick, 15e3);

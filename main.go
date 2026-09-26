@@ -280,6 +280,21 @@ type Config struct {
 			Interval Duration `yaml:"interval"`
 		} `yaml:"internet"`
 	} `yaml:"outages"`
+	// Economy: Economie in cijfers panel (Eurostat and ECB open data, no key).
+	Economy struct {
+		Enabled      bool     `yaml:"enabled"`
+		EurostatBase string   `yaml:"eurostat_base"`
+		ECBBase      string   `yaml:"ecb_base"`
+		Interval     Duration `yaml:"interval"`
+	} `yaml:"economy"`
+	// Markets: Beurs panel (Yahoo Finance's unofficial spark endpoint; personal use).
+	Markets struct {
+		Enabled  bool           `yaml:"enabled"`
+		URL      string         `yaml:"url"`
+		Interval Duration       `yaml:"interval"`
+		Indices  []MarketSymbol `yaml:"indices"`
+		Stocks   []MarketSymbol `yaml:"stocks"` // for the top 3 risers and fallers (AEX)
+	} `yaml:"markets"`
 	// Pollen: Hooikoorts panel (Open-Meteo Air Quality API, CAMS Europe; no key).
 	Pollen struct {
 		Enabled bool   `yaml:"enabled"`
@@ -365,6 +380,17 @@ func defaultConfig() *Config {
 			Name string `yaml:"name"`
 		}{n.asn, n.name})
 	}
+	c.Economy.Enabled, c.Economy.Interval = true, Duration(6*time.Hour)
+	c.Economy.EurostatBase = "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data"
+	c.Economy.ECBBase = "https://data-api.ecb.europa.eu/service/data"
+	c.Markets.Enabled, c.Markets.URL, c.Markets.Interval = true, "https://query1.finance.yahoo.com/v8/finance/spark", Duration(15*time.Minute)
+	c.Markets.Indices = []MarketSymbol{{"^AEX", "AEX"}, {"^AMX", "AMX"}, {"^BFX", "BEL 20"}, {"^GDAXI", "DAX"}, {"^STOXX50E", "Euro Stoxx 50"},
+		{"^GSPC", "S&P 500"}, {"^IXIC", "Nasdaq"}, {"BZ=F", "Brent-olie ($)"}, {"GC=F", "Goud ($)"}, {"BTC-EUR", "Bitcoin (€)"}}
+	c.Markets.Stocks = []MarketSymbol{{"ASML.AS", "ASML"}, {"SHELL.AS", "Shell"}, {"UNA.AS", "Unilever"}, {"PRX.AS", "Prosus"}, {"REN.AS", "RELX"},
+		{"INGA.AS", "ING"}, {"ADYEN.AS", "Adyen"}, {"HEIA.AS", "Heineken"}, {"WKL.AS", "Wolters Kluwer"}, {"ASM.AS", "ASM International"},
+		{"AD.AS", "Ahold Delhaize"}, {"PHIA.AS", "Philips"}, {"NN.AS", "NN Group"}, {"ABN.AS", "ABN AMRO"}, {"KPN.AS", "KPN"},
+		{"UMG.AS", "Universal Music Group"}, {"EXO.AS", "Exor"}, {"AGN.AS", "Aegon"}, {"AKZA.AS", "Akzo Nobel"}, {"ASRNL.AS", "ASR Nederland"},
+		{"BESI.AS", "BE Semiconductor"}, {"DSFIR.AS", "DSM-Firmenich"}, {"IMCD.AS", "IMCD"}, {"RAND.AS", "Randstad"}, {"MT.AS", "ArcelorMittal"}}
 	c.Pollen.Enabled, c.Pollen.URL = true, "https://air-quality-api.open-meteo.com/v1/air-quality"
 	c.Utilities.Enabled, c.Utilities.Interval = true, Duration(5*time.Minute)
 	c.Utilities.LianderURL = "https://services1.arcgis.com/v6W5HAVrpgSg3vts/arcgis/rest/services/IStoringen_Productie_V7/FeatureServer/0"
@@ -433,13 +459,14 @@ var defaultRefresh = map[string]time.Duration{
 	"energy": 30 * time.Minute, "air": 15 * time.Minute, "trains": 3 * time.Minute, "politics": 15 * time.Minute,
 	"today": 60 * time.Minute, "ransomware": 30 * time.Minute,
 	"pollen": 60 * time.Minute, "utilities": 5 * time.Minute, "quakes": 15 * time.Minute,
+	"economy": 60 * time.Minute, "markets": 5 * time.Minute,
 	"health": 30 * time.Minute,
 }
 
 func (c *Config) validate() error {
 	for k, v := range c.Refresh {
 		if _, ok := defaultRefresh[k]; !ok {
-			return fmt.Errorf("refresh.%s: unknown panel (known: news, weather, alerts, traffic, alarms, energy, air, trains, politics, today, ransomware, pollen, utilities, quakes, threats, advisories, breaches, outages, ap, health)", k)
+			return fmt.Errorf("refresh.%s: unknown panel (known: news, weather, alerts, traffic, alarms, energy, air, trains, politics, today, ransomware, pollen, utilities, quakes, economy, markets, threats, advisories, breaches, outages, ap, health)", k)
 		}
 		if v.D() < time.Minute || v.D() > 24*time.Hour {
 			return fmt.Errorf("refresh.%s: %s is outside 1m..24h", k, v.D())
@@ -554,6 +581,21 @@ func (c *Config) validate() error {
 			c.Ransomware.Countries[i] = strings.ToUpper(strings.TrimSpace(cc))
 			if !rwCountryRe.MatchString(c.Ransomware.Countries[i]) {
 				fail("ransomware.countries: %q is not an ISO country code such as NL", cc)
+			}
+		}
+	}
+	if c.Economy.Enabled && (c.Economy.Interval.D() < time.Hour || !httpsURL(c.Economy.EurostatBase) || !httpsURL(c.Economy.ECBBase)) {
+		fail("economy: interval must be at least 1h and the URLs https")
+	}
+	if m := &c.Markets; m.Enabled {
+		if m.Interval.D() < 5*time.Minute || !httpsURL(m.URL) || len(m.Indices)+len(m.Stocks) == 0 || len(m.Indices) > 20 || len(m.Stocks) > 60 {
+			fail("markets: interval must be at least 5m, url https, 1–20 indices and at most 60 stocks")
+		}
+		for _, l := range [][]MarketSymbol{m.Indices, m.Stocks} {
+			for _, s := range l {
+				if !marketSymbolRe.MatchString(s.Symbol) || strings.TrimSpace(s.Name) == "" {
+					fail("markets: %q needs a valid symbol (e.g. ^AEX, ASML.AS) and a name", s.Symbol)
+				}
 			}
 		}
 	}
@@ -1099,6 +1141,8 @@ func (a *App) routes(basePath string) http.Handler {
 	handle("GET /api/pollen", a.handlePollen)
 	handle("GET /api/utilities", a.handleUtilities)
 	handle("GET /api/quakes", a.handleQuakes)
+	handle("GET /api/economy", a.handleEconomy)
+	handle("GET /api/markets", a.handleMarkets)
 	handle("GET /api/alarms", a.handleAlarms)
 	handle("GET /healthz", a.handleHealth)
 	handle("GET /metrics", a.handleMetrics)
@@ -1301,6 +1345,8 @@ func (a *App) handleCatalog(w http.ResponseWriter, r *http.Request) {
 		"pollen":           cfg.Pollen.Enabled,
 		"utilities":        cfg.Utilities.Enabled,
 		"quakes":           cfg.Quakes.Enabled,
+		"economy":          cfg.Economy.Enabled,
+		"markets":          cfg.Markets.Enabled,
 		"alarms":           map[string]any{"enabled": cfg.Alarms.Enabled, "city": cfg.Alarms.City},
 		"alerts":           map[string]bool{"nctv": cfg.Alerts.NCTV.Enabled, "knmi": cfg.Alerts.KNMI},
 		"presets":          cfg.Presets,
@@ -1485,6 +1531,12 @@ func (a *App) otherFeeds(cfg *Config) []FeedStatus {
 	}
 	if cfg.Quakes.Enabled {
 		add("knmi:quakes", "KNMI · aardbevingen", "daily")
+	}
+	if cfg.Economy.Enabled {
+		add("econ:figures", "Eurostat en ECB · economie", "daily")
+	}
+	if cfg.Markets.Enabled {
+		add("yahoo:markets", "Yahoo Finance · beurs", "daily")
 	}
 	if cfg.Outages.Enabled && cfg.Outages.Internet.Enabled {
 		add("ioda:internet", "IODA · internetverstoringen", "outage")
