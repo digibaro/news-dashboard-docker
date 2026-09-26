@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"context"
 	"crypto/sha1"
+	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/xml"
@@ -37,33 +38,42 @@ const (
 	feedAccept   = "application/rss+xml, application/atom+xml, application/rdf+xml, application/feed+json, application/xml;q=0.9, text/xml;q=0.9, */*;q=0.5"
 )
 
+// tls12Hosts: servers that never answer a Go TLS 1.3 handshake (the connection stalls until the
+// timeout) but work over TLS 1.2. IODA: checked 2026-09-26, curl and Python are fine over TLS 1.3.
+var tls12Hosts = map[string]bool{"api.ioda.inetintel.cc.gatech.edu": true}
+
 type Fetcher struct {
-	client  *http.Client
-	global  chan struct{}
-	mu      sync.Mutex
-	perHost map[string]chan struct{}
-	ua      func() string
-	timeout func() time.Duration
+	client   *http.Client
+	client12 *http.Client // TLS 1.2 only, for tls12Hosts
+	global   chan struct{}
+	mu       sync.Mutex
+	perHost  map[string]chan struct{}
+	ua       func() string
+	timeout  func() time.Duration
 }
 
 func newFetcher(maxConcurrent int, ua func() string, timeout func() time.Duration) *Fetcher {
 	tr := http.DefaultTransport.(*http.Transport).Clone()
 	tr.MaxIdleConnsPerHost = perHostLimit
 	tr.IdleConnTimeout = 60 * time.Second
+	tr12 := tr.Clone()
+	tr12.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS12, MaxVersion: tls.VersionTLS12}
+	redirects := func(req *http.Request, via []*http.Request) error {
+		if len(via) > 3 {
+			return errors.New("more than 3 redirects")
+		}
+		if req.URL.Scheme != "http" && req.URL.Scheme != "https" {
+			return errors.New("redirect to non-http URL")
+		}
+		return nil
+	}
 	return &Fetcher{
-		client: &http.Client{Transport: tr, CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if len(via) > 3 {
-				return errors.New("more than 3 redirects")
-			}
-			if req.URL.Scheme != "http" && req.URL.Scheme != "https" {
-				return errors.New("redirect to non-http URL")
-			}
-			return nil
-		}},
-		global:  make(chan struct{}, maxConcurrent),
-		perHost: map[string]chan struct{}{},
-		ua:      ua,
-		timeout: timeout,
+		client:   &http.Client{Transport: tr, CheckRedirect: redirects},
+		client12: &http.Client{Transport: tr12, CheckRedirect: redirects},
+		global:   make(chan struct{}, maxConcurrent),
+		perHost:  map[string]chan struct{}{},
+		ua:       ua,
+		timeout:  timeout,
 	}
 }
 
@@ -146,7 +156,11 @@ func (f *Fetcher) Do(ctx context.Context, fr FetchReq) (*FetchResp, error) {
 	for k, v := range fr.Header {
 		req.Header.Set(k, v)
 	}
-	resp, err := f.client.Do(req)
+	client := f.client
+	if tls12Hosts[req.URL.Hostname()] {
+		client = f.client12
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, shortErr(err)
 	}

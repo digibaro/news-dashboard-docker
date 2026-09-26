@@ -1683,6 +1683,16 @@ func (a *App) threatJobs(cfg *Config) []Job {
 					func(b []byte) (any, error) { return parseRansomware(b, cc, time.Now()) }, nil)})
 		}
 	}
+	if cfg.Utilities.Enabled {
+		jobs = append(jobs, Job{Key: "grid:outages", Sig: cfg.Utilities.LianderURL + "|" + cfg.Utilities.StedinURL, Interval: cfg.Utilities.Interval.D(), Run: a.runUtilities})
+	}
+	if cfg.Quakes.Enabled {
+		jobs = append(jobs, Job{Key: "knmi:quakes", Sig: fmt.Sprint(cfg.Quakes.URL, cfg.Quakes.Days), Interval: cfg.Quakes.Interval.D(), Run: a.runQuakes})
+	}
+	if cfg.Outages.Enabled && cfg.Outages.Internet.Enabled {
+		in := cfg.Outages.Internet
+		jobs = append(jobs, Job{Key: "ioda:internet", Sig: fmt.Sprint(in.Base, in.Country, in.Networks), Interval: in.Interval.D(), Run: a.runInternet})
+	}
 	if cfg.Today.Enabled {
 		jobs = append(jobs, Job{Key: "rijk:schoolholidays", Sig: cfg.Today.SchoolURL, Interval: 24 * time.Hour,
 			Run: a.fetchJob("rijk:schoolholidays", func() string { return a.config().Today.SchoolURL }, "application/json", nil, parseSchoolHolidays, nil)})
@@ -2701,7 +2711,16 @@ func (a *App) handleOutages(w http.ResponseWriter, r *http.Request) {
 		}
 		list = append(list, e)
 	}
-	writeJSON(w, r, http.StatusOK, 60, map[string]any{"enabled": true, "providers": list})
+	resp := map[string]any{"enabled": true, "providers": list}
+	if cfg.Outages.Internet.Enabled {
+		e := a.feedEntry("ioda:internet")
+		e["url"] = "https://ioda.inetintel.cc.gatech.edu/country/" + cfg.Outages.Internet.Country
+		if v, ok := a.threats.get("ioda:internet").Data.([]InternetEntity); ok {
+			e["entities"] = v
+		}
+		resp["internet"] = e
+	}
+	writeJSON(w, r, http.StatusOK, 60, resp)
 }
 
 // ---------------------------------------------------------------------------
@@ -4005,4 +4024,576 @@ func (a *App) handleRansomware(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, r, http.StatusOK, 300, map[string]any{"enabled": true, "sources": sources, "victims": all,
 		"last7": last7, "last30": last30, "last365": last365, "top_groups": top})
+}
+
+// ---------------------------------------------------------------------------
+// Hooikoorts: pollen forecast (alder, birch, grass, mugwort, olive, ragweed) for a
+// location, from the Open-Meteo Air Quality API (CAMS Europe). Daily maxima for the
+// next three days, fetched on demand per ~10 km cell and cached for an hour.
+
+var pollenTypes = []string{"alder", "birch", "grass", "mugwort", "olive", "ragweed"}
+
+type PollenDay struct {
+	Date string             `json:"date"`
+	Max  map[string]float64 `json:"max"` // grains/m³, highest hourly value of the day
+}
+
+type PollenData struct {
+	Days []PollenDay        `json:"days"`
+	Now  map[string]float64 `json:"now"`
+}
+
+func parsePollen(body []byte, now time.Time) (PollenData, error) {
+	var r struct {
+		Hourly map[string]json.RawMessage `json:"hourly"`
+	}
+	if err := json.Unmarshal(body, &r); err != nil {
+		return PollenData{}, fmt.Errorf("open-meteo pollen: %w", err)
+	}
+	var times []string
+	if err := json.Unmarshal(r.Hourly["time"], &times); err != nil || len(times) == 0 {
+		return PollenData{}, errors.New("open-meteo pollen: no hourly data")
+	}
+	d := PollenData{Now: map[string]float64{}}
+	byDay := map[string]map[string]float64{}
+	var order []string
+	nowKey := now.In(amsterdam).Format("2006-01-02T15")
+	for _, typ := range pollenTypes {
+		var vals []*float64
+		if json.Unmarshal(r.Hourly[typ+"_pollen"], &vals) != nil {
+			continue
+		}
+		for i, v := range vals {
+			if i >= len(times) || v == nil || *v < 0 || *v > 100000 || len(times[i]) < 13 {
+				continue
+			}
+			day := times[i][:10]
+			if byDay[day] == nil {
+				byDay[day] = map[string]float64{}
+				order = append(order, day)
+			}
+			if *v > byDay[day][typ] {
+				byDay[day][typ] = math.Round(*v*10) / 10
+			}
+			if times[i][:13] == nowKey {
+				d.Now[typ] = math.Round(*v*10) / 10
+			}
+		}
+	}
+	sort.Strings(order)
+	today := now.In(amsterdam).Format("2006-01-02")
+	for _, day := range order {
+		if day >= today && len(d.Days) < 3 {
+			d.Days = append(d.Days, PollenDay{Date: day, Max: byDay[day]})
+		}
+	}
+	if len(d.Days) == 0 {
+		return PollenData{}, errors.New("open-meteo pollen: no data for today")
+	}
+	return d, nil
+}
+
+func (a *App) handlePollen(w http.ResponseWriter, r *http.Request) {
+	cfg := a.config()
+	if !cfg.Pollen.Enabled {
+		writeJSON(w, r, http.StatusOK, 60, map[string]any{"enabled": false})
+		return
+	}
+	lat, lon := cfg.Weather.Location.Lat, cfg.Weather.Location.Lon
+	if q := r.URL.Query(); q.Get("lat") != "" || q.Get("lon") != "" {
+		var ok1, ok2 bool
+		lat, ok1 = parseCoord(q.Get("lat"), 90)
+		lon, ok2 = parseCoord(q.Get("lon"), 180)
+		if !ok1 || !ok2 {
+			writeError(w, r, http.StatusBadRequest, "lat/lon ongeldig")
+			return
+		}
+	}
+	lat, lon = math.Round(lat*10)/10, math.Round(lon*10)/10 // CAMS cells are ~10 km: share the cache
+	ip := a.clientIP(r)
+	ctx := context.WithoutCancel(r.Context())
+	d, at, stale, err := a.pollen.get(fmt.Sprintf("%.1f,%.1f", lat, lon), time.Hour, func() (PollenData, error) {
+		if !a.wx.limiter.allow(ip) {
+			return PollenData{}, errRateLimited
+		}
+		u := fmt.Sprintf("%s?latitude=%.1f&longitude=%.1f&hourly=%s&timezone=Europe%%2FAmsterdam&forecast_days=4", cfg.Pollen.URL, lat, lon,
+			strings.Join(func() []string {
+				var s []string
+				for _, t := range pollenTypes {
+					s = append(s, t+"_pollen")
+				}
+				return s
+			}(), ","))
+		resp, err := a.fetcher.Do(ctx, FetchReq{URL: u, Accept: "application/json"})
+		if err != nil {
+			return PollenData{}, fmt.Errorf("open-meteo pollen: %w", err)
+		}
+		return parsePollen(resp.Body, time.Now())
+	})
+	switch {
+	case errors.Is(err, errRateLimited):
+		writeError(w, r, http.StatusTooManyRequests, "te veel verzoeken, probeer het zo opnieuw")
+		return
+	case err != nil:
+		writeError(w, r, http.StatusBadGateway, "Open-Meteo is niet bereikbaar")
+		return
+	}
+	writeJSON(w, r, http.StatusOK, 600, map[string]any{"enabled": true, "data": d, "fetched_at": at.UTC().Truncate(time.Second), "stale": stale,
+		"location": map[string]float64{"lat": lat, "lon": lon}})
+}
+
+// ---------------------------------------------------------------------------
+// Kritieke infrastructuur: electricity and gas outages of the grid operators that publish
+// them: Liander (public ArcGIS feature service IStoringen, behind Liander's outage map)
+// and Stedin (the JSON behind web.stedin.net/storingen, undocumented). Enexis, the small
+// operators and the drinking-water companies publish no open outage data; the panel says so.
+
+type UtilityOutage struct {
+	ID        string     `json:"id"`
+	Energy    string     `json:"energy"`  // elektriciteit | gas | overig
+	Planned   bool       `json:"planned"` // planned maintenance
+	Status    string     `json:"status,omitempty"`
+	Reported  time.Time  `json:"reported"`
+	Estimate  *time.Time `json:"estimate,omitempty"`
+	EstText   string     `json:"estimate_text,omitempty"` // Stedin: "26-09-2026 tussen 13:15 en 13:45 uur"
+	Cause     string     `json:"cause,omitempty"`
+	Customers string     `json:"customers,omitempty"` // Liander bucket such as "< 25"
+	Places    string     `json:"places,omitempty"`
+	Postcodes int        `json:"postcodes,omitempty"`
+}
+
+type GridOperator struct {
+	Name        string          `json:"name"`
+	URL         string          `json:"url"`
+	Area        string          `json:"area"`
+	Active      []UtilityOutage `json:"active"`
+	Planned     []UtilityOutage `json:"planned"`
+	Resolved24h int             `json:"resolved_24h"` // -1 = unknown
+	FetchedAt   *time.Time      `json:"fetched_at,omitempty"`
+	Error       string          `json:"error,omitempty"`
+}
+
+// titleNL: "AMSTERDAM" → "Amsterdam", "'S-GRAVENHAGE" → "'s-Gravenhage".
+func titleNL(s string) string {
+	words := strings.Fields(strings.ToLower(s))
+	for i, w := range words {
+		parts := strings.Split(w, "-")
+		for j, p := range parts {
+			if strings.HasPrefix(p, "'") || (j > 0 || i > 0) && (p == "aan" || p == "den" || p == "de" || p == "op" || p == "van" || p == "bij" || p == "in") {
+				continue
+			}
+			if r := []rune(p); len(r) > 0 {
+				parts[j] = strings.ToUpper(string(r[0])) + string(r[1:])
+			}
+		}
+		words[i] = strings.Join(parts, "-")
+	}
+	return strings.Join(words, " ")
+}
+
+// parseLianderOutages reads the IStoringen feature service (Liander's outage map).
+func parseLianderOutages(body []byte) ([]UtilityOutage, error) {
+	var r struct {
+		Features []struct {
+			Attributes struct {
+				Nummer    int    `json:"STORING_NUMMER"`
+				Type      string `json:"STORING_TYPE"`
+				Energie   string `json:"STORING_ENERGIESOORT"`
+				Status    string `json:"STORING_STATUS"`
+				Gemeld    *int64 `json:"STORING_DATUM_GEMELD"`
+				Schatting *int64 `json:"STORING_DATUM_SCHATTING"`
+				Oorzaak   string `json:"STORING_OORZAAK"`
+				Klanten   string `json:"STORING_GETROFFEN_KLANTEN"`
+				Plaatsen  string `json:"STORING_GETROFFEN_PLAATSEN"`
+			} `json:"attributes"`
+		} `json:"features"`
+		Error *struct {
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal(body, &r); err != nil {
+		return nil, fmt.Errorf("liander: %w", err)
+	}
+	if r.Error != nil {
+		return nil, fmt.Errorf("liander: %s", firstNonEmpty(truncate(plainText(r.Error.Message), 80), "error"))
+	}
+	if r.Features == nil {
+		return nil, errors.New("liander: unexpected response")
+	}
+	out := []UtilityOutage{}
+	for _, f := range r.Features {
+		a := f.Attributes
+		if a.Gemeld == nil || strings.EqualFold(a.Status, "opgelost") || a.Type == "dummy" {
+			continue
+		}
+		energy := strings.ToLower(strings.TrimSpace(a.Energie))
+		if energy != "elektriciteit" && energy != "gas" {
+			energy = "overig"
+		}
+		o := UtilityOutage{ID: strconv.Itoa(a.Nummer), Energy: energy, Planned: a.Type == "P", Status: truncate(plainText(a.Status), 40),
+			Reported: time.UnixMilli(*a.Gemeld).UTC(), Customers: truncate(plainText(a.Klanten), 20)}
+		if a.Schatting != nil {
+			t := time.UnixMilli(*a.Schatting).UTC()
+			o.Estimate = &t
+		}
+		if c := plainText(a.Oorzaak); c != "" && !strings.EqualFold(c, "nog niet bekend") {
+			o.Cause = truncate(c, 60)
+		}
+		places := strings.Split(plainText(a.Plaatsen), ",")
+		for i := range places {
+			places[i] = titleNL(strings.TrimSpace(places[i]))
+		}
+		o.Places = truncate(strings.Join(places, ", "), 100)
+		out = append(out, o)
+	}
+	return out, nil
+}
+
+// parseStedinPlace reads the outages of one place from Stedin's outage API (the JSON behind
+// web.stedin.net/storingen; undocumented).
+func parseStedinPlace(body []byte, place string) ([]UtilityOutage, error) {
+	var list []struct {
+		ID             string   `json:"id"`
+		IncidentType   string   `json:"incidentType"`
+		Utility        string   `json:"utility"`
+		StartTime      string   `json:"startTime"`
+		TimeIndication string   `json:"timeIndication"`
+		PostalCodes    []string `json:"postalCodes"`
+	}
+	if err := json.Unmarshal(body, &list); err != nil {
+		return nil, fmt.Errorf("stedin: %w", err)
+	}
+	out := []UtilityOutage{}
+	for _, x := range list {
+		t, ok := parseDate(x.StartTime)
+		if !ok {
+			continue
+		}
+		energy := map[string]string{"electricity": "elektriciteit", "gas": "gas"}[strings.ToLower(x.Utility)]
+		if energy == "" {
+			energy = "overig"
+		}
+		out = append(out, UtilityOutage{ID: truncate(plainText(x.ID), 40), Energy: energy, Planned: strings.EqualFold(x.IncidentType, "Maintenance"),
+			Reported: t.UTC(), EstText: truncate(plainText(x.TimeIndication), 80), Places: truncate(plainText(place), 60), Postcodes: len(x.PostalCodes)})
+	}
+	return out, nil
+}
+
+func (a *App) fetchLiander(ctx context.Context, base string) (GridOperator, error) {
+	g := GridOperator{Name: "Liander", URL: "https://www.liander.nl/storingen-en-onderhoud", Area: "Noord-Holland, Gelderland, Flevoland, delen van Friesland en Zuid-Holland",
+		Resolved24h: -1}
+	q := url.Values{}
+	q.Set("where", "STORING_STATUS <> 'opgelost'")
+	q.Set("outFields", "STORING_NUMMER,STORING_TYPE,STORING_ENERGIESOORT,STORING_STATUS,STORING_DATUM_GEMELD,STORING_DATUM_SCHATTING,STORING_OORZAAK,STORING_GETROFFEN_KLANTEN,STORING_GETROFFEN_PLAATSEN")
+	q.Set("orderByFields", "STORING_DATUM_GEMELD DESC")
+	q.Set("resultRecordCount", "500")
+	q.Set("returnGeometry", "false")
+	q.Set("f", "json")
+	resp, err := a.fetcher.Do(ctx, FetchReq{URL: base + "/query?" + q.Encode(), Accept: "application/json"})
+	if err != nil {
+		return g, fmt.Errorf("liander: %w", err)
+	}
+	list, err := parseLianderOutages(resp.Body)
+	if err != nil {
+		return g, err
+	}
+	c := url.Values{}
+	c.Set("where", fmt.Sprintf("STORING_STATUS = 'opgelost' AND STORING_TYPE <> 'P' AND STORING_DATUM_EIND >= TIMESTAMP '%s'", time.Now().UTC().Add(-24*time.Hour).Format("2006-01-02 15:04:05")))
+	c.Set("returnCountOnly", "true")
+	c.Set("f", "json")
+	if r2, err2 := a.fetcher.Do(ctx, FetchReq{URL: base + "/query?" + c.Encode(), Accept: "application/json"}); err2 == nil {
+		var n struct {
+			Count *int `json:"count"`
+		}
+		if json.Unmarshal(r2.Body, &n) == nil && n.Count != nil {
+			g.Resolved24h = *n.Count
+		}
+	}
+	g.Active, g.Planned = splitPlanned(list)
+	return g, nil
+}
+
+func (a *App) fetchStedin(ctx context.Context, base string) (GridOperator, error) {
+	g := GridOperator{Name: "Stedin", URL: "https://web.stedin.net/storingen", Area: "Zuid-Holland, Utrecht en Zeeland (grotendeels)", Resolved24h: -1}
+	resp, err := a.fetcher.Do(ctx, FetchReq{URL: base + "?active=true", Accept: "application/json"})
+	if err != nil {
+		return g, fmt.Errorf("stedin: %w", err)
+	}
+	var ov struct {
+		Total  *int `json:"total"`
+		Places []struct {
+			Place string `json:"place"`
+			Count int    `json:"count"`
+		} `json:"places"`
+	}
+	if err := json.Unmarshal(resp.Body, &ov); err != nil || ov.Total == nil {
+		return g, errors.New("stedin: unexpected response")
+	}
+	var list []UtilityOutage
+	for i, p := range ov.Places {
+		if i == 25 || p.Place == "" { // one request per place; a storm day is summarised by the first 25
+			break
+		}
+		r, err := a.fetcher.Do(ctx, FetchReq{URL: base + "?" + url.Values{"place": {p.Place}, "active": {"true"}}.Encode(), Accept: "application/json"})
+		if err != nil {
+			continue
+		}
+		if items, err := parseStedinPlace(r.Body, p.Place); err == nil {
+			list = append(list, items...)
+		}
+	}
+	sort.SliceStable(list, func(i, j int) bool { return list[i].Reported.After(list[j].Reported) })
+	g.Active, g.Planned = splitPlanned(list)
+	return g, nil
+}
+
+func splitPlanned(list []UtilityOutage) (active, planned []UtilityOutage) {
+	active, planned = []UtilityOutage{}, []UtilityOutage{}
+	for _, o := range list {
+		if o.Planned {
+			planned = append(planned, o)
+		} else {
+			active = append(active, o)
+		}
+	}
+	return
+}
+
+func (a *App) runUtilities(ctx context.Context) error {
+	const key = "grid:outages"
+	cfg := a.config().Utilities
+	prev, _ := a.threats.get(key).Data.([]GridOperator)
+	var out []GridOperator
+	okN := 0
+	for i, f := range []func() (GridOperator, error){
+		func() (GridOperator, error) { return a.fetchLiander(ctx, strings.TrimSuffix(cfg.LianderURL, "/")) },
+		func() (GridOperator, error) { return a.fetchStedin(ctx, strings.TrimSuffix(cfg.StedinURL, "/")) },
+	} {
+		g, err := f()
+		now := time.Now().UTC().Truncate(time.Second)
+		if err != nil {
+			if i < len(prev) && prev[i].FetchedAt != nil { // keep the last good data, with the error
+				g = prev[i]
+			}
+			g.Error = truncate(err.Error(), 120)
+			slog.Warn("fetch failed", "source", key, "operator", g.Name, "err", err)
+		} else {
+			g.FetchedAt = &now
+			okN++
+		}
+		out = append(out, g)
+	}
+	if okN == 0 {
+		err := errors.New("netbeheerders: no operator reachable")
+		a.threats.fail(key, err)
+		if prev == nil {
+			return err
+		}
+	}
+	a.threats.ok(key, out, "", "")
+	return nil
+}
+
+func (a *App) handleUtilities(w http.ResponseWriter, r *http.Request) {
+	if !a.config().Utilities.Enabled {
+		writeJSON(w, r, http.StatusOK, 60, map[string]any{"enabled": false})
+		return
+	}
+	e := a.feedEntry("grid:outages")
+	e["enabled"] = true
+	if v, ok := a.threats.get("grid:outages").Data.([]GridOperator); ok {
+		e["operators"] = v
+	}
+	writeJSON(w, r, http.StatusOK, 60, e)
+}
+
+// ---------------------------------------------------------------------------
+// Aardbevingen: earthquakes in and around the Netherlands from KNMI's FDSN event
+// service (open data). Explosions, quarry blasts and sonic booms are left out;
+// "induced or triggered" events (gas extraction, Groningen) are kept and marked.
+
+type Quake struct {
+	ID      string    `json:"id"`
+	Time    time.Time `json:"time"`
+	Place   string    `json:"place"`
+	Mag     *float64  `json:"mag,omitempty"`
+	MagType string    `json:"mag_type,omitempty"`
+	Depth   float64   `json:"depth_km"`
+	Induced bool      `json:"induced,omitempty"`
+	URL     string    `json:"url"`
+}
+
+var quakeIDRe = regexp.MustCompile(`^[a-z]{2,8}\d{4}[a-z]{2,8}$`)
+
+func parseKNMIQuakes(body []byte) ([]Quake, error) {
+	out := []Quake{}
+	lines := strings.Split(string(body), "\n")
+	header := false
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "#EventID|") {
+			header = true
+			continue
+		}
+		f := strings.Split(line, "|")
+		if line == "" || len(f) < 14 {
+			continue
+		}
+		typ := strings.ToLower(strings.TrimSpace(f[13]))
+		if typ != "earthquake" && typ != "induced or triggered event" {
+			continue
+		}
+		t, err := time.Parse("2006-01-02T15:04:05.999999", strings.TrimSpace(f[1]))
+		if err != nil || !quakeIDRe.MatchString(f[0]) {
+			continue
+		}
+		q := Quake{ID: f[0], Time: t.UTC(), Place: truncate(plainText(f[12]), 60), MagType: truncate(plainText(f[9]), 6), Induced: typ != "earthquake",
+			URL: "https://www.knmi.nl/nederland-nu/seismologie/aardbevingen/" + url.PathEscape(f[0])}
+		if d, err := strconv.ParseFloat(f[4], 64); err == nil && d >= 0 && d < 700 {
+			q.Depth = math.Round(d*10) / 10
+		}
+		if m, err := strconv.ParseFloat(f[10], 64); err == nil && m > -3 && m < 10 {
+			m = math.Round(m*10) / 10
+			q.Mag = &m
+		}
+		out = append(out, q)
+	}
+	if !header {
+		return nil, errors.New("knmi: not an FDSN text response")
+	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].Time.After(out[j].Time) })
+	return out, nil
+}
+
+func (a *App) runQuakes(ctx context.Context) error {
+	const key = "knmi:quakes"
+	cfg := a.config().Quakes
+	q := url.Values{}
+	q.Set("starttime", time.Now().UTC().AddDate(0, 0, -cfg.Days).Format("2006-01-02"))
+	q.Set("minlatitude", "50.6")
+	q.Set("maxlatitude", "53.8")
+	q.Set("minlongitude", "3.2")
+	q.Set("maxlongitude", "7.3")
+	q.Set("format", "text")
+	q.Set("orderby", "time")
+	resp, err := a.fetcher.Do(ctx, FetchReq{URL: cfg.URL + "?" + q.Encode(), Accept: "text/plain"})
+	if resp != nil && resp.Status == http.StatusNoContent { // FDSN: no events in the window
+		a.threats.ok(key, []Quake{}, "", "")
+		return nil
+	}
+	var list []Quake
+	if err == nil {
+		list, err = parseKNMIQuakes(resp.Body)
+	}
+	if err != nil {
+		a.threats.fail(key, err)
+		slog.Warn("fetch failed", "source", key, "err", err)
+		return err
+	}
+	if len(list) > 200 {
+		list = list[:200]
+	}
+	a.threats.ok(key, list, "", "")
+	return nil
+}
+
+func (a *App) handleQuakes(w http.ResponseWriter, r *http.Request) {
+	cfg := a.config()
+	if !cfg.Quakes.Enabled {
+		writeJSON(w, r, http.StatusOK, 60, map[string]any{"enabled": false})
+		return
+	}
+	e := a.feedEntry("knmi:quakes")
+	e["enabled"], e["days"] = true, cfg.Quakes.Days
+	if v, ok := a.threats.get("knmi:quakes").Data.([]Quake); ok {
+		e["quakes"] = v
+	}
+	writeJSON(w, r, http.StatusOK, 300, e)
+}
+
+// ---------------------------------------------------------------------------
+// Internet in Nederland (part of the Storingen panel): outage events detected by
+// IODA (Georgia Tech) for the country and a few large Dutch networks, last 7 days.
+// Data: Copyright Georgia Tech Research Corporation; no key; attribution shown.
+
+type InternetEvent struct {
+	Start      time.Time `json:"start"`
+	Duration   int       `json:"duration_s"`
+	Datasource string    `json:"datasource"` // bgp | ping-slash24 | merit-nt | gtr ...
+	Score      float64   `json:"score"`
+}
+
+type InternetEntity struct {
+	Name   string          `json:"name"`
+	Kind   string          `json:"kind"` // country | asn
+	Code   string          `json:"code"`
+	Events []InternetEvent `json:"events"`
+	Error  string          `json:"error,omitempty"`
+}
+
+func parseIODAEvents(body []byte) ([]InternetEvent, error) {
+	var r struct {
+		Data []struct {
+			Start      int64   `json:"start"`
+			Duration   int     `json:"duration"`
+			Datasource string  `json:"datasource"`
+			Score      float64 `json:"score"`
+		} `json:"data"`
+		Error any `json:"error"`
+	}
+	if err := json.Unmarshal(body, &r); err != nil {
+		return nil, fmt.Errorf("ioda: %w", err)
+	}
+	if r.Error != nil || r.Data == nil {
+		return nil, fmt.Errorf("ioda: %v", firstNonEmpty(fmt.Sprint(r.Error), "unexpected response"))
+	}
+	out := []InternetEvent{}
+	for _, e := range r.Data {
+		if e.Start <= 0 || e.Duration < 0 || e.Duration > 30*86400 {
+			continue
+		}
+		out = append(out, InternetEvent{Start: time.Unix(e.Start, 0).UTC(), Duration: e.Duration, Datasource: truncate(plainText(e.Datasource), 20), Score: math.Round(e.Score)})
+	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].Start.After(out[j].Start) })
+	return out, nil
+}
+
+func (a *App) runInternet(ctx context.Context) error {
+	const key = "ioda:internet"
+	cfg := a.config().Outages.Internet
+	now := time.Now()
+	type ent struct{ kind, code, name string }
+	ents := []ent{{"country", cfg.Country, "Nederland"}}
+	if cfg.Country != "NL" {
+		ents[0].name = cfg.Country
+	}
+	for _, n := range cfg.Networks {
+		ents = append(ents, ent{"asn", strconv.Itoa(n.ASN), n.Name})
+	}
+	var out []InternetEntity
+	ok := 0
+	for _, e := range ents {
+		u := fmt.Sprintf("%s/outages/events?entityType=%s&entityCode=%s&from=%d&until=%d", strings.TrimSuffix(cfg.Base, "/"), e.kind, url.QueryEscape(e.code),
+			now.Add(-7*24*time.Hour).Unix(), now.Unix())
+		ie := InternetEntity{Name: e.name, Kind: e.kind, Code: e.code, Events: []InternetEvent{}}
+		resp, err := a.fetcher.Do(ctx, FetchReq{URL: u, Accept: "application/json"})
+		if err == nil {
+			ie.Events, err = parseIODAEvents(resp.Body)
+		}
+		if err != nil {
+			ie.Error = truncate(err.Error(), 120)
+			ie.Events = []InternetEvent{}
+		} else {
+			ok++
+		}
+		out = append(out, ie)
+	}
+	if ok == 0 {
+		err := fmt.Errorf("ioda: no network reachable (%s)", out[0].Error)
+		a.threats.fail(key, err)
+		slog.Warn("fetch failed", "source", key, "err", err)
+		return err
+	}
+	a.threats.ok(key, out, "", "")
+	return nil
 }

@@ -268,7 +268,37 @@ type Config struct {
 		Enabled   bool           `yaml:"enabled"`
 		Interval  Duration       `yaml:"interval"`
 		Providers []OutageSource `yaml:"providers"`
+		// Internet: outage events for the country and large networks, detected by IODA (Georgia Tech).
+		Internet struct {
+			Enabled  bool   `yaml:"enabled"`
+			Base     string `yaml:"base"`
+			Country  string `yaml:"country"`
+			Networks []struct {
+				ASN  int    `yaml:"asn"`
+				Name string `yaml:"name"`
+			} `yaml:"networks"`
+			Interval Duration `yaml:"interval"`
+		} `yaml:"internet"`
 	} `yaml:"outages"`
+	// Pollen: Hooikoorts panel (Open-Meteo Air Quality API, CAMS Europe; no key).
+	Pollen struct {
+		Enabled bool   `yaml:"enabled"`
+		URL     string `yaml:"url"`
+	} `yaml:"pollen"`
+	// Utilities: Kritieke infrastructuur panel (grid operators that publish outages).
+	Utilities struct {
+		Enabled    bool     `yaml:"enabled"`
+		LianderURL string   `yaml:"liander_url"` // ArcGIS feature service layer (IStoringen)
+		StedinURL  string   `yaml:"stedin_url"`  // Stedin outage API (per place)
+		Interval   Duration `yaml:"interval"`
+	} `yaml:"utilities"`
+	// Quakes: Aardbevingen panel (KNMI FDSN event service; no key).
+	Quakes struct {
+		Enabled  bool     `yaml:"enabled"`
+		URL      string   `yaml:"url"`
+		Days     int      `yaml:"days"`
+		Interval Duration `yaml:"interval"`
+	} `yaml:"quakes"`
 	Categories []Category `yaml:"categories"`
 	Presets    []Preset   `yaml:"presets"`
 	Sources    []Source   `yaml:"sources"`
@@ -324,6 +354,22 @@ func defaultConfig() *Config {
 	c.Breaches.Interval = Duration(3 * time.Hour)
 	c.Outages.Enabled = true
 	c.Outages.Interval = Duration(10 * time.Minute)
+	c.Outages.Internet.Enabled, c.Outages.Internet.Base, c.Outages.Internet.Country = true, "https://api.ioda.inetintel.cc.gatech.edu/v2", "NL"
+	c.Outages.Internet.Interval = Duration(15 * time.Minute)
+	for _, n := range []struct {
+		asn  int
+		name string
+	}{{1136, "KPN"}, {33915, "VodafoneZiggo"}, {50266, "Odido thuis"}, {31615, "Odido mobiel"}, {15435, "DELTA Fiber"}} {
+		c.Outages.Internet.Networks = append(c.Outages.Internet.Networks, struct {
+			ASN  int    `yaml:"asn"`
+			Name string `yaml:"name"`
+		}{n.asn, n.name})
+	}
+	c.Pollen.Enabled, c.Pollen.URL = true, "https://air-quality-api.open-meteo.com/v1/air-quality"
+	c.Utilities.Enabled, c.Utilities.Interval = true, Duration(5*time.Minute)
+	c.Utilities.LianderURL = "https://services1.arcgis.com/v6W5HAVrpgSg3vts/arcgis/rest/services/IStoringen_Productie_V7/FeatureServer/0"
+	c.Utilities.StedinURL = "https://www.stedin.net/api/storingen/places"
+	c.Quakes.Enabled, c.Quakes.URL, c.Quakes.Days, c.Quakes.Interval = true, "https://rdsa.knmi.nl/fdsnws/event/1/query", 90, Duration(15*time.Minute)
 	c.Threats.Enabled = true
 	c.Threats.Interval = Duration(15 * time.Minute)
 	c.Threats.DailyInterval = Duration(time.Hour)
@@ -386,13 +432,14 @@ var defaultRefresh = map[string]time.Duration{
 	"advisories": 30 * time.Minute, "outages": 10 * time.Minute, "ap": 30 * time.Minute, "breaches": 30 * time.Minute,
 	"energy": 30 * time.Minute, "air": 15 * time.Minute, "trains": 3 * time.Minute, "politics": 15 * time.Minute,
 	"today": 60 * time.Minute, "ransomware": 30 * time.Minute,
+	"pollen": 60 * time.Minute, "utilities": 5 * time.Minute, "quakes": 15 * time.Minute,
 	"health": 30 * time.Minute,
 }
 
 func (c *Config) validate() error {
 	for k, v := range c.Refresh {
 		if _, ok := defaultRefresh[k]; !ok {
-			return fmt.Errorf("refresh.%s: unknown panel (known: news, weather, alerts, traffic, alarms, energy, air, trains, politics, today, ransomware, threats, advisories, breaches, outages, ap, health)", k)
+			return fmt.Errorf("refresh.%s: unknown panel (known: news, weather, alerts, traffic, alarms, energy, air, trains, politics, today, ransomware, pollen, utilities, quakes, threats, advisories, breaches, outages, ap, health)", k)
 		}
 		if v.D() < time.Minute || v.D() > 24*time.Hour {
 			return fmt.Errorf("refresh.%s: %s is outside 1m..24h", k, v.D())
@@ -507,6 +554,26 @@ func (c *Config) validate() error {
 			c.Ransomware.Countries[i] = strings.ToUpper(strings.TrimSpace(cc))
 			if !rwCountryRe.MatchString(c.Ransomware.Countries[i]) {
 				fail("ransomware.countries: %q is not an ISO country code such as NL", cc)
+			}
+		}
+	}
+	if c.Pollen.Enabled && !httpsURL(c.Pollen.URL) {
+		fail("pollen.url must be an https URL")
+	}
+	if c.Utilities.Enabled && (c.Utilities.Interval.D() < 2*time.Minute || !httpsURL(c.Utilities.LianderURL) || !httpsURL(c.Utilities.StedinURL)) {
+		fail("utilities: interval must be at least 2m and the URLs https")
+	}
+	if c.Quakes.Enabled && (c.Quakes.Interval.D() < 5*time.Minute || !httpsURL(c.Quakes.URL) || c.Quakes.Days < 1 || c.Quakes.Days > 365) {
+		fail("quakes: interval must be at least 5m, url https, days 1–365")
+	}
+	if in := &c.Outages.Internet; c.Outages.Enabled && in.Enabled {
+		in.Country = strings.ToUpper(strings.TrimSpace(in.Country))
+		if in.Interval.D() < 10*time.Minute || !httpsURL(in.Base) || !rwCountryRe.MatchString(in.Country) || len(in.Networks) > 10 {
+			fail("outages.internet: interval must be at least 10m, base https, country an ISO code, at most 10 networks")
+		}
+		for _, n := range in.Networks {
+			if n.ASN <= 0 || n.ASN > 4294967295 || strings.TrimSpace(n.Name) == "" {
+				fail("outages.internet.networks: each needs an asn and a name")
 			}
 		}
 	}
@@ -696,6 +763,7 @@ type App struct {
 	vild    atomic.Pointer[vildTable] // NDW location table for road names
 	alarms  *ttlCache[[]Alarm]        // P2000 alerts per city slug
 	air     *ttlCache[[]AirComponent] // pollutant values per Luchtmeetnet station
+	pollen  *ttlCache[PollenData]     // pollen forecast per ~10 km cell
 	p2k     map[string]*p2kCounter    // national alerts per service, last hour
 }
 
@@ -846,7 +914,7 @@ func run(cfgPath string) error {
 
 	a := &App{cfgPath: cfgPath, level: level, started: time.Now(), news: newNewsCache(), sched: newScheduler(), wx: newWeatherCaches(),
 		threats: newStateStore(), geo: newGeoCache(10000), metrics: newHTTPMetrics(),
-		alarms: newTTLCache[[]Alarm](500), air: newTTLCache[[]AirComponent](200), p2k: newP2KCounters()}
+		alarms: newTTLCache[[]Alarm](500), air: newTTLCache[[]AirComponent](200), pollen: newTTLCache[PollenData](300), p2k: newP2KCounters()}
 	if st, err := os.Stat(cfgPath); err == nil {
 		a.cfgMod = st.ModTime()
 	}
@@ -1028,6 +1096,9 @@ func (a *App) routes(basePath string) http.Handler {
 	handle("GET /api/politics", a.handlePolitics)
 	handle("GET /api/today", a.handleToday)
 	handle("GET /api/ransomware", a.handleRansomware)
+	handle("GET /api/pollen", a.handlePollen)
+	handle("GET /api/utilities", a.handleUtilities)
+	handle("GET /api/quakes", a.handleQuakes)
 	handle("GET /api/alarms", a.handleAlarms)
 	handle("GET /healthz", a.handleHealth)
 	handle("GET /metrics", a.handleMetrics)
@@ -1227,6 +1298,9 @@ func (a *App) handleCatalog(w http.ResponseWriter, r *http.Request) {
 		"politics":         cfg.Politics.Enabled,
 		"today":            cfg.Today.Enabled,
 		"ransomware":       cfg.Ransomware.Enabled,
+		"pollen":           cfg.Pollen.Enabled,
+		"utilities":        cfg.Utilities.Enabled,
+		"quakes":           cfg.Quakes.Enabled,
 		"alarms":           map[string]any{"enabled": cfg.Alarms.Enabled, "city": cfg.Alarms.City},
 		"alerts":           map[string]bool{"nctv": cfg.Alerts.NCTV.Enabled, "knmi": cfg.Alerts.KNMI},
 		"presets":          cfg.Presets,
@@ -1405,6 +1479,15 @@ func (a *App) otherFeeds(cfg *Config) []FeedStatus {
 		for _, cc := range cfg.Ransomware.Countries {
 			add("rw:"+cc, "ransomware.live · "+cc, "breach")
 		}
+	}
+	if cfg.Utilities.Enabled {
+		add("grid:outages", "Netbeheerders · stroom- en gasstoringen", "daily")
+	}
+	if cfg.Quakes.Enabled {
+		add("knmi:quakes", "KNMI · aardbevingen", "daily")
+	}
+	if cfg.Outages.Enabled && cfg.Outages.Internet.Enabled {
+		add("ioda:internet", "IODA · internetverstoringen", "outage")
 	}
 	if cfg.Outages.Enabled {
 		for _, p := range cfg.Outages.Providers {

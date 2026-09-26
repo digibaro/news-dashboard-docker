@@ -626,6 +626,41 @@ table.tt { width: 100%; border-collapse: collapse; font-size: 12px; }
 @media (max-width: 1099px) { .vsk { height: 293px; } }
 @media (max-width: 699px) { .vsk { height: 310px; } }
 
+/* ---------- Hooikoorts ---------- */
+.pol { list-style: none; margin: 6px 0 0; padding: 0; font-size: 13px; }
+.pol li { display: grid; grid-template-columns: minmax(5.5em, 1fr) repeat(3, minmax(0, 1fr)); gap: 6px; align-items: center; padding: 4px 0; border-top: 1px solid var(--line); }
+.pol li.hd { border-top: 0; color: var(--text-3); font-size: 11px; }
+.pol .lv { font-size: 12px; border-left: 3px solid var(--lvl, var(--line-strong)); padding-left: 6px; color: var(--text-2); }
+.plv-0 { --lvl: var(--line); } .plv-1 { --lvl: var(--sev-low); } .plv-2 { --lvl: var(--sev-med); } .plv-3 { --lvl: var(--sev-high); } .plv-4 { --lvl: var(--sev-crit); }
+.polsk { height: 115px; }
+@media (max-width: 699px) { .polsk { height: 130px; } }
+
+/* ---------- Kritieke infrastructuur ---------- */
+.grid-op { padding: 6px 0; border-top: 1px solid var(--line); }
+.grid-op:first-child { border-top: 0; padding-top: 0; }
+.grid-op .row1 { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.grid-op .row1 a { color: var(--text); font-weight: 600; text-decoration: none; }
+.grid-op .row1 a:hover { text-decoration: underline; }
+.grid-op .st2 { margin-left: auto; color: var(--text-2); font-size: 12px; }
+.grid-op .area { font-size: 11px; color: var(--text-3); margin: 1px 0 0 17px; }
+.grid-op ul { list-style: none; margin: 4px 0 0 17px; padding: 0; font-size: 12px; color: var(--text-2); }
+.grid-op ul li { padding: 2px 0; }
+.grid-op ul li b { color: var(--text); font-weight: 600; }
+.grid-op .sum { font-size: 12px; color: var(--text-3); margin: 3px 0 0 17px; }
+.grid-op .sd { width: 9px; height: 9px; border-radius: 50%; background: var(--lvl); flex: none; }
+.utsk { height: 380px; }
+@media (max-width: 1099px) { .utsk { height: 445px; } }
+@media (max-width: 699px) { .utsk { height: 465px; } }
+
+/* ---------- Aardbevingen ---------- */
+.mag { display: inline-block; min-width: 3.1em; text-align: center; font-weight: 700; font-size: 12px; border: 1px solid currentColor; border-radius: 3px; padding: 0 4px; margin-right: 8px; }
+.mag.m1 { color: var(--text-2); } .mag.m2 { color: var(--sev-med); } .mag.m3 { color: var(--sev-high); } .mag.m4 { color: var(--sev-crit); }
+.qksk { height: 365px; }
+@media (max-width: 1099px) { .qksk { height: 382px; } }
+
+/* ---------- Internet (in Storingen) ---------- */
+.inet { margin-bottom: 6px; padding: 0 0 7px; border-top: 0; border-bottom: 1px solid var(--line-strong); list-style: none; }
+
 /* ---------- Ransomware ---------- */
 .rwsk { height: 420px; }
 .muted-inline { color: var(--text-3); font-size: 12px; }
@@ -855,6 +890,13 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.8.0</h3>
+    <ul>
+      <li>Nieuw paneel Hooikoorts: de pollenverwachting voor vandaag, morgen en overmorgen.</li>
+      <li>Nieuw paneel Aardbevingen: bevingen in en rond Nederland van het KNMI.</li>
+      <li>Nieuw paneel Kritieke infrastructuur: actuele stroom- en gasstoringen bij Liander en Stedin.</li>
+      <li>Storingen: internetverstoringen in Nederland en bij de grote providers.</li>
+    </ul>
     <h3>Versie 1.7.0</h3>
     <ul>
       <li>Nieuwe naam: Nieuws Hub.</li>
@@ -921,6 +963,13 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.8.0</h3>
+    <ul>
+      <li>New panel Hay fever: the pollen forecast for today, tomorrow and the day after.</li>
+      <li>New panel Earthquakes: quakes in and around the Netherlands from KNMI.</li>
+      <li>New panel Critical infrastructure: current electricity and gas outages at Liander and Stedin.</li>
+      <li>Outages: internet disruptions in the Netherlands and at the large providers.</li>
+    </ul>
     <h3>Version 1.7.0</h3>
     <ul>
       <li>New name: Nieuws Hub.</li>
@@ -1048,7 +1097,7 @@ textarea.json {
       <p class="msg" id="alarm-msg" role="status"></p>
     </section>
     <section aria-labelledby="set-air-h" id="set-air">
-      <h3 id="set-air-h">Plaats voor luchtkwaliteit</h3>
+      <h3 id="set-air-h">Plaats voor luchtkwaliteit en hooikoorts</h3>
       <p class="hint" id="air-now"></p>
       <div class="row" style="margin-top:0">
         <input class="field" style="flex:1;min-width:12rem" type="search" id="air-search" placeholder="Zoek een plaats" aria-label="Zoek een plaats voor de luchtkwaliteit" autocomplete="off">
@@ -1132,15 +1181,18 @@ const PANELS = {
   weather: 'Weer',
   today: 'Vandaag',
   air: 'Luchtkwaliteit',
+  pollen: 'Hooikoorts',
   traffic: 'Verkeer',
   trains: 'Treinstoringen',
   alarms: 'Alarmeringen',
+  quakes: 'Aardbevingen',
   energy: 'Energieprijzen',
   politics: 'Politiek vandaag',
   threats: 'Cyberdreigingen',
   advisories: 'Security-adviezen',
   breaches: 'Datalekken',
   ransomware: 'Ransomware NL',
+  utilities: 'Kritieke infrastructuur',
   outages: 'Storingen',
   ap: 'Autoriteit Persoonsgegevens acties',
   health: 'Gezondheid',
@@ -1626,10 +1678,99 @@ const EN = {
   "Ransomware: {n} claims in 7 dagen": "Ransomware: {n} claims in 7 days",
   "laatste: {name}": "latest: {name}",
   "Rijksoverheid · schoolvakanties": "Dutch government · school holidays",
+  // Hooikoorts, Kritieke infrastructuur, Aardbevingen, Internet
+  "Noord-Holland, Gelderland, Flevoland, delen van Friesland en Zuid-Holland": "Noord-Holland, Gelderland, Flevoland, parts of Friesland and Zuid-Holland",
+  "Zuid-Holland, Utrecht en Zeeland (grotendeels)": "Zuid-Holland, Utrecht and Zeeland (mostly)",
+  "{h} u": "{h} h",
+  "nu geen verstoring": "no disruption now",
+  "Hooikoorts": "Hay fever",
+  "Aardbevingen": "Earthquakes",
+  "Kritieke infrastructuur": "Critical infrastructure",
+  "Plaats voor luchtkwaliteit en hooikoorts": "Place for air quality and hay fever",
+  "Plaats voor hooikoorts wijzigen (nu {name})": "Change place for hay fever (now {name})",
+  "De pollenverwachting kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.": "The pollen forecast could not be loaded ({err}). Retrying automatically.",
+  "Dit paneel staat uit in config.yaml (pollen.enabled).": "This panel is disabled in config.yaml (pollen.enabled).",
+  "Vandaag: ": "Today: ",
+  "{level} ({type})": "{level} ({type})",
+  "nauwelijks pollen": "hardly any pollen",
+  "Pollen per soort, hoogste waarde per dag": "Pollen by type, highest value per day",
+  "korrels/m³": "grains/m³",
+  "Er zijn de komende dagen nauwelijks pollen in de lucht.": "There is hardly any pollen in the air in the coming days.",
+  " (CAMS, Copernicus) · indicatieve drempels per pollensoort": " (CAMS, Copernicus) · indicative thresholds per pollen type",
+  "geen": "none",
+  "zeer hoog": "very high",
+  "gras": "grass",
+  "berk": "birch",
+  "els": "alder",
+  "bijvoet": "mugwort",
+  "ambrosia": "ragweed",
+  "olijf": "olive",
+  "Gras": "Grass",
+  "Berk": "Birch",
+  "Els": "Alder",
+  "Bijvoet": "Mugwort",
+  "Ambrosia": "Ragweed",
+  "Olijf": "Olive",
+  "Hooikoorts: {level} ({type})": "Hay fever: {level} ({type})",
+  "Hooikoorts: nauwelijks pollen": "Hay fever: hardly any pollen",
+  "Dit paneel staat uit in config.yaml (utilities.enabled).": "This panel is disabled in config.yaml (utilities.enabled).",
+  "Storingen worden voor het eerst opgehaald.": "Outages are being fetched for the first time.",
+  "niet bereikbaar": "unreachable",
+  "{s} stroom · {g} gas": "{s} electricity · {g} gas",
+  "geen storingen": "no outages",
+  "en nog {n} storingen": "and {n} more outages",
+  "gepland onderhoud: {n}": "planned maintenance: {n}",
+  "opgelost in 24 uur: {n}": "resolved in 24 hours: {n}",
+  "laatste poging mislukt": "last attempt failed",
+  "verwacht opgelost {t}": "expected fixed {t}",
+  "hersteltijd {t}": "repair time {t}",
+  "{n} klanten": "{n} customers",
+  "{n} postcodes": "{n} postcodes",
+  "sinds {t}": "since {t}",
+  "elektriciteit": "electricity",
+  "gas": "gas",
+  "overig": "other",
+  "monteur ter plaatse": "engineer on site",
+  "monteur onderweg": "engineer on the way",
+  "gemeld": "reported",
+  "in behandeling": "in progress",
+  "Enexis, Rendo, Coteq en Westland Infra publiceren geen open storingsgegevens: controleer uw adres op ": "Enexis, Rendo, Coteq and Westland Infra publish no open outage data: check your address at ",
+  "Bron: storingskaart van Liander en storingenpagina van Stedin · gaslucht of storing melden: 0800-9009 (gratis)": "Source: Liander outage map and Stedin outage page · report a gas smell or outage: 0800-9009 (free, Dutch)",
+  "Aardbevingen konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.": "Earthquakes could not be loaded ({err}). Retrying automatically.",
+  "Dit paneel staat uit in config.yaml (quakes.enabled).": "This panel is disabled in config.yaml (quakes.enabled).",
+  "KNMI is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.": "KNMI is unreachable ({err}); retrying automatically.",
+  "Aardbevingen worden voor het eerst opgehaald.": "Earthquakes are being fetched for the first time.",
+  " beving in de afgelopen 30 dagen": " earthquake in the last 30 days",
+  " bevingen in de afgelopen 30 dagen": " earthquakes in the last 30 days",
+  " · sterkste in {n} dagen: ": " · strongest in {n} days: ",
+  "diepte {d} km": "depth {d} km",
+  "geïnduceerd": "induced",
+  "Veroorzaakt door menselijke activiteit, zoals gaswinning": "Caused by human activity, such as gas extraction",
+  "Geen aardbevingen in de afgelopen {n} dagen.": "No earthquakes in the last {n} days.",
+  " (open data) · explosies en luchtknallen weggelaten": " (open data) · explosions and sonic booms left out",
+  "routering (BGP)": "routing (BGP)",
+  "bereikbaarheid (ping)": "reachability (ping)",
+  "internetverkeer": "internet traffic",
+  "Google-verkeer": "Google traffic",
+  "{n} min": "{n} min",
+  "{h} u {m} min": "{h} h {m} min",
+  "verstoring nu": "disruption now",
+  "verstoring in de afgelopen 24 uur": "disruption in the last 24 hours",
+  "geen verstoringen (7 dagen)": "no disruptions (7 days)",
+  "Internet in Nederland": "Internet in the Netherlands",
+  "Bronnen: de officiële statuspagina’s · internet: ": "Sources: the official status pages · internet: ",
+  " · stroom en gas: zie Kritieke infrastructuur": " · electricity and gas: see Critical infrastructure",
+  "Internet: {who}": "Internet: {who}",
+  "{s} stroom- en {g} gasstoringen bij {ops}": "{s} electricity and {g} gas outages at {ops}",
+  "Energie, lucht, trein, politiek en infrastructuur": "Energy, air, trains, politics and infrastructure",
+  "Netbeheerders · stroom- en gasstoringen": "Grid operators · electricity and gas outages",
+  "KNMI · aardbevingen": "KNMI · earthquakes",
+  "IODA · internetverstoringen": "IODA · internet disruptions",
 };
 
 // Sentences the server composes from parts (rain summary, directions, source names).
 const EN_PATTERNS = [
+  [/^(\d\d-\d\d-\d{4}) tussen (\d\d:\d\d) en (\d\d:\d\d) uur$/, '$1 between $2 and $3'],
   [/^Droog tot (\d\d:\d\d)\.$/, 'Dry until $1.'],
   [/^(Lichte|Matige|Zware) regen tot minstens (\d\d:\d\d)\.$/, (m, k, t) => `${{ Lichte: 'Light', Matige: 'Moderate', Zware: 'Heavy' }[k]} rain until at least ${t}.`],
   [/^(Lichte|Matige|Zware) regen, droog vanaf (\d\d:\d\d)\.$/, (m, k, t) => `${{ Lichte: 'Light', Matige: 'Moderate', Zware: 'Heavy' }[k]} rain, dry from ${t}.`],
@@ -2256,6 +2397,9 @@ const freshOf = {
   ap: () => { const s = panelData.ap?.status; return s && { ts: s.fetched_at, max: 65, stale: !!s.error }; },
   alarms: () => { const d = panelData.alarms?.data; return d?.enabled && { ts: d.fetched_at, max: 6, stale: !!d.stale }; },
   traffic: () => { const d = panelData.traffic?.data; return d?.enabled && { ts: d.fetched_at, max: 15, stale: !!d.error }; },
+  pollen: () => { const d = panelData.pollen?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 130, stale: !!d.stale }; },
+  utilities: () => { const d = panelData.utilities?.data; return d?.enabled && { ts: oldest(d.operators), max: 15, stale: d.operators?.some(o => o.error) }; },
+  quakes: () => { const d = panelData.quakes?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 40, stale: !!d.error }; },
   today: () => { const d = panelData.today?.data?.school; return d?.fetched_at && { ts: d.fetched_at, max: 2 * 1440 + 60, stale: !!d.error }; },
   ransomware: () => { const d = panelData.ransomware?.data; return d?.enabled && { ts: oldest(d.sources), max: 130, stale: d.sources?.some(s => s.error) }; },
   energy: () => { const d = panelData.energy?.data; return d?.enabled && { ts: d.fetched_at, max: 130, stale: !!d.error }; },
@@ -2279,6 +2423,9 @@ const panelRenderers = {
   air: renderAir,
   today: renderToday,
   ransomware: renderRansomware,
+  pollen: renderPollen,
+  utilities: renderUtilities,
+  quakes: renderQuakes,
   trains: renderTrains,
   politics: renderPolitics,
   health: renderHealth,
@@ -2457,6 +2604,7 @@ function setWeatherLocation(loc, msg) {
   panelData.weather = null;
   renderPanel('weather');
   loadWeather();
+  if (!prefs.air) { loadAir(); loadPollen(); } // they follow the weather location
 }
 function updateWxLocHint() {
   const w = prefs.weather;
@@ -2937,10 +3085,9 @@ function renderOutages(body) {
   const r = st.data;
   if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('Storingsinformatie kon niet worden opgehaald ({err}).', { err: tr(st.error?.message) }) })); return; }
   if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (outages.enabled).' })); return; }
-  const rank = { major: 0, minor: 1, unknown: 2, ok: 3 };
-  const rows = (r.providers || []).map(p => ({ p, status: p.data?.status || 'unknown' }))
-    .sort((a, b) => rank[a.status] - rank[b.status]); // problems first, otherwise config order (stable)
+  const rows = (r.providers || []).map(p => ({ p, status: p.data?.status || 'unknown' })); // config.yaml order
   body.replaceChildren(
+    internetBlock(r.internet),
     h('ul', { class: 'outs' }, rows.map(({ p, status }) => {
       const inc = (p.data?.incidents || []).slice().sort((a, b) => a.resolved - b.resolved).slice(0, 3);
       const text = status === 'unknown' ? (p.error ? 'status onbekend: niet bereikbaar' : 'wordt opgehaald') : OUT_NL[status];
@@ -2951,7 +3098,7 @@ function renderOutages(body) {
           h('span', { translate: 'no' }, i.url ? extLink(i.url, i.title) : i.title),
           ` · ${[i.resolved ? t('opgelost') : tr(i.status), since(new Date(i.updated))].filter(Boolean).join(' · ')}`))) : null);
     })),
-    h('p', { class: 'pfoot', text: 'Bronnen: de officiële statuspagina’s. Netbeheerders (Stedin, Enexis, Liander) publiceren storingen niet als open data en ontbreken daarom.' }));
+    h('p', { class: 'pfoot' }, t('Bronnen: de officiële statuspagina’s · internet: '), extLink('https://ioda.inetintel.cc.gatech.edu/', 'IODA (Georgia Tech)'), t(' · stroom en gas: zie Kritieke infrastructuur')));
 }
 
 // ---------------------------------------------------------------- datalekken (Have I Been Pwned)
@@ -3151,6 +3298,7 @@ function setAirLocation(loc, msg) {
   $('#air-results').replaceChildren();
   $('#air-msg').classList.remove('err'); $('#air-msg').textContent = msg;
   panelData.air = null; renderPanel('air'); loadAir();
+  panelData.pollen = null; renderPanel('pollen'); loadPollen();
 }
 function wireAirSettings() {
   let timer, seq = 0;
@@ -3359,6 +3507,142 @@ function renderRansomware(body) {
   body.replaceChildren(...out);
 }
 
+// ---------------------------------------------------------------- hooikoorts (Open-Meteo, CAMS)
+let pollenSeq = 0;
+async function loadPollen() {
+  const seq = ++pollenSeq, l = airLoc();
+  try {
+    const d = await api('api/pollen' + (l ? `?lat=${l.lat}&lon=${l.lon}` : ''));
+    if (seq !== pollenSeq) return;
+    panelData.pollen = { data: d };
+  } catch (e) { if (seq !== pollenSeq) return; panelData.pollen = { ...(panelData.pollen || {}), error: e }; }
+  renderPanel('pollen');
+}
+// name, and the lower bounds (grains/m³, daily maximum) of matig / hoog / zeer hoog: indicative
+const POLLEN = { grass: ['gras', [20, 50, 150]], birch: ['berk', [30, 100, 500]], alder: ['els', [30, 100, 500]],
+  mugwort: ['bijvoet', [10, 30, 100]], ragweed: ['ambrosia', [10, 30, 100]], olive: ['olijf', [30, 100, 500]] };
+const POLLEN_LV = ['geen', 'laag', 'matig', 'hoog', 'zeer hoog'];
+const pollenLevel = (typ, v) => v < 1 ? 0 : 1 + POLLEN[typ][1].filter(b => v >= b).length;
+function pollenSummary(d) {
+  const day = d.days?.[0];
+  if (!day) return null;
+  let best = null;
+  for (const typ of Object.keys(POLLEN)) {
+    const lv = pollenLevel(typ, day.max[typ] || 0);
+    if (!best || lv > best.lv) best = { typ, lv };
+  }
+  return best;
+}
+function renderPollen(body, extra) {
+  const st = panelData.pollen;
+  extra.replaceChildren(h('span', { text: airLocName() + ' · ' }),
+    h('button', { class: 'linkbtn', type: 'button', onclick: () => openSettings('air'), 'aria-label': t('Plaats voor hooikoorts wijzigen (nu {name})', { name: airLocName() }), text: t('wijzigen') }));
+  if (!st) { body.replaceChildren(h('div', { class: 'tsk polsk', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:85%' }))); return; }
+  const r = st.data;
+  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('De pollenverwachting kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
+  if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (pollen.enabled).' })); return; }
+  const d = r.data, out = [];
+  const present = Object.keys(POLLEN).filter(typ => d.days.some(x => (x.max[typ] || 0) >= 1));
+  const sum = pollenSummary(d);
+  out.push(h('p', { class: 'eline' }, t('Vandaag: '), h('b', { text: sum && sum.lv > 0 ? t('{level} ({type})', { level: t(POLLEN_LV[sum.lv]), type: t(POLLEN[sum.typ][0]) }) : t('nauwelijks pollen') })));
+  if (present.length) {
+    const days = d.days.map((x, i) => i === 0 ? t('Vandaag') : i === 1 ? t('Morgen') : fmt.wdmUTC.format(dateOnly(x.date)));
+    out.push(h('ul', { class: 'pol', 'aria-label': t('Pollen per soort, hoogste waarde per dag') },
+      h('li', { class: 'hd', 'aria-hidden': 'true' }, h('span'), days.map(x => h('span', { text: x }))),
+      present.map(typ => h('li', null, h('span', { text: t(POLLEN[typ][0][0].toUpperCase() + POLLEN[typ][0].slice(1)) }),
+        d.days.map((x, i) => { const v = x.max[typ] || 0, lv = pollenLevel(typ, v); return h('span', { class: 'lv plv-' + lv, title: `${v.toLocaleString(locale())} ${t('korrels/m³')}` },
+          h('span', { class: 'sr-only', text: days[i] + ': ' }), t(POLLEN_LV[lv])); })))));
+  } else {
+    out.push(h('p', { class: 'pnote', text: t('Er zijn de komende dagen nauwelijks pollen in de lucht.') }));
+  }
+  out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://open-meteo.com/', 'Open-Meteo'), t(' (CAMS, Copernicus) · indicatieve drempels per pollensoort')));
+  body.replaceChildren(...out);
+}
+
+// ---------------------------------------------------------------- kritieke infrastructuur (netbeheerders)
+async function loadUtilities() {
+  try { panelData.utilities = { data: await api('api/utilities') }; }
+  catch (e) { panelData.utilities = { ...(panelData.utilities || {}), error: e }; }
+  renderPanel('utilities');
+}
+const bucketSize = c => { const m = /(\d+)/.exec(c || ''); return m ? Number(m[1]) * (/>/.test(c) ? 10 : 1) : 0; };
+function utilityItem(o) {
+  const when = o.estimate ? t('verwacht opgelost {t}', { t: fmt.time.format(new Date(o.estimate)) }) : o.estimate_text ? t('hersteltijd {t}', { t: tr(o.estimate_text) }) : '';
+  return h('li', null, h('span', { 'aria-hidden': 'true', text: o.energy === 'gas' ? '🔥 ' : '⚡ ' }), h('span', { class: 'sr-only', text: t(o.energy) + ': ' }),
+    h('b', { translate: 'no', text: o.places || '–' }),
+    ' · ', [o.status ? tr(o.status) : null, when, o.customers ? t('{n} klanten', { n: o.customers }) : o.postcodes ? t('{n} postcodes', { n: o.postcodes }) : null,
+      t('sinds {t}', { t: since(new Date(o.reported)) })].filter(Boolean).join(' · '));
+}
+function renderUtilities(body) {
+  const st = panelData.utilities;
+  if (!st) { body.replaceChildren(h('div', { class: 'tsk utsk', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:85%' }))); return; }
+  const r = st.data;
+  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('Storingsinformatie kon niet worden opgehaald ({err}).', { err: tr(st.error?.message) }) })); return; }
+  if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (utilities.enabled).' })); return; }
+  const ops = r.operators || [], out = [];
+  if (!ops.length) { body.replaceChildren(h('p', { class: 'pnote', text: t('Storingen worden voor het eerst opgehaald.') })); return; }
+  out.push(h('div', null, ops.map(g => {
+    const act = (g.active || []).slice().sort((a, b) => bucketSize(b.customers) - bucketSize(a.customers) || new Date(b.reported) - new Date(a.reported));
+    const el = act.filter(o => o.energy === 'elektriciteit').length, gas = act.filter(o => o.energy === 'gas').length;
+    const status = !g.fetched_at ? t('niet bereikbaar') : act.length ? t('{s} stroom · {g} gas', { s: el, g: gas }) : t('geen storingen');
+    return h('div', { class: 'grid-op' },
+      h('div', { class: 'row1' }, h('span', { class: 'sd lvl-' + (!g.fetched_at ? 'unknown' : act.length ? 'minor' : 'ok'), 'aria-hidden': 'true' }), extLink(g.url, g.name), h('span', { class: 'st2', text: status })),
+      h('div', { class: 'area', text: tr(g.area) }),
+      act.length ? h('ul', null, act.slice(0, 4).map(utilityItem)) : null,
+      h('p', { class: 'sum', text: [act.length > 4 ? t('en nog {n} storingen', { n: act.length - 4 }) : null, (g.planned || []).length ? t('gepland onderhoud: {n}', { n: g.planned.length }) : null,
+        g.resolved_24h >= 0 ? t('opgelost in 24 uur: {n}', { n: g.resolved_24h }) : null, g.error ? t('laatste poging mislukt') : null].filter(Boolean).join(' · ') }));
+  })));
+  out.push(h('p', { class: 'pnote' }, t('Enexis, Rendo, Coteq en Westland Infra publiceren geen open storingsgegevens: controleer uw adres op '), extLink('https://gasenstroomstoringen.nl/', 'gasenstroomstoringen.nl'), '.'));
+  out.push(h('p', { class: 'pfoot', text: t('Bron: storingskaart van Liander en storingenpagina van Stedin · gaslucht of storing melden: 0800-9009 (gratis)') }));
+  body.replaceChildren(...out);
+}
+
+// ---------------------------------------------------------------- aardbevingen (KNMI)
+async function loadQuakes() {
+  try { panelData.quakes = { data: await api('api/quakes') }; }
+  catch (e) { panelData.quakes = { ...(panelData.quakes || {}), error: e }; }
+  renderPanel('quakes');
+}
+const magClass = m => m == null ? 'm1' : m < 1.5 ? 'm1' : m < 2.5 ? 'm2' : m < 3.5 ? 'm3' : 'm4';
+const magText = q => q.mag == null ? 'M?' : 'M' + q.mag.toLocaleString(locale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+function renderQuakes(body) {
+  const st = panelData.quakes;
+  if (!st) { body.replaceChildren(h('div', { class: 'tsk qksk', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:85%' }))); return; }
+  const r = st.data;
+  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('Aardbevingen konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
+  if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (quakes.enabled).' })); return; }
+  if (!r.quakes) { body.replaceChildren(h('p', { class: 'pnote', text: r.error ? t('KNMI is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: r.error }) : t('Aardbevingen worden voor het eerst opgehaald.') })); return; }
+  const qs = r.quakes, out = [], month = qs.filter(q => Date.now() - new Date(q.time) < 30 * 864e5);
+  const strongest = qs.reduce((a, q) => (q.mag != null && (a == null || q.mag > a.mag) ? q : a), null);
+  out.push(h('p', { class: 'eline' }, h('b', { text: String(month.length) }), t(month.length === 1 ? ' beving in de afgelopen 30 dagen' : ' bevingen in de afgelopen 30 dagen'),
+    strongest ? [t(' · sterkste in {n} dagen: ', { n: r.days }), h('b', { text: magText(strongest) }), ` ${strongest.place} (${fmt.short.format(new Date(strongest.time))})`] : null));
+  if (qs.length) {
+    out.push(h('ul', { class: 'plist' }, qs.slice(0, 6).map(q => h('li', null,
+      h('span', { class: 'mag ' + magClass(q.mag), text: magText(q) }), h('span', { translate: 'no' }, extLink(q.url, q.place)),
+      h('div', { class: 'm' }, h('span', { text: `${fmt.short.format(new Date(q.time))} ${fmt.time.format(new Date(q.time))}` }), h('span', { text: t('diepte {d} km', { d: q.depth_km.toLocaleString(locale()) }) }),
+        q.induced ? h('span', { class: 'tag plain', title: t('Veroorzaakt door menselijke activiteit, zoals gaswinning'), text: t('geïnduceerd') }) : null)))));
+  } else {
+    out.push(h('p', { class: 'pnote', text: t('Geen aardbevingen in de afgelopen {n} dagen.', { n: r.days }) }));
+  }
+  out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://www.knmi.nl/nederland-nu/seismologie/aardbevingen', 'KNMI'), t(' (open data) · explosies en luchtknallen weggelaten')));
+  body.replaceChildren(...out);
+}
+
+// ---------------------------------------------------------------- internet (IODA, in Storingen)
+const IODA_SRC = { bgp: 'routering (BGP)', 'ping-slash24': 'bereikbaarheid (ping)', 'merit-nt': 'internetverkeer', gtr: 'Google-verkeer', 'gtr-norm': 'Google-verkeer' };
+const durText = s => { const m = Math.round(s / 60); return m < 60 ? t('{n} min', { n: m }) : m % 60 ? t('{h} u {m} min', { h: Math.floor(m / 60), m: m % 60 }) : t('{h} u', { h: m / 60 }); };
+function internetBlock(net) {
+  if (!net) return null;
+  const events = (net.entities || []).flatMap(e => e.events.map(x => ({ ...x, who: e.name }))).sort((a, b) => new Date(b.start) - new Date(a.start));
+  const now = Date.now(), ongoing = events.some(x => +new Date(x.start) + x.duration_s * 1000 > now - 15 * 6e4), recent = events.some(x => now - new Date(x.start) < 864e5);
+  const status = !net.entities ? 'unknown' : ongoing ? 'major' : recent ? 'minor' : 'ok';
+  const text = !net.entities ? (net.error ? t('status onbekend: niet bereikbaar') : t('wordt opgehaald')) : ongoing ? t('verstoring nu') : recent ? t('verstoring in de afgelopen 24 uur') : events.length ? t('nu geen verstoring') : t('geen verstoringen (7 dagen)');
+  return h('div', { class: 'out inet' },
+    h('div', { class: 'row1' }, h('span', { class: 'sd lvl-' + (status === 'ok' ? 'ok' : status), 'aria-hidden': 'true' }), extLink(net.url, t('Internet in Nederland')), h('span', { class: 'st2', text: text })),
+    events.length ? h('ul', null, events.slice(0, 4).map(x => h('li', null,
+      `${fmt.short.format(new Date(x.start))} ${fmt.time.format(new Date(x.start))} · `, h('b', { translate: 'no', text: x.who }), ` · ${durText(x.duration_s)} · ${t(IODA_SRC[x.datasource] || x.datasource)}`))) : null);
+}
+
 // ---------------------------------------------------------------- overzicht (digest) & kiosk
 const urlMode = new URLSearchParams(location.search).get('mode');
 let viewMode = 'normal', digestQueued = false, kioskTimer = null, kioskPauseUntil = 0, wakeLock = null;
@@ -3433,8 +3717,10 @@ function renderDigest() {
   const air = panelData.air?.data;
   if (panelOn('air') && air?.lki) {
     const [, label] = lkiLevel(air.lki.value);
+    const ps = panelData.pollen?.data?.data && pollenSummary(panelData.pollen.data.data);
     cards.push(dCard('air', 'Luchtkwaliteit', [h('p', null, h('span', { class: 'big', text: String(Math.round(air.lki.value)) }), ' ', t(label), ' · ', airLocName()),
-      h('p', { text: t(LKI_ADVICE[label]) })]));
+      h('p', { text: t(LKI_ADVICE[label]) }),
+      panelOn('pollen') && ps ? h('p', { text: ps.lv > 0 ? t('Hooikoorts: {level} ({type})', { level: t(POLLEN_LV[ps.lv]), type: t(POLLEN[ps.typ][0]) }) : t('Hooikoorts: nauwelijks pollen') }) : null]));
   }
   const sec = [];
   const adv = panelData.advisories?.data?.items || [];
@@ -3458,8 +3744,20 @@ function renderDigest() {
   const outg = panelData.outages?.data;
   if (panelOn('outages') && outg?.enabled) {
     const bad = (outg.providers || []).filter(p => p.data && p.data.status !== 'ok');
-    cards.push(dCard('outages', 'Storingen', bad.length ? h('ul', null, bad.map(p => li(h('b', { text: p.name }), t(OUT_NL[p.data.status])))) : h('p', { text: t('Alle gevolgde diensten werken normaal.') })));
+    const netEv = (outg.internet?.entities || []).flatMap(e => e.events.map(x => ({ ...x, who: e.name }))).filter(x => Date.now() - new Date(x.start) < 864e5);
+    const items = [...bad.map(p => li(h('b', { text: p.name }), t(OUT_NL[p.data.status]))), ...netEv.slice(0, 2).map(x => li(h('b', { text: t('Internet: {who}', { who: x.who }) }), `${fmt.time.format(new Date(x.start))} · ${durText(x.duration_s)}`))];
+    cards.push(dCard('outages', 'Storingen', items.length ? h('ul', null, items) : h('p', { text: t('Alle gevolgde diensten werken normaal.') })));
   }
+  const ut = panelData.utilities?.data;
+  if (panelOn('utilities') && ut?.enabled && ut.operators?.length) {
+    const act = ut.operators.flatMap(g => (g.active || []).map(o => ({ ...o, op: g.name })));
+    cards.push(dCard('utilities', 'Kritieke infrastructuur', [h('p', { text: t('{s} stroom- en {g} gasstoringen bij {ops}', { s: act.filter(o => o.energy === 'elektriciteit').length, g: act.filter(o => o.energy === 'gas').length, ops: ut.operators.map(g => g.name).join(t(' en ')) }) }),
+      act.length ? h('ul', { translate: 'no' }, act.sort((a, b) => bucketSize(b.customers) - bucketSize(a.customers)).slice(0, 3).map(o => li(h('b', { text: o.places || '–' }), [o.op, o.customers ? t('{n} klanten', { n: o.customers }) : null].filter(Boolean).join(' · ')))) : null]));
+  }
+  const qk = panelData.quakes?.data?.quakes;
+  const recentQ = (qk || []).filter(q => Date.now() - new Date(q.time) < 7 * 864e5);
+  if (panelOn('quakes') && recentQ.length)
+    cards.push(dCard('quakes', 'Aardbevingen', h('ul', { translate: 'no' }, recentQ.slice(0, 3).map(q => li(h('b', { text: `${magText(q)} ${q.place}` }), `${fmt.short.format(new Date(q.time))} ${fmt.time.format(new Date(q.time))}` + (q.induced ? ' · ' + t('geïnduceerd') : ''))))));
   grid.replaceChildren(...cards);
 }
 function setMode(m, save = true) {
@@ -3789,7 +4087,7 @@ function renderStatus() {
   const feeds = d.feeds || [];
   groups.push({ title: 'Cyberdreigingen', rows: feeds.filter(f => f.kind === 'threat').map(f => ({ name: f.name, s: f })) });
   groups.push({ title: 'Security-adviezen', rows: feeds.filter(f => f.kind === 'advisory').map(f => ({ name: f.name, s: f })) });
-  for (const [kind, title] of [['alert', 'Bovenbalk'], ['traffic', 'Verkeer'], ['breach', 'Datalekken'], ['daily', 'Energie, lucht, trein en politiek'], ['outage', 'Storingen']]) {
+  for (const [kind, title] of [['alert', 'Bovenbalk'], ['traffic', 'Verkeer'], ['breach', 'Datalekken'], ['daily', 'Energie, lucht, trein, politiek en infrastructuur'], ['outage', 'Storingen']]) {
     groups.push({ title, rows: feeds.filter(f => f.kind === kind).map(f => ({ name: f.name, s: f })) });
   }
   const all = groups.flatMap(g => g.rows);
@@ -4034,7 +4332,7 @@ async function init() {
   buildChips();
   if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
   await Promise.allSettled([loadNews({ replace: true }), loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(),
-    loadBreaches(), loadOutages(), loadHealthPanel(), loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware()]);
+    loadBreaches(), loadOutages(), loadHealthPanel(), loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadPollen(), loadUtilities(), loadQuakes()]);
   kioskFit(); // the header and top bar have their final height now
   // intervals from config.yaml (refresh:), in seconds; defaults if the server is older
   const R = (k, def) => Math.max(60, catalog?.refresh?.[k] || def * 60) * 1000;
@@ -4053,6 +4351,9 @@ async function init() {
   every(R('politics', 15), loadPolitics);
   every(R('today', 60), loadToday);
   every(R('ransomware', 30), loadRansomware);
+  every(R('pollen', 60), loadPollen);
+  every(R('utilities', 5), loadUtilities);
+  every(R('quakes', 15), loadQuakes);
   every(R('outages', 10), loadOutages);
   every(R('health', 30), loadHealthPanel);
   setInterval(tick, 15e3);

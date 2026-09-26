@@ -1042,7 +1042,7 @@ func newTestApp(t *testing.T, cfgYAML string) *App {
 	}
 	a := &App{cfg: cfg, level: new(slog.LevelVar), started: time.Now(), news: newNewsCache(), sched: newScheduler(),
 		wx: newWeatherCaches(), threats: newStateStore(), geo: newGeoCache(100), metrics: newHTTPMetrics(),
-		alarms: newTTLCache[[]Alarm](50), air: newTTLCache[[]AirComponent](20), p2k: newP2KCounters()}
+		alarms: newTTLCache[[]Alarm](50), air: newTTLCache[[]AirComponent](20), pollen: newTTLCache[PollenData](20), p2k: newP2KCounters()}
 	a.images = newImageProxy(func() string { return "test" })
 	a.fetcher = newFetcher(4, func() string { return "test" }, func() time.Duration { return 5 * time.Second })
 	return a
@@ -1062,7 +1062,7 @@ func TestSecurityHeadersOnEveryRoute(t *testing.T) {
 	a := newTestApp(t, validConfig+"\nfeatures: { show_images: true, proxy_images: true }\n")
 	h := a.routes("/")
 	routes := map[string]int{
-		"/": 200, "/api/catalog": 200, "/api/news": 200, "/api/threats": 200, "/api/advisories": 200, "/api/breaches": 200, "/api/outages": 200, "/api/energy": 200, "/api/air": 200, "/api/trains": 200, "/api/politics": 200, "/api/air?lat=x&lon=5": 400, "/api/today": 200, "/api/ransomware": 200, "/healthz": 200,
+		"/": 200, "/api/catalog": 200, "/api/news": 200, "/api/threats": 200, "/api/advisories": 200, "/api/breaches": 200, "/api/outages": 200, "/api/energy": 200, "/api/air": 200, "/api/trains": 200, "/api/politics": 200, "/api/air?lat=x&lon=5": 400, "/api/today": 200, "/api/ransomware": 200, "/api/pollen?lat=x&lon=5": 400, "/api/utilities": 200, "/api/quakes": 200, "/healthz": 200,
 		"/api/weather?lat=abc&lon=5": 400, "/api/geocode?q=a": 400, "/api/img?u=aHR0cHM6Ly9ldmls&s=forged": 403,
 		"/manifest.webmanifest": 200, "/icon-192.png": 200, "/sw.js": 200, "/metrics": 404, "/nope": 404, "/api/news/../../etc/passwd": 404,
 	}
@@ -1898,6 +1898,96 @@ func TestParseRansomware(t *testing.T) {
 	}
 	if _, err := parseRansomware([]byte(`{"message": "1 per 1 minute"}`), "NL", now); err == nil || !strings.Contains(err.Error(), "1 per 1 minute") {
 		t.Errorf("rate-limit reply must be an error: %v", err)
+	}
+}
+
+func TestParsePollen(t *testing.T) {
+	now := time.Date(2026, 9, 26, 10, 30, 0, 0, amsterdam)
+	body := `{"hourly":{"time":["2026-09-26T09:00","2026-09-26T10:00","2026-09-27T12:00","2026-09-28T12:00","2026-09-29T12:00"],
+	 "grass_pollen":[0.7,0.5,1.2,null,0.4],"birch_pollen":[0,0,0,0,0],"mugwort_pollen":[0.1,0.1,0.1,0.1,0.1],"alder_pollen":[0,0,0,0,-1]}}`
+	d, err := parsePollen([]byte(body), now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(d.Days) != 3 || d.Days[0].Date != "2026-09-26" || d.Days[0].Max["grass"] != 0.7 || d.Days[1].Max["grass"] != 1.2 || d.Now["grass"] != 0.5 {
+		t.Errorf("pollen: %+v", d)
+	}
+	if _, err := parsePollen([]byte(`{"hourly":{}}`), now); err == nil {
+		t.Error("no data: expected error")
+	}
+}
+
+func TestGridOperators(t *testing.T) {
+	for in, want := range map[string]string{"AMSTERDAM": "Amsterdam", "'S-GRAVENHAGE": "'s-Gravenhage", "ALPHEN AAN DEN RIJN": "Alphen aan den Rijn", "BERGEN OP ZOOM": "Bergen op Zoom"} {
+		if got := titleNL(in); got != want {
+			t.Errorf("titleNL(%q) = %q, want %q", in, got, want)
+		}
+	}
+	liander := `{"features":[
+	 {"attributes":{"STORING_NUMMER":8369814,"STORING_TYPE":"S","STORING_ENERGIESOORT":"Elektriciteit","STORING_STATUS":"monteur ter plaatse","STORING_DATUM_GEMELD":1790406240000,
+	  "STORING_DATUM_SCHATTING":1790417100000,"STORING_OORZAAK":"Spontane storing","STORING_GETROFFEN_KLANTEN":"< 25","STORING_GETROFFEN_PLAATSEN":"AMSTERDAM,DIEMEN"}},
+	 {"attributes":{"STORING_NUMMER":2,"STORING_TYPE":"P","STORING_ENERGIESOORT":"Gas","STORING_STATUS":"gepland","STORING_DATUM_GEMELD":1790406240000,"STORING_OORZAAK":"Nog niet bekend"}},
+	 {"attributes":{"STORING_NUMMER":3,"STORING_TYPE":"S","STORING_ENERGIESOORT":"Elektriciteit","STORING_STATUS":"opgelost","STORING_DATUM_GEMELD":1790406240000}}]}`
+	l, err := parseLianderOutages([]byte(liander))
+	if err != nil {
+		t.Fatal(err)
+	}
+	act, plan := splitPlanned(l)
+	if len(act) != 1 || len(plan) != 1 || act[0].Places != "Amsterdam, Diemen" || act[0].Energy != "elektriciteit" || act[0].Estimate == nil || act[0].Customers != "< 25" ||
+		plan[0].Energy != "gas" || plan[0].Cause != "" {
+		t.Errorf("liander: %+v / %+v", act, plan)
+	}
+	if _, err := parseLianderOutages([]byte(`{"error":{"code":400,"message":"Invalid query"}}`)); err == nil || !strings.Contains(err.Error(), "Invalid query") {
+		t.Errorf("ArcGIS error must be reported: %v", err)
+	}
+	stedin := `[{"id":"6ab7722b21fe7d1a33aa41b0","incidentType":"Interruption","utility":"Electricity","startTime":"2026-09-26T07:19:48.521+00:00",
+	 "timeIndication":"26-09-2026 tussen 13:15 en 13:45 uur","postalCodes":["2994 GB","2994 GA"],"hasUpdates":false},
+	 {"id":"x","incidentType":"Maintenance","utility":"Gas","startTime":"2026-09-25T06:40:00+00:00","timeIndication":"28-09-2026","postalCodes":["2411 BH"]}]`
+	s, err := parseStedinPlace([]byte(stedin), "Barendrecht")
+	if err != nil {
+		t.Fatal(err)
+	}
+	act, plan = splitPlanned(s)
+	if len(act) != 1 || act[0].EstText != "26-09-2026 tussen 13:15 en 13:45 uur" || act[0].Postcodes != 2 || act[0].Places != "Barendrecht" || len(plan) != 1 || plan[0].Energy != "gas" {
+		t.Errorf("stedin: %+v / %+v", act, plan)
+	}
+}
+
+func TestParseKNMIQuakes(t *testing.T) {
+	body := "#EventID|Time|Latitude|Longitude|Depth/km|Author|Catalog|Contributor|ContributorID|MagType|Magnitude|MagAuthor|EventLocationName|EventType\n" +
+		"knmi2026sjgb|2026-09-16T09:12:40.64655|53.46|6.10|0.0|||KNMI|knmi2026sjgb||||Schiermonnikoog|sonic boom\n" +
+		"knmi2026sawe|2026-09-11T20:18:45.5|50.84|6.247|12.0|||KNMI|knmi2026sawe|MLs|1.0479842224688232||Eschweiler (Duitsland)|earthquake\n" +
+		"knmi2026qmut|2026-08-21T03:50:39.0000|53.378|6.667|3.0|||KNMI|knmi2026qmut|MLn|2.75655436993489||Zandeweer|induced or triggered event\n" +
+		"knmi2026pwsh|2026-08-12T10:45:59.2|50.72|6.192|0.0|||KNMI|knmi2026pwsh||||Aken (Duitsland)|quarry blast\n"
+	q, err := parseKNMIQuakes([]byte(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(q) != 2 || q[0].ID != "knmi2026sawe" || *q[0].Mag != 1 || q[1].Place != "Zandeweer" || !q[1].Induced || *q[1].Mag != 2.8 || q[1].Depth != 3 ||
+		q[1].URL != "https://www.knmi.nl/nederland-nu/seismologie/aardbevingen/knmi2026qmut" {
+		t.Errorf("quakes: %+v", q)
+	}
+	if _, err := parseKNMIQuakes([]byte("<html>error</html>")); err == nil {
+		t.Error("non-FDSN response: expected error")
+	}
+}
+
+func TestParseIODAEvents(t *testing.T) {
+	body := `{"type":"outages.events","error":null,"data":[
+	 {"location":"asn/31615","start":1790142600,"duration":10500,"datasource":"bgp","status":0,"score":2414.4},
+	 {"location":"asn/31615","start":1790167800,"duration":3600,"datasource":"ping-slash24","score":1443}]}`
+	ev, err := parseIODAEvents([]byte(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ev) != 2 || ev[0].Datasource != "ping-slash24" || ev[1].Duration != 10500 || ev[1].Score != 2414 {
+		t.Errorf("events: %+v", ev)
+	}
+	if _, err := parseIODAEvents([]byte(`{"error":"bad entity","data":null}`)); err == nil {
+		t.Error("IODA error: expected error")
+	}
+	if !tls12Hosts["api.ioda.inetintel.cc.gatech.edu"] {
+		t.Error("IODA must use the TLS 1.2 client")
 	}
 }
 

@@ -129,6 +129,30 @@ ransomware:
   countries: [NL]                 # ISO codes, e.g. [NL, BE]; one request per country per interval
   interval: 1h                    # min. 10m
 
+# Hooikoorts: pollen forecast (grass, birch, alder, mugwort, ragweed, olive) for the visitor's air-quality
+# place (default: their weather location), from the Open-Meteo Air Quality API (CAMS Europe; no key).
+pollen:
+  enabled: true
+  url: "https://air-quality-api.open-meteo.com/v1/air-quality"
+
+# Kritieke infrastructuur: electricity and gas outages of the grid operators that publish them:
+# Liander (public ArcGIS feature service behind its outage map) and Stedin (the JSON behind
+# web.stedin.net/storingen, undocumented). Enexis, the small operators and the drinking-water
+# companies publish no open outage data; the panel says so and links to gasenstroomstoringen.nl.
+utilities:
+  enabled: true
+  liander_url: "https://services1.arcgis.com/v6W5HAVrpgSg3vts/arcgis/rest/services/IStoringen_Productie_V7/FeatureServer/0"
+  stedin_url: "https://www.stedin.net/api/storingen/places"
+  interval: 5m                    # Liander 2 requests, Stedin 1 + 1 per affected place; min. 2m
+
+# Aardbevingen: earthquakes in and around the Netherlands from KNMI (FDSN event service, open data).
+# Explosions, quarry blasts and sonic booms are left out; induced events (gas extraction) are marked.
+quakes:
+  enabled: true
+  url: "https://rdsa.knmi.nl/fdsnws/event/1/query"
+  days: 90
+  interval: 15m                   # min. 5m
+
 alerts:
   nctv: { enabled: true, url: "https://www.nctv.nl/onderwerpen/d/dtn", interval: 6h }
   knmi: true
@@ -164,10 +188,25 @@ outages:
   enabled: true
   interval: 10m
   providers:
-    - { id: azure,      name: "Microsoft Azure", format: rss,        url: "https://azure.status.microsoft/en-us/status/feed/", homepage: "https://azure.status.microsoft/" }
-    - { id: m365,       name: "Microsoft 365",   format: m365,       url: "https://status.cloud.microsoft/api/posts/m365Consumer", homepage: "https://status.cloud.microsoft/" }
+    # Shown in this order, below "Internet in Nederland".
+    - { id: akamai,     name: "Akamai",          format: statuspage, url: "https://www.akamaistatus.com/api/v2/summary.json", homepage: "https://www.akamaistatus.com/" }
     - { id: aws,        name: "AWS",             format: rss,        url: "https://status.aws.amazon.com/rss/all.rss", homepage: "https://health.aws.amazon.com/health/status" }
     - { id: cloudflare, name: "Cloudflare",      format: statuspage, url: "https://www.cloudflarestatus.com/api/v2/summary.json", homepage: "https://www.cloudflarestatus.com/" }
+    - { id: azure,      name: "Microsoft Azure", format: rss,        url: "https://azure.status.microsoft/en-us/status/feed/", homepage: "https://azure.status.microsoft/" }
+    - { id: m365,       name: "Microsoft 365",   format: m365,       url: "https://status.cloud.microsoft/api/posts/m365Consumer", homepage: "https://status.cloud.microsoft/" }
+  # Internet in Nederland: outage events detected by IODA (Georgia Tech; no key, attribution shown) for the
+  # country and the networks below, last 7 days. Find more AS numbers at https://bgp.he.net.
+  internet:
+    enabled: true
+    base: "https://api.ioda.inetintel.cc.gatech.edu/v2"
+    country: NL
+    interval: 15m                 # one request per country/network; min. 10m
+    networks:
+      - { asn: 1136,  name: "KPN" }
+      - { asn: 33915, name: "VodafoneZiggo" }
+      - { asn: 50266, name: "Odido thuis" }
+      - { asn: 31615, name: "Odido mobiel" }
+      - { asn: 15435, name: "DELTA Fiber" }
 
 # Refresh: how often an open browser tab asks this server for new data (per panel, 1m..24h).
 # This does not change how often the server fetches from the sources: that is set per source
@@ -188,6 +227,9 @@ refresh:
   politics: 15m
   today: 60m
   ransomware: 30m
+  pollen: 60m
+  utilities: 5m
+  quakes: 15m
   outages: 10m
   ap: 30m
   health: 30m
