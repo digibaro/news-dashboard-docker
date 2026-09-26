@@ -138,7 +138,7 @@ pollen:
 # Kritieke infrastructuur: electricity and gas outages of the grid operators that publish them:
 # Liander (public ArcGIS feature service behind its outage map) and Stedin (the JSON behind
 # web.stedin.net/storingen, undocumented). Enexis, the small operators and the drinking-water
-# companies publish no open outage data; the panel says so and links to gasenstroomstoringen.nl.
+# companies publish no open outage data (checked September 2026).
 utilities:
   enabled: true
   liander_url: "https://services1.arcgis.com/v6W5HAVrpgSg3vts/arcgis/rest/services/IStoringen_Productie_V7/FeatureServer/0"

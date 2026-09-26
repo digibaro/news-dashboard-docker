@@ -1363,7 +1363,8 @@ const EN = {
   'Dit paneel staat uit in config.yaml (outages.enabled).': 'This panel is disabled in config.yaml (outages.enabled).',
   // health & AP
   ' · alleen meldingen over infectieziekten, vaccinatie, hitte en smog': ' · only alerts about infectious diseases, vaccination, heat and smog',
-  'Geen actuele gezondheidsmeldingen van het RIVM in de afgelopen twee maanden.': 'No current health alerts from RIVM in the last two months.',
+  'Geen gezondheidsmeldingen van het RIVM in de afgelopen 31 dagen.': 'No health alerts from RIVM in the last 31 days.',
+  'Geen berichten van de Autoriteit Persoonsgegevens in de afgelopen 31 dagen.': 'No news from the Dutch Data Protection Authority in the last 31 days.',
   // data breaches
   'Datalekken': 'Data breaches', 'Elders': 'Elsewhere', 'nieuw': 'new', '{n} accounts': '{n} accounts', 'gelekt {d}': 'breached {d}', 'gemeld {d}': 'added {d}',
   'Geen Nederlandse datalekken gevonden.': 'No Dutch data breaches found.', 'Geen datalekken gevonden.': 'No data breaches found.',
@@ -1377,7 +1378,6 @@ const EN = {
   'RIVM-berichten konden niet worden opgehaald; er wordt automatisch opnieuw geprobeerd.': 'RIVM news could not be loaded; retrying automatically.',
   'De bron “rivm” staat uit in config.yaml.': 'The source “rivm” is disabled in config.yaml.', 'De bron “ap” staat uit in config.yaml.': 'The source “ap” is disabled in config.yaml.',
   'Boete': 'Fine', 'Last onder dwangsom': 'Penalty order', 'Berisping': 'Reprimand', 'Autoriteit Persoonsgegevens': 'Dutch Data Protection Authority',
-  'Geen recente berichten van de Autoriteit Persoonsgegevens.': 'No recent news from the Dutch Data Protection Authority.',
   'AP-berichten konden niet worden opgehaald; er wordt automatisch opnieuw geprobeerd.': 'AP news could not be loaded; retrying automatically.',
   // freshness & status
   'verouderd · ': 'outdated · ', 'wacht op eerste ophaalronde': 'waiting for first fetch', 'Status wordt opgehaald…': 'Loading status…',
@@ -1734,7 +1734,6 @@ const EN = {
   "monteur onderweg": "engineer on the way",
   "gemeld": "reported",
   "in behandeling": "in progress",
-  "Enexis, Rendo, Coteq en Westland Infra publiceren geen open storingsgegevens: controleer uw adres op ": "Enexis, Rendo, Coteq and Westland Infra publish no open outage data: check your address at ",
   "Bron: storingskaart van Liander en storingenpagina van Stedin · gaslucht of storing melden: 0800-9009 (gratis)": "Source: Liander outage map and Stedin outage page · report a gas smell or outage: 0800-9009 (free, Dutch)",
   "Aardbevingen konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.": "Earthquakes could not be loaded ({err}). Retrying automatically.",
   "Dit paneel staat uit in config.yaml (quakes.enabled).": "This panel is disabled in config.yaml (quakes.enabled).",
@@ -1759,7 +1758,6 @@ const EN = {
   "geen verstoringen (7 dagen)": "no disruptions (7 days)",
   "Internet in Nederland": "Internet in the Netherlands",
   "Bronnen: de officiële statuspagina’s · internet: ": "Sources: the official status pages · internet: ",
-  " · stroom en gas: zie Kritieke infrastructuur": " · electricity and gas: see Critical infrastructure",
   "Internet: {who}": "Internet: {who}",
   "{s} stroom- en {g} gasstoringen bij {ops}": "{s} electricity and {g} gas outages at {ops}",
   "Energie, lucht, trein, politiek en infrastructuur": "Energy, air, trains, politics and infrastructure",
@@ -3098,7 +3096,7 @@ function renderOutages(body) {
           h('span', { translate: 'no' }, i.url ? extLink(i.url, i.title) : i.title),
           ` · ${[i.resolved ? t('opgelost') : tr(i.status), since(new Date(i.updated))].filter(Boolean).join(' · ')}`))) : null);
     })),
-    h('p', { class: 'pfoot' }, t('Bronnen: de officiële statuspagina’s · internet: '), extLink('https://ioda.inetintel.cc.gatech.edu/', 'IODA (Georgia Tech)'), t(' · stroom en gas: zie Kritieke infrastructuur')));
+    h('p', { class: 'pfoot' }, t('Bronnen: de officiële statuspagina’s · internet: '), extLink('https://ioda.inetintel.cc.gatech.edu/', 'IODA (Georgia Tech)')));
 }
 
 // ---------------------------------------------------------------- datalekken (Have I Been Pwned)
@@ -3592,7 +3590,6 @@ function renderUtilities(body) {
       h('p', { class: 'sum', text: [act.length > 4 ? t('en nog {n} storingen', { n: act.length - 4 }) : null, (g.planned || []).length ? t('gepland onderhoud: {n}', { n: g.planned.length }) : null,
         g.resolved_24h >= 0 ? t('opgelost in 24 uur: {n}', { n: g.resolved_24h }) : null, g.error ? t('laatste poging mislukt') : null].filter(Boolean).join(' · ') }));
   })));
-  out.push(h('p', { class: 'pnote' }, t('Enexis, Rendo, Coteq en Westland Infra publiceren geen open storingsgegevens: controleer uw adres op '), extLink('https://gasenstroomstoringen.nl/', 'gasenstroomstoringen.nl'), '.'));
   out.push(h('p', { class: 'pfoot', text: t('Bron: storingskaart van Liander en storingenpagina van Stedin · gaslucht of storing melden: 0800-9009 (gratis)') }));
   body.replaceChildren(...out);
 }
@@ -3818,7 +3815,7 @@ const isHealthAlert = it => HEALTH_RE.test(fold(it.title + ' ' + (it.summary || 
 async function loadHealthPanel() {
   if (!srcById.has('rivm')) { panelData.health = { missing: true }; renderPanel('health'); return; }
   try {
-    const d = await api('api/news?sources=rivm&limit=60&group=0');
+    const d = await api('api/news?sources=rivm&limit=60&group=0&since=' + recentSince());
     panelData.health = { items: (d.items || []).filter(isHealthAlert), status: d.status?.rivm };
   } catch (e) { panelData.health = { ...(panelData.health || {}), error: e }; }
   renderPanel('health');
@@ -3829,11 +3826,12 @@ function renderHealth(body) {
   if (d.missing) { body.replaceChildren(h('p', { class: 'pnote', text: 'De bron “rivm” staat uit in config.yaml.' })); return; }
   const out = [];
   if (d.error && !d.items) out.push(h('p', { class: 'pnote', text: 'RIVM-berichten konden niet worden opgehaald; er wordt automatisch opnieuw geprobeerd.' }));
-  if (d.items?.length) {
-    out.push(h('ul', { class: 'plist' }, d.items.slice(0, 8).map(it => h('li', null, h('span', { translate: 'no' }, extLink(it.url, it.title)),
+  const healthItems = (d.items || []).filter(isRecent);
+  if (healthItems.length) {
+    out.push(h('ul', { class: 'plist' }, healthItems.slice(0, 8).map(it => h('li', null, h('span', { translate: 'no' }, extLink(it.url, it.title)),
       h('div', { class: 'm' }, timeEl(new Date(it.published), false))))));
   } else if (d.items) {
-    out.push(h('p', { class: 'pnote', text: 'Geen actuele gezondheidsmeldingen van het RIVM in de afgelopen twee maanden.' }));
+    out.push(h('p', { class: 'pnote', text: 'Geen gezondheidsmeldingen van het RIVM in de afgelopen 31 dagen.' }));
   }
   out.push(h('p', { class: 'pfoot' }, 'Bron: ', extLink('https://www.rivm.nl/', 'RIVM'), ' · alleen meldingen over infectieziekten, vaccinatie, hitte en smog'));
   body.replaceChildren(...out);
@@ -3845,10 +3843,13 @@ const AP_ACTIONS = [
   [/\bboetes?\b/i, 'Boete', 'sev-critical'],
   [/\bberisping\b/i, 'Berisping', 'sev-medium'],
 ];
+const RECENT_DAYS = 31; // AP and Gezondheid show only items of the last 31 days
+const recentSince = () => Math.floor(Date.now() / 1000) - RECENT_DAYS * 86400;
+const isRecent = it => Date.now() - new Date(it.published) <= RECENT_DAYS * 864e5;
 async function loadAP() {
   if (!srcById.has('ap')) { panelData.ap = { missing: true }; renderPanel('ap'); return; }
   try {
-    const d = await api('api/news?sources=ap&limit=8');
+    const d = await api('api/news?sources=ap&limit=30&since=' + recentSince());
     panelData.ap = { items: d.items || [], status: d.status?.ap };
   } catch (e) {
     panelData.ap = { ...(panelData.ap || {}), error: e };
@@ -3864,14 +3865,15 @@ function renderAP(body, extra) {
   if (d.status && !d.status.ok && d.status.error) {
     out.push(h('p', { class: 'pnote', text: t('Website van de AP niet bereikbaar sinds {t} — wordt automatisch opnieuw geprobeerd.', { t: since(new Date(d.status.error_since)) }) }));
   }
-  if (d.items?.length) {
-    out.push(h('ul', { class: 'plist' }, d.items.map(it => {
+  const apItems = (d.items || []).filter(isRecent).slice(0, 8);
+  if (apItems.length) {
+    out.push(h('ul', { class: 'plist' }, apItems.map(it => {
       const act = AP_ACTIONS.find(([re]) => re.test(it.title)); // title only: summaries often mention fines in passing
       return h('li', null, h('span', { translate: 'no' }, extLink(it.url, it.title)),
         h('div', { class: 'm' }, timeEl(new Date(it.published), false), act ? h('span', { class: 'tag ' + act[2], text: t(act[1]) }) : null));
     })));
   } else if (!d.error) {
-    out.push(h('p', { class: 'pnote', text: 'Geen recente berichten van de Autoriteit Persoonsgegevens.' }));
+    out.push(h('p', { class: 'pnote', text: 'Geen berichten van de Autoriteit Persoonsgegevens in de afgelopen 31 dagen.' }));
   }
   const home = srcById.get('ap')?.homepage;
   if (home) out.push(h('p', { class: 'pfoot' }, 'Bron: ', extLink(home, 'Autoriteit Persoonsgegevens')));

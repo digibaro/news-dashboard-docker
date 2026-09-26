@@ -11,7 +11,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
   - abuse.ch Feodo botnet C2 servers
   - geolocation via ip-api.com
   - the ISC Infocon level
-  - Autoriteit Persoonsgegevens enforcement news
+  - Autoriteit Persoonsgegevens enforcement news (last 31 days)
 - **Security advisories**: NCSC-NL, with the `[kans/schade]` rating parsed into badges, plus optional CERT-EU, CISA, BSI and MSRC.
 - **Top bar:** the current KNMI weather code, the number of P2000 alerts in the last hour per service for a configured area (default Den Haag), and the NCTV terrorism threat level.
 - **Vandaag:** date and week number, sunrise and sunset, moon phase, the next public holiday, the next clock change, and school holidays for regio Noord, Midden and Zuid (the visitor's region highlighted).
@@ -27,7 +27,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Datalekken:** the latest 3 Dutch and 3 other data breaches at organisations, from Have I Been Pwned: number of accounts, leak date, and what data leaked.
 - **Ransomware NL:** organisations claimed by ransomware groups on their leak sites (ransomware.live), with counts, the most active groups and the latest claims. No links to leak sites and no descriptions.
 - **Storingen:** **internet in the Netherlands** on top, then the status of Akamai, AWS, Cloudflare, Microsoft Azure and Microsoft 365 (in the order of `config.yaml`); internet: outages detected by IODA for the country and KPN, VodafoneZiggo, Odido and DELTA Fiber. Any service with an Atlassian Statuspage or RSS status feed can be added in `config.yaml`.
-- **Gezondheid:** RIVM news filtered to health alerts (infectious diseases, vaccination, heat, smog).
+- **Gezondheid:** RIVM news of the last 31 days, filtered to health alerts (infectious diseases, vaccination, heat, smog).
 - **Themes**: Licht / Donker (true black) / Auto.
 - **Language**: Nederlands / English / Auto (browser language), switchable at the top and under Instellingen → Weergave. Only the interface is translated; news, advisories and alerts stay in their original language.
 
@@ -495,7 +495,7 @@ The server fetches everything; browsers only talk to the dashboard itself.
 | [Open-Meteo](https://open-meteo.com/) (CAMS) | Hooikoorts | Air Quality API, pollen from the Copernicus Atmosphere Monitoring Service (CC BY 4.0). Levels are indicative thresholds per pollen type (grains/m³, daily maximum), not a medical scale. |
 | [KNMI](https://www.knmi.nl/nederland-nu/seismologie/aardbevingen) | Aardbevingen | FDSN event service (`rdsa.knmi.nl`), open data; each quake links to its KNMI page. Only earthquakes and induced events; explosions, quarry blasts and sonic booms are left out. |
 | [Liander](https://www.liander.nl/storingen-en-onderhoud) | Kritieke infrastructuur | The public ArcGIS feature service `IStoringen_Productie_V7` (Alliander) behind Liander's outage map: status, cause, expected repair time and a customer count per outage. No explicit licence; attribution shown. |
-| [Stedin](https://web.stedin.net/storingen) | Kritieke infrastructuur | The JSON behind Stedin's outage page (`/api/storingen/places`, undocumented): one overview request plus one per affected place. Enexis, Rendo, Coteq, Westland Infra and the drinking-water companies publish no open outage data (checked September 2026); the panel links to gasenstroomstoringen.nl. |
+| [Stedin](https://web.stedin.net/storingen) | Kritieke infrastructuur | The JSON behind Stedin's outage page (`/api/storingen/places`, undocumented): one overview request plus one per affected place. Enexis, Rendo, Coteq, Westland Infra and the drinking-water companies publish no open outage data (checked September 2026), so they are not in the panel. |
 | [IODA](https://ioda.inetintel.cc.gatech.edu/) (Georgia Tech) | Storingen: internet | Outage events for the country and chosen networks (routing, reachability, traffic). No key. The data is "Copyright Georgia Tech Research Corporation"; no published data licence found (checked September 2026), attribution shown. IODA's server does not answer Go's TLS 1.3 handshake, so the app talks to that one host over TLS 1.2. |
 | [ransomware.live](https://www.ransomware.live/) | Ransomware NL | Free API v2: no key, **personal use only**, 1 request per minute per endpoint (polled hourly per country). Business use needs their free PRO key under separate terms. These are claims made by criminal groups, not verified; the panel says so. Descriptions (which can quote stolen data) and links to leak sites are never passed on. |
 | [Have I Been Pwned](https://haveibeenpwned.com/) | Datalekken | The public breach list (`/api/v3/breaches`): no API key, and no visitor data is sent. Licensed **CC BY 4.0** (attribution shown in the panel). Fetched every 3 h. Left out: unverified, fabricated, retired, spam lists, malware and stealer logs, entries without a domain, and (unless `include_sensitive: true`) sensitive breaches. HIBP has no country field, so "Dutch" means a `.nl` domain or a description mentioning Dutch/the Netherlands. |
@@ -654,6 +654,11 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.8.1
+- **Autoriteit Persoonsgegevens acties and Gezondheid:** only items from the last 31 days. Each panel says so when there are none.
+- **Kritieke infrastructuur:** the note about grid operators without open data (Enexis and others) is removed; the 0800-9009 outage number stays.
+- **Storingen:** the footer no longer refers to Kritieke infrastructuur.
 
 ### 1.8.0
 - **New panel Hooikoorts** (after Luchtkwaliteit): the pollen forecast for today, tomorrow and the day after (grass, birch, alder, mugwort, ragweed), with indicative levels from none to very high. It uses the same place as Luchtkwaliteit. Source: Open-Meteo (CAMS, Copernicus).
