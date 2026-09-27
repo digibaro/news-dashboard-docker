@@ -11,7 +11,7 @@
 <meta name="referrer" content="no-referrer">
 <title>Nieuws Hub</title>
 <meta name="description" content="Nieuws, weer en actuele cyberdreigingen op één pagina.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230f1115'/%3E%3Cpath d='M8 11h16M8 16h16M8 21h10' stroke='%23fff' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230f1115'/%3E%3Cpath d='M8 11h16M8 16h16M8 21h10' stroke='%2300a4dc' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
 <script>
 /* Apply stored theme and density before first paint (no flash). */
 (function () {
@@ -115,7 +115,8 @@ svg.i { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor;
 .top { position: sticky; top: 0; z-index: 20; background: var(--bg); border-bottom: 1px solid var(--line); }
 .top-in { max-width: 1440px; margin: 0 auto; padding: 8px 16px; display: flex; align-items: center; gap: 12px; min-height: 52px; }
 .brand { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; }
-.brand a { color: var(--text); text-decoration: none; }
+.brand a { color: var(--text); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
+.brand .logo { flex: none; width: 22px; height: 22px; }
 .clock { color: var(--text-2); font-size: 13px; white-space: nowrap; }
 .wx-mini { display: inline-flex; align-items: center; gap: 5px; color: var(--text-2); font-size: 13px; white-space: nowrap; text-decoration: none; }
 .wx-mini:hover { color: var(--text); }
@@ -487,7 +488,7 @@ table.tt { width: 100%; border-collapse: collapse; font-size: 12px; }
 .ab .d { width: 9px; height: 9px; border-radius: 50%; background: var(--lvl, var(--line-strong)); flex: none; }
 .ab strong { color: var(--text); font-weight: 650; }
 .ab .short { display: none; }
-.ab > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ab > span:last-child { position: relative; min-width: 0; overflow: hidden; text-overflow: ellipsis; } /* relative: keeps .sr-only labels inside the clip */
 .ab { max-width: 100%; }
 /* phones: one badge per line from the first paint, so loading never changes the bar's height */
 @media (max-width: 699px) { .alertbar-in { flex-direction: column; gap: 2px; } .ab .long { display: none; } .ab .short { display: inline; } }
@@ -837,7 +838,7 @@ textarea.json {
 </div>
 <header class="top" id="top">
   <div class="top-in">
-    <h1 class="brand" translate="no"><a href="./">Nieuws Hub</a></h1>
+    <h1 class="brand" translate="no"><a href="./"><svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="6" fill="#0f1115"/><path d="M8 11h16M8 16h16M8 21h10" stroke="#00a4dc" stroke-width="2.5" stroke-linecap="round" fill="none"/></svg>Nieuws Hub</a></h1>
     <time class="clock" id="clock"></time>
     <a class="wx-mini" id="wx-mini" href="#panel-weather" hidden></a>
     <div class="search" role="search">

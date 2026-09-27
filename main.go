@@ -1959,7 +1959,7 @@ func (a *App) handleImage(w http.ResponseWriter, r *http.Request) {
 // Installable web app: manifest, icons (drawn at startup) and service worker.
 
 // pwaAssets returns the manifest, icons and service worker. The icons repeat the
-// favicon (three bars on a dark rounded square); the maskable one keeps the bars
+// favicon (three #00a4dc bars on a dark rounded square); the maskable one keeps the bars
 // inside the 80 % safe zone.
 func pwaAssets(indexETag string) map[string]*staticAsset {
 	manifest, _ := json.Marshal(map[string]any{
@@ -2010,9 +2010,9 @@ func drawIcon(size int, maskable bool) []byte {
 				}
 				fg = math.Max(fg, cover(d))
 			}
-			// bars (white) over background (#0f1115)
-			c := func(bgc float64) uint8 { return uint8(math.Round(bgc*(1-fg) + 255*fg)) }
-			img.SetNRGBA(x, y, color.NRGBA{c(0x0f), c(0x11), c(0x15), uint8(math.Round(255 * bg))})
+			// bars (#00a4dc) over background (#0f1115)
+			c := func(bgc, fgc float64) uint8 { return uint8(math.Round(bgc*(1-fg) + fgc*fg)) }
+			img.SetNRGBA(x, y, color.NRGBA{c(0x0f, 0x00), c(0x11, 0xa4), c(0x15, 0xdc), uint8(math.Round(255 * bg))})
 		}
 	}
 	var buf bytes.Buffer

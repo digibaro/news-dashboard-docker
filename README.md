@@ -666,6 +666,11 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 
 ## Changelog
 
+### 1.9.1
+- **Logo:** the favicon's icon now appears in front of "Nieuws Hub" in the top bar.
+- **Icon colour:** the stripes of the favicon, the app icons and the logo are blue (#00A4DC); the dark background stays.
+- **Phones:** on very narrow screens (320 px) the Alarmeringen line in the top bar no longer makes the page scroll sideways.
+
 ### 1.9.0
 - **New panel Economie in cijfers** (after Energieprijzen): Dutch inflation with the euro-area figure and a 12-month trend line, unemployment with the change from the previous month, the ECB deposit rate and since when, and the euro in dollars. Sources: Eurostat and the ECB, no key.
 - **New panel Beurs** (after Economie in cijfers): the AEX, AMX, BEL 20, DAX, Euro Stoxx 50, S&P 500, Nasdaq, Brent oil, gold and bitcoin with their daily change, and the top 3 risers and fallers of the AEX. Prices are delayed and come from Yahoo Finance's unofficial endpoint (personal use only; see *Data sources*). Indices and stocks are configurable.
