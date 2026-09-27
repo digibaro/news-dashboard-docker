@@ -224,13 +224,17 @@ fuel:
 # browser); the server finds the municipal waste calendar that knows it.
 waste:
   enabled: true
-  # providers: municipal calendars with the "opzet" REST API. Default: 16 calendars (Den Haag, HVC,
-  #   GAD, DAR, Cyclus, Blink, Purmerend and more, see the README). A list here replaces the default.
+  # 51 built-in providers (municipal calendars, Ximmio, Amsterdam, RD4, ROVA, HVC, ... see the README),
+  # after the Home Assistant integration "afvalwijzer". The server finds the one that knows an address.
+  # providers: [denhaag, hvc]      # only these ids (a list replaces the default); https URLs add extra opzet calendars
+  app_providers: false            # also Mijn Afvalwijzer (e.g. Utrecht, Eindhoven, Breda), Burgerportaal (Groningen,
+                                  # Tilburg, Assen, BAR, Nijkerk, RMN), Omrin and Circulus. They use the key of the
+                                  # vendor's own app or a guest login, not a public API: switch on at your own discretion.
   # Optional default address, for visitors who did not set one (and their push reminders):
-  #   opzet          - postcode and number, looked up at the calendars above
+  #   auto           - postcode and number, looked up at the providers above (or a provider id, e.g. denhaag)
   #   ics            - an iCal link from your municipality or waste company
   #   home_assistant - your existing waste sensors in Home Assistant (afvalbeheer, afvalwijzer, ...)
-  provider: opzet
+  provider: auto
   postcode: ""                    # e.g. "2511AB"; empty = no default address
   number: 0
   suffix: ""                      # house letter or addition, e.g. "A"

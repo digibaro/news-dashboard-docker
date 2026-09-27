@@ -20,7 +20,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Aardbevingen:** earthquakes in and around the Netherlands from KNMI in the last 31 days, with magnitude, depth and induced (gas extraction) events marked.
 - **Kritieke infrastructuur:** current electricity and gas outages at Liander and Stedin (place, status, expected repair time, customers affected), planned work and outages resolved in the last 24 h.
 - **NL-Alert:** active and recent NL-Alerts (last 31 days), marked when the visitor's weather location lies inside the alert area.
-- **Afvalkalender:** the next waste collection days. Each visitor sets an own address (postcode and house number) under Instellingen, like the places for alarms and air quality; the server finds the municipal waste calendar that knows it (16 calendars, e.g. Den Haag, HVC, GAD, DAR, Cyclus). An optional default address can also come from an iCal link or Home Assistant.
+- **Afvalkalender:** the next waste collection days. Each visitor sets an own address (postcode and house number) under Instellingen, like the places for alarms and air quality; the server finds the provider that knows it among 51 built-in providers (municipal calendars, Ximmio, Amsterdam, HVC, RD4, ROVA and more; 60 with the optional app providers such as Mijn Afvalwijzer). An optional default address can also come from an iCal link or Home Assistant.
 - **Brandstofprijzen:** the national average recommended pump price (GLA) for Euro95, diesel and LPG, with the change since yesterday.
 - **Treinstoringen:** current rail disruptions and engineering works from the NS Disruptions API (needs a free key).
 - **Economie in cijfers:** Dutch inflation (with the euro-area figure and a 12-month trend), unemployment, the ECB deposit rate and the euro in dollars, from Eurostat and the ECB.
@@ -74,7 +74,7 @@ It is built as **one Go binary with the frontend embedded, plus one `config.yaml
 12. [Development](#development)
 13. [Possible extensions](#possible-extensions)
 14. [Changelog](#changelog)
-15. [License](#license)
+15. [License](#license) · [Disclaimer](#disclaimer)
 
 ---
 
@@ -165,7 +165,7 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 | `economy` | Economie in cijfers: `enabled`, `eurostat_base`, `ecb_base`, `interval` (default 6h, min. 1h) |
 | `nlalert` | NL-Alert: `enabled`, `url`, `interval` (default 2m, min. 1m) |
 | `fuel` | Brandstofprijzen: `enabled`, `url` (UnitedConsumers page), `interval` (default 3h, min. 1h) |
-| `waste` | Afvalkalender: `enabled`, `providers` (base URLs of municipal calendars with the opzet API; default: 16 calendars, see *Data sources*), `interval` (default 6h, min. 1h). Visitors set their own address in the browser. Optional **default address** (for visitors without one, and their push reminders) via `provider`: **opzet** `postcode`, `number`, `suffix` · **ics** `ics_url` · **home_assistant** `home_assistant.url`, `home_assistant.token` (or `NDB_HA_TOKEN`), `home_assistant.entities` (1–10 sensor ids). |
+| `waste` | Afvalkalender: `enabled`, `providers` (provider ids to use, e.g. `[denhaag, hvc]`; a list replaces the default of all built-in providers; https URLs add extra opzet calendars), `app_providers` (default `false`; see *Data sources*), `interval` (default 6h, min. 1h). Visitors set their own address in the browser and can pick a provider or let the server find it. Optional **default address** (for visitors without one, and their push reminders) via `provider`: **auto** (or a provider id) `postcode`, `number`, `suffix` · **ics** `ics_url` · **home_assistant** `home_assistant.url`, `home_assistant.token` (or `NDB_HA_TOKEN`), `home_assistant.entities` (1–10 sensor ids). |
 | `trending` | Trending words above the news: `enabled` (computed from the news cache, no extra requests) |
 | `push` | Push notifications (off by default): `enabled`, `subject` (`mailto:` or https contact), `vapid_private_key` (or `NDB_VAPID_PRIVATE_KEY`), `max_subscriptions` (default 50), `quake_min_mag` (2.5), `breaking_sources` (6; 0 = off), `waste_hour` (19; -1 = off). See [Push notifications](#push-notifications). |
 | `markets` | Beurs: `enabled`, `url` (Yahoo spark), `interval` (default 15m, min. 5m), `indices` (1–20, shown in order) and `stocks` (max. 60, the source of the top 3 risers and fallers), each `{ symbol, name }`. The default stocks are the AEX constituents; Euronext reviews them every quarter. |
@@ -544,7 +544,7 @@ The server fetches everything; browsers only talk to the dashboard itself.
 | [ECB Data Portal](https://data.ecb.europa.eu/) | Economie in cijfers | Deposit facility rate and the EUR/USD reference rate, SDMX API, no key; reuse allowed with attribution. |
 | [NL-Alert](https://actueel.nl-alert.nl/) | NL-Alert | The public JSON API behind actueel.nl-alert.nl (`api.public-warning.app`), no key. Alerts include their broadcast areas; "in jouw omgeving" is a point-in-polygon check on the server with the visitor's weather location. |
 | [UnitedConsumers](https://www.unitedconsumers.com/tanken/brandstofprijzen) | Brandstofprijzen | The daily *gemiddelde landelijke adviesprijs* (GLA). There is **no open API**: the price table is read from the public page once every 3 hours. UnitedConsumers claims copyright on the data on its site, so this is for **personal use only**; turn it off with `fuel.enabled: false` for public or commercial use. CBS publishes official daily pump prices (table 80416ned), but its OData hosts are not reachable from every network. |
-| Municipal waste calendars | Afvalkalender | The "opzet" REST API that many municipalities use for their waste calendar, no key. Default list (checked September 2026): Den Haag, HVC, GAD, DAR, Cyclus, Blink, Purmerend, Alphen aan den Rijn, Cranendonck, Lingewaard, Peel en Maas, Schouwen-Duiveland, Súdwest-Fryslân, Venray, Voorschoten and Waalre. A visitor's address is asked at all of them in parallel once; the matching calendar is remembered. Municipalities with another system (e.g. Amsterdam, Rotterdam, Utrecht, Ximmio or Mijn Afvalwijzer) are not supported yet. For the default address also: any iCal link, or your own Home Assistant (REST API with a long-lived token). |
+| Waste collection providers | Afvalkalender | The provider list and request formats follow the Home Assistant integration [afvalwijzer](https://github.com/xirixiz/homeassistant-afvalwijzer) by xirixiz (MIT licence), rewritten in Go and checked with real addresses (September 2026). A visitor's municipality comes from [PDOK](https://www.pdok.nl/) (Locatieserver, open, no key); then that municipality's calendar and all regional providers are asked in parallel once, and the provider that knows the address is remembered. **Public APIs without a key (on):** 16 municipal calendars with the "opzet" API (Den Haag, Alphen aan den Rijn, Purmerend, Haarlem/Spaarnelanden, …), the regional opzet calendars of HVC, GAD, DAR, Cyclus, Afvalstoffendienst, Offalkalinder, PreZero, Saver and ZRD, 14 Ximmio companies (Almere, Twente Milieu, Avalex, ACV, Avri, Blink, Meerlanden, RAD, Waardlanden, Area, Venlo, Woerden, Hellendoorn, Oostzaan), Amsterdam (open data; dates computed from weekdays and frequency), RD4, ROVA, Irado, Reinis, RWM, Kliko (Maassluis, Oude IJsselstreek), Straatbeeld (Drimmelen) and the iCal calendars of Borsele, Goes and Edam-Volendam. **App providers (`waste.app_providers`, off by default):** Mijn Afvalwijzer (a large share of municipalities, e.g. Utrecht, Eindhoven, Breda) with the key of its web app, Burgerportaal (Groningen, Tilburg, Assen, BAR, Nijkerk, RMN) with an anonymous Firebase session, Omrin with the app's guest login, and Circulus with a web session. These are not public APIs; switch them on at your own discretion. Not included: providers that did not answer for any tested address (Westland, Afval3xbeter, Mijn Afvalzaken, De Afval App), Montferland (plain HTTP only), Mijn Afvalhulp and RecycleApp (Belgium). For the default address also: any iCal link, or your own Home Assistant (REST API with a long-lived token). |
 | Push services | Meldingen | Messages go through the browser vendor's push service (Google FCM, Mozilla, Apple, Microsoft). The content is end-to-end encrypted (RFC 8291); the service sees only the timing and size. |
 | [Yahoo Finance](https://finance.yahoo.com/) | Beurs | **Unofficial** "spark" endpoint without a key: delayed prices, **personal use only** under Yahoo's terms, and it may change or stop without notice. Free official APIs with European stocks either forbid display (Twelve Data free plan) or cover only the US (EODHD demo); Euronext's own data is encrypted and not used. Turn the panel off with `markets.enabled: false` for public or commercial use. |
 | [KNMI](https://www.knmi.nl/nederland-nu/seismologie/aardbevingen) | Aardbevingen | FDSN event service (`rdsa.knmi.nl`), open data; each quake links to its KNMI page. Only earthquakes and induced events; explosions, quarry blasts and sonic booms are left out. |
@@ -659,7 +659,7 @@ All JSON responses:
 | `GET /api/economy` | Economie in cijfers: `inflation` and `unemployment` (13 months), `inflation_ea`, `rate` with `rate_since`, `eurusd` (last 2 days) |
 | `GET /api/nlalert?lat=&lon=` | NL-Alert: `alerts` of the last 31 days (text, English text, start, stop, withdrawn, `near` for the given point or the configured weather location) and the number `active` |
 | `GET /api/fuel` | Brandstofprijzen: `date` and `prices` (fuel, name, price per litre, change in cents) |
-| `GET /api/waste?postcode=&number=&suffix=` | Afvalkalender for the given address (`own`, `pickups`, `calendar`, or `not_found`); without parameters the server's default address (`needs_address` when there is none). The address is not echoed |
+| `GET /api/waste?postcode=&number=&suffix=&provider=` | Afvalkalender for the given address (`own`, `pickups`, `provider`, `calendar`, `home`, or `not_found`); `provider` is optional (default: find automatically). Without parameters the server's default address (`needs_address` when there is none). The address is not echoed. The enabled providers are in `/api/catalog` (`waste_providers`) |
 | `GET /api/trending` | Trending: up to 8 `terms` with the number of `sources` in the last 3 hours |
 | `GET /api/push` | Push: `enabled`, the VAPID public `key` and the available `topics` |
 | `POST /api/push/subscribe` · `/unsubscribe` · `/test` | Register, remove or test this device's subscription (same-origin JSON only) |
@@ -719,6 +719,15 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.11.0
+- **Disclaimer** (Dutch and English) at the bottom of the page and of this README: best effort, GPL-3.0, no warranty, no support.
+- **Afvalkalender for much more of the Netherlands:** 51 built-in waste collection providers instead of 16, after the Home Assistant integration [afvalwijzer](https://github.com/xirixiz/homeassistant-afvalwijzer) (MIT): municipal calendars, 14 Ximmio companies (Almere, Twente Milieu, Avalex, Blink, …), Amsterdam, RD4, ROVA, Irado, Reinis, RWM, Kliko, Straatbeeld and three iCal calendars. Tested with real addresses: every provider found its own address automatically.
+- **App providers** (off by default, `waste.app_providers`): Mijn Afvalwijzer (e.g. Utrecht, Eindhoven, Breda), Burgerportaal (Groningen, Tilburg, Assen, BAR, Nijkerk, RMN), Omrin and Circulus. They use the vendor app's key or a guest login instead of a public API.
+- **Faster, smarter search:** the municipality of an address comes from PDOK, so only that municipality's calendar and the regional providers are asked; the provider found is remembered per address.
+- **Choose your provider** under *Instellingen → Adres voor de afvalkalender*, or leave it on "Automatisch zoeken". The panel links to the provider.
+- **Standard waste names:** codes such as GREEN, PAPER or pbd and long descriptions become GFT, Papier, PMD, Restafval, and so on.
+- Config: `waste.providers` now takes provider ids (URLs still add extra opzet calendars), new `waste.app_providers`, and `waste.provider: auto` (the old `opzet` still works).
 
 ### 1.10.0
 - **New panel NL-Alert** (after Alarmeringen): active and recent NL-Alerts of the last 31 days, with the Dutch or English text, and "in jouw omgeving" when the visitor's weather location lies inside the alert area. Source: the public API behind actueel.nl-alert.nl.
@@ -893,3 +902,29 @@ This program is free software: you can redistribute it and/or modify it under th
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See [`LICENSE`](LICENSE) for the full text of the GNU General Public License v3.0.
 
 The news, weather, threat and alert data shown by the dashboard belong to their publishers; see [Data sources, terms and licences](#data-sources-terms-and-licences).
+
+## Disclaimer
+
+**English**
+
+This software is provided on a best effort basis. It was developed with care, but it may contain bugs, errors or incomplete features.
+
+**License:** This program is free software, released under the GNU General Public License v3.0 (GPL-3.0). You may redistribute and/or modify it under the terms of that license. See the [`LICENSE`](LICENSE) file or https://www.gnu.org/licenses/gpl-3.0.html for the full text.
+
+**No warranty:** This software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose and non-infringement. As stated in sections 15 and 16 of the GPL-3.0, the author(s) shall not be liable for any damages, data loss or other consequences arising from the use of, or inability to use, this software.
+
+**No support:** No support is provided. The author(s) are under no obligation to answer questions, fix bugs, provide updates or implement feature requests. Issues and contributions may be considered, but without any guarantee of response.
+
+**Use at your own risk.**
+
+**Nederlands**
+
+Deze software wordt aangeboden op best effort-basis. De software is met zorg ontwikkeld, maar kan fouten, bugs of onvolledige functionaliteit bevatten.
+
+**Licentie:** Dit programma is vrije software, uitgebracht onder de GNU General Public License v3.0 (GPL-3.0). Je mag het verspreiden en/of aanpassen onder de voorwaarden van deze licentie. Zie het bestand [`LICENSE`](LICENSE) of https://www.gnu.org/licenses/gpl-3.0.html voor de volledige tekst.
+
+**Geen garantie:** Deze software wordt geleverd "zoals hij is", zonder enige garantie, expliciet of impliciet, waaronder begrepen maar niet beperkt tot garanties van verkoopbaarheid, geschiktheid voor een bepaald doel of het niet inbreuk maken op rechten van derden. Conform artikel 15 en 16 van de GPL-3.0 zijn de auteur(s) niet aansprakelijk voor schade, dataverlies of andere gevolgen voortvloeiend uit het gebruik van, of het niet kunnen gebruiken van, deze software.
+
+**Geen support:** Er wordt geen ondersteuning geboden. De auteur(s) zijn niet verplicht vragen te beantwoorden, bugs op te lossen, updates te leveren of wensen voor nieuwe functies te implementeren. Meldingen en bijdragen worden mogelijk bekeken, maar zonder garantie op een reactie.
+
+**Gebruik is volledig op eigen risico.**

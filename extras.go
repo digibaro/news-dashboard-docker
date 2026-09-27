@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"net/url"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -255,166 +255,16 @@ var (
 
 func normPostcode(s string) string { return strings.ToUpper(strings.ReplaceAll(s, " ", "")) }
 
-// WasteResult is what a visitor with an own address gets.
-type WasteResult struct {
-	Pickups  []WastePickup `json:"pickups"`
-	Provider string        `json:"provider"` // host of the municipal calendar
-}
-
-type wasteAddr struct {
-	Postcode string `json:"postcode"`
-	Number   int    `json:"number"`
-	Suffix   string `json:"suffix,omitempty"`
-}
-
-func (w wasteAddr) key() string {
-	return fmt.Sprintf("%s-%d-%s", w.Postcode, w.Number, strings.ToUpper(w.Suffix))
-}
-
-var (
-	wasteSuffixRe    = regexp.MustCompile(`^[A-Za-z0-9-]{0,6}$`)
-	errWasteNotFound = errors.New("adres niet gevonden bij de ondersteunde afvalkalenders")
-)
-
-func parseWasteAddr(pc, nr, sfx string) (wasteAddr, bool) {
-	w := wasteAddr{Postcode: normPostcode(pc), Suffix: strings.TrimSpace(sfx)}
-	n, err := strconv.Atoi(strings.TrimSpace(nr))
-	w.Number = n
-	return w, err == nil && postcodeRe.MatchString(w.Postcode) && n >= 1 && n <= 99999 && wasteSuffixRe.MatchString(w.Suffix)
-}
-
-// wasteIndex remembers which calendar (and BAG id) belongs to an address, so a
-// visitor's address is looked up at the providers only once.
-type wasteIndex struct {
-	mu sync.Mutex
-	m  map[string][2]string // address key -> {base, bag}
-}
-
-func (x *wasteIndex) get(k string) ([2]string, bool) {
-	x.mu.Lock()
-	defer x.mu.Unlock()
-	v, ok := x.m[k]
-	return v, ok
-}
-
-func (x *wasteIndex) set(k string, v [2]string) {
-	x.mu.Lock()
-	defer x.mu.Unlock()
-	if x.m == nil || len(x.m) >= 5000 {
-		x.m = map[string][2]string{}
-	}
-	if v[0] == "" {
-		delete(x.m, k)
-		return
-	}
-	x.m[k] = v
-}
-
-// opzetBag looks the address up at one calendar; "" when it does not know it.
-func (a *App) opzetBag(ctx context.Context, base string, w wasteAddr) (string, error) {
-	resp, err := a.fetcher.Do(ctx, FetchReq{URL: fmt.Sprintf("%s/rest/adressen/%s-%d", strings.TrimSuffix(base, "/"), url.PathEscape(w.Postcode), w.Number), Accept: "application/json"})
-	if err != nil {
-		return "", err
-	}
-	var addrs []struct {
-		BagID      string `json:"bagId"`
-		Letter     string `json:"huisletter"`
-		Toevoeging string `json:"huisnummerToevoeging"`
-	}
-	if err := json.Unmarshal(resp.Body, &addrs); err != nil {
-		return "", err
-	}
-	bag := ""
-	for _, ad := range addrs {
-		if strings.EqualFold(ad.Letter+ad.Toevoeging, w.Suffix) {
-			bag = ad.BagID
-		}
-	}
-	if bag == "" && len(addrs) > 0 {
-		bag = addrs[0].BagID // no or unknown suffix: the first address with this number
-	}
-	if bag != "" && !bagIDRe.MatchString(bag) {
-		return "", errors.New("waste: unexpected address id")
-	}
-	return bag, nil
-}
-
-// findWasteLoc asks all configured calendars in parallel (at most 6 at a time) and
-// takes the first one in config order that knows the address.
-func (a *App) findWasteLoc(ctx context.Context, w wasteAddr, providers []string) ([2]string, error) {
-	type res struct {
-		bag string
-		err error
-	}
-	out := make([]res, len(providers))
-	sem := make(chan struct{}, 6)
-	var wg sync.WaitGroup
-	for i, base := range providers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			sem <- struct{}{}
-			defer func() { <-sem }()
-			bag, err := a.opzetBag(ctx, base, w)
-			out[i] = res{bag, err}
-		}()
-	}
-	wg.Wait()
-	failed := 0
-	for i, r := range out {
-		if r.bag != "" {
-			return [2]string{strings.TrimSuffix(providers[i], "/"), r.bag}, nil
-		}
-		if r.err != nil {
-			failed++
-		}
-	}
-	if failed == len(providers) && failed > 0 {
-		return [2]string{}, errors.New("de afvalkalenders zijn niet bereikbaar")
-	}
-	return [2]string{}, errWasteNotFound
-}
-
-// wasteForAddress returns the pickups for an address via the opzet calendars.
-func (a *App) wasteForAddress(ctx context.Context, w wasteAddr) (WasteResult, error) {
-	providers := a.config().Waste.Providers
-	loc, ok := a.wasteIdx.get(w.key())
-	if !ok {
-		var err error
-		if loc, err = a.findWasteLoc(ctx, w, providers); err != nil {
-			return WasteResult{}, err
-		}
-		a.wasteIdx.set(w.key(), loc)
-	}
-	resp, err := a.fetcher.Do(ctx, FetchReq{URL: loc[0] + "/rest/adressen/" + loc[1] + "/afvalstromen", Accept: "application/json"})
-	if err != nil {
-		if resp != nil && resp.Status == http.StatusNotFound {
-			a.wasteIdx.set(w.key(), [2]string{}) // look it up again next time
-		}
-		return WasteResult{}, err
-	}
-	list, err := parseOpzetStreams(resp.Body)
-	if err != nil {
-		return WasteResult{}, err
-	}
-	host := loc[0]
-	if u, err := url.Parse(loc[0]); err == nil {
-		host = u.Hostname()
-	}
-	return WasteResult{Pickups: sortPickups(list, time.Now()), Provider: host}, nil
-}
-
 func hasWasteDefault(c *Config) bool {
 	w := c.Waste
 	switch w.Provider {
-	case "opzet":
-		return w.Postcode != ""
 	case "ics":
 		return w.ICSURL != ""
 	case "home_assistant":
 		return w.HomeAssistant.URL != ""
+	default: // auto, opzet (1.10.0) or a provider id
+		return w.Postcode != ""
 	}
-	return false
 }
 
 func (a *App) runWaste(ctx context.Context) error {
@@ -423,10 +273,6 @@ func (a *App) runWaste(ctx context.Context) error {
 	var list []WastePickup
 	var err error
 	switch cfg.Provider {
-	case "opzet":
-		var res WasteResult
-		res, err = a.wasteForAddress(ctx, wasteAddr{Postcode: normPostcode(cfg.Postcode), Number: cfg.Number, Suffix: cfg.Suffix})
-		list = res.Pickups
 	case "ics":
 		var resp *FetchResp
 		if resp, err = a.fetcher.Do(ctx, FetchReq{URL: cfg.ICSURL, Accept: "text/calendar, */*;q=0.5"}); err == nil {
@@ -434,8 +280,14 @@ func (a *App) runWaste(ctx context.Context) error {
 		}
 	case "home_assistant":
 		list, err = a.fetchHAWaste(ctx, cfg.HomeAssistant.URL, cfg.HomeAssistant.Token, cfg.HomeAssistant.Entities)
-	default:
-		err = fmt.Errorf("waste: unknown provider %q", cfg.Provider)
+	default: // auto (or opzet) searches the providers; otherwise a provider id
+		w := wasteAddr{Postcode: normPostcode(cfg.Postcode), Number: cfg.Number, Suffix: cfg.Suffix}
+		if cfg.Provider != "auto" && cfg.Provider != "opzet" {
+			w.Provider = cfg.Provider
+		}
+		var res WasteResult
+		res, err = a.wasteForAddress(ctx, w)
+		list = res.Pickups
 	}
 	if err != nil {
 		a.threats.fail(key, err)
@@ -623,6 +475,10 @@ func (a *App) handleWaste(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	if q.Get("postcode") != "" || q.Get("number") != "" {
 		addr, ok := parseWasteAddr(q.Get("postcode"), q.Get("number"), q.Get("suffix"))
+		if pr := q.Get("provider"); pr != "" {
+			addr.Provider = pr
+			ok = ok && wasteProviderIDRe.MatchString(pr) && slices.ContainsFunc(enabledWasteProviders(cfg), func(p wasteProvider) bool { return p.ID == pr })
+		}
 		if !ok {
 			writeError(w, r, http.StatusBadRequest, "postcode of huisnummer ongeldig")
 			return
@@ -646,8 +502,8 @@ func (a *App) handleWaste(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, r, http.StatusOK, 60, map[string]any{"enabled": true, "own": true, "error": shortErr(err).Error()})
 			return
 		}
-		e := map[string]any{"enabled": true, "own": true, "pickups": sortPickups(res.Pickups, time.Now()), "provider": "opzet", "calendar": res.Provider,
-			"fetched_at": at.UTC().Truncate(time.Second)}
+		e := map[string]any{"enabled": true, "own": true, "pickups": sortPickups(res.Pickups, time.Now()), "provider": res.Provider, "calendar": res.Name,
+			"home": res.Home, "fetched_at": at.UTC().Truncate(time.Second)}
 		if stale {
 			e["error"] = "verouderd: de afvalkalender is nu niet bereikbaar"
 		}

@@ -260,6 +260,10 @@ dialog.wide { width: min(720px, calc(100vw - 32px)); max-height: calc(100dvh - 4
 .lvl-bad { --lvl: var(--sev-crit); }
 .lvl-wait { --lvl: var(--line-strong); }
 .changes h3 { margin: 12px 0 4px; font-size: 14px; }
+.disc p { margin: 0 0 10px; color: var(--text-2); font-size: 13px; line-height: 1.55; }
+.disc p:last-child { margin-bottom: 0; }
+.disc a { overflow-wrap: anywhere; }
+.disc b { font-weight: 650; color: var(--text); }
 .changes ul { margin: 0; padding-left: 20px; color: var(--text-2); font-size: 13px; line-height: 1.5; }
 dialog.keys { width: min(460px, calc(100vw - 32px)); padding: 0; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--bg); color: var(--text); }
 dialog.keys::backdrop { background: var(--backdrop); }
@@ -945,7 +949,8 @@ textarea.json {
   <p><span id="version"></span>
     <button class="linkbtn" type="button" id="open-changes">Wat is er nieuw</button> ·
     <button class="linkbtn" type="button" id="open-status">Bronstatus</button> ·
-    <button class="linkbtn" type="button" id="open-keys">Sneltoetsen (?)</button></p>
+    <button class="linkbtn" type="button" id="open-keys">Sneltoetsen (?)</button> ·
+    <button class="linkbtn" type="button" id="open-disclaimer">Disclaimer</button></p>
 </footer>
 
 <dialog class="keys wide" id="status-dlg" aria-labelledby="status-h">
@@ -960,12 +965,38 @@ textarea.json {
   </div>
 </dialog>
 
+<dialog class="keys wide" id="disclaimer-dlg" aria-labelledby="disclaimer-h">
+  <div class="sheet-head">
+    <h2 id="disclaimer-h">Disclaimer</h2>
+    <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
+  </div>
+  <div class="dlg-body disc" id="disc-nl">
+    <p>Deze software wordt aangeboden op best effort-basis. De software is met zorg ontwikkeld, maar kan fouten, bugs of onvolledige functionaliteit bevatten.</p>
+    <p><b>Licentie:</b> Dit programma is vrije software, uitgebracht onder de GNU General Public License v3.0 (GPL-3.0). Je mag het verspreiden en/of aanpassen onder de voorwaarden van deze licentie. Zie het bestand <a href="https://github.com/digibaro/news-dashboard-docker/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">LICENSE</a> of <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener noreferrer">https://www.gnu.org/licenses/gpl-3.0.html</a> voor de volledige tekst.</p>
+    <p><b>Geen garantie:</b> Deze software wordt geleverd "zoals hij is", zonder enige garantie, expliciet of impliciet, waaronder begrepen maar niet beperkt tot garanties van verkoopbaarheid, geschiktheid voor een bepaald doel of het niet inbreuk maken op rechten van derden. Conform artikel 15 en 16 van de GPL-3.0 zijn de auteur(s) niet aansprakelijk voor schade, dataverlies of andere gevolgen voortvloeiend uit het gebruik van, of het niet kunnen gebruiken van, deze software.</p>
+    <p><b>Geen support:</b> Er wordt geen ondersteuning geboden. De auteur(s) zijn niet verplicht vragen te beantwoorden, bugs op te lossen, updates te leveren of wensen voor nieuwe functies te implementeren. Meldingen en bijdragen worden mogelijk bekeken, maar zonder garantie op een reactie.</p>
+    <p><b>Gebruik is volledig op eigen risico.</b></p>
+  </div>
+  <div class="dlg-body disc" id="disc-en" hidden translate="no">
+    <p>This software is provided on a best effort basis. It was developed with care, but it may contain bugs, errors or incomplete features.</p>
+    <p><b>License:</b> This program is free software, released under the GNU General Public License v3.0 (GPL-3.0). You may redistribute and/or modify it under the terms of that license. See the <a href="https://github.com/digibaro/news-dashboard-docker/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">LICENSE</a> file or <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener noreferrer">https://www.gnu.org/licenses/gpl-3.0.html</a> for the full text.</p>
+    <p><b>No warranty:</b> This software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose and non-infringement. As stated in sections 15 and 16 of the GPL-3.0, the author(s) shall not be liable for any damages, data loss or other consequences arising from the use of, or inability to use, this software.</p>
+    <p><b>No support:</b> No support is provided. The author(s) are under no obligation to answer questions, fix bugs, provide updates or implement feature requests. Issues and contributions may be considered, but without any guarantee of response.</p>
+    <p><b>Use at your own risk.</b></p>
+  </div>
+</dialog>
+
 <dialog class="keys wide" id="changes-dlg" aria-labelledby="changes-h">
   <div class="sheet-head">
     <h2 id="changes-h">Wat is er nieuw</h2>
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.11.0</h3>
+    <ul>
+      <li>Afvalkalender voor veel meer gemeenten: 51 afvalinzamelaars, waaronder Almere, Amsterdam, Twente Milieu, HVC, RD4 en ROVA. De server zoekt zelf welke jouw adres kent, of je kiest er een.</li>
+      <li>Afvalsoorten krijgen vaste namen: GFT, Papier, PMD, Restafval.</li>
+    </ul>
     <h3>Versie 1.10.0</h3>
     <ul>
       <li>Nieuw paneel NL-Alert: actieve en recente NL-Alerts, met of het bericht jouw omgeving betreft.</li>
@@ -1055,6 +1086,11 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.11.0</h3>
+    <ul>
+      <li>Waste calendar for many more municipalities: 51 collection providers, including Almere, Amsterdam, Twente Milieu, HVC, RD4 and ROVA. The server finds the one that knows your address, or you pick one.</li>
+      <li>Waste types get standard names: GFT, Paper, PMD, Residual waste.</li>
+    </ul>
     <h3>Version 1.10.0</h3>
     <ul>
       <li>New panel NL-Alert: active and recent NL-Alerts, and whether a message covers your area.</li>
@@ -1231,6 +1267,7 @@ textarea.json {
         <input class="field" style="width:5.5rem" id="waste-sfx" placeholder="Toev." aria-label="Toevoeging (letter of toevoeging)" maxlength="6" spellcheck="false">
         <button class="btn" type="button" id="waste-save">Opslaan</button>
       </div>
+      <label class="opt"><span>Afvalkalender<small>Automatisch zoekt de server de kalender die je adres kent.</small></span><select class="field" style="max-width:55%" id="waste-provider" translate="no"></select></label>
       <div class="row"><button class="btn" type="button" id="waste-default">Standaardadres</button></div>
       <p class="hint">Je adres blijft in deze browser. De server gebruikt het alleen om de afvalkalender van je gemeente op te vragen en onthoudt de uitkomst hooguit 6 uur in het geheugen.</p>
       <p class="msg" id="waste-msg" role="status"></p>
@@ -2043,8 +2080,6 @@ const EN = {
   "Dit paneel staat uit in config.yaml (waste.enabled).": "This panel is disabled in config.yaml (waste.enabled).",
   "Stel je adres in om je ophaaldagen te zien.": "Set your address to see your collection days.",
   "Adres instellen": "Set address",
-  "Dit adres staat niet in de afvalkalenders die deze server kent (onder meer Den Haag, HVC, GAD, DAR en Cyclus). Controleer postcode en huisnummer.": "This address is not in the waste calendars this server knows (including Den Haag, HVC, GAD, DAR and Cyclus). Check the postcode and house number.",
-  "Dit adres staat niet in de afvalkalenders die deze server kent (onder meer Den Haag, HVC, GAD, DAR en Cyclus).": "This address is not in the waste calendars this server knows (including Den Haag, HVC, GAD, DAR and Cyclus).",
   "Bron: afvalkalender ": "Source: waste calendar ",
   "Bron: {src} · standaardadres van deze server": "Source: {src} · this server's default address",
   "Adres voor de afvalkalender": "Address for the waste calendar",
@@ -2074,6 +2109,31 @@ const EN = {
   "postcode of huisnummer ongeldig": "postcode or house number invalid",
   "verouderd: de afvalkalender is nu niet bereikbaar": "outdated: the waste calendar is unreachable right now",
   "de afvalkalenders zijn niet bereikbaar": "the waste calendars are unreachable",
+  // 1.11: afvalkalender-aanbieders
+  "Automatisch zoekt de server de kalender die je adres kent.": "Automatic: the server finds the calendar that knows your address.",
+  "Automatisch zoeken": "Find automatically",
+  "{name} kent dit adres niet. Controleer postcode en huisnummer, of kies \"Automatisch zoeken\".": "{name} does not know this address. Check the postcode and house number, or choose \"Find automatically\".",
+  "Dit adres staat niet in de afvalkalenders die deze server kent. Controleer postcode en huisnummer.": "This address is not in the waste calendars this server knows. Check the postcode and house number.",
+  " (automatisch gevonden)": " (found automatically)",
+  "{name} kent dit adres niet. Kies \"Automatisch zoeken\" of een andere kalender.": "{name} does not know this address. Choose \"Find automatically\" or another calendar.",
+  "Dit adres staat niet in de afvalkalenders die deze server kent.": "This address is not in the waste calendars this server knows.",
+  "De afvalkalender wordt nu getoond voor {addr} ({name}).": "The waste calendar now shows {addr} ({name}).",
+  // afvalsoorten (standaardnamen van de server)
+  "Restafval": "Residual waste",
+  "Papier": "Paper",
+  "Glas": "Glass",
+  "Textiel": "Textiles",
+  "Kerstbomen": "Christmas trees",
+  "Grofvuil": "Bulky waste",
+  "Snoeiafval": "Pruning waste",
+  "Tuinafval": "Garden waste",
+  "Klein chemisch afval": "Small chemical waste",
+  "Luiers": "Nappies",
+  "BEST-tas": "BEST bag",
+  "PMD en restafval": "PMD and residual waste",
+  "Milieustraat op wielen": "Mobile recycling point",
+  "Overig": "Other",
+  "Plastic": "Plastic",
 };
 
 // Sentences the server composes from parts (rain summary, directions, source names).
@@ -2139,8 +2199,10 @@ function startTranslation() {
   lang = effectiveLang(prefs.lang);
   document.documentElement.lang = lang;
   if (lang !== 'en') return;
-  $('#changes-nl').remove(); // release notes: written per language
+  $('#changes-nl').remove(); // release notes and disclaimer: written per language
   $('#changes-en').hidden = false;
+  $('#disc-nl').remove();
+  $('#disc-en').hidden = false;
   translateNode(document.body);
   new MutationObserver(recs => {
     for (const r of recs) {
@@ -2217,7 +2279,8 @@ function sanitize(p) {
   for (const k of ['onboarded', 'group', 'hideRead', 'images', 'trending']) if (typeof p[k] === 'boolean') d[k] = p[k];
   if (p.waste && typeof p.waste === 'object') {
     const pc = String(p.waste.postcode || '').toUpperCase().replace(/\s+/g, ''), nr = Number(p.waste.number), sfx = String(p.waste.suffix || '').trim().slice(0, 6);
-    if (/^[1-9]\d{3}[A-Z]{2}$/.test(pc) && Number.isInteger(nr) && nr >= 1 && nr <= 99999 && /^[A-Za-z0-9-]*$/.test(sfx)) d.waste = { postcode: pc, number: nr, suffix: sfx };
+    const prov = typeof p.waste.provider === 'string' && /^[a-z0-9][a-z0-9:.-]{1,60}$/.test(p.waste.provider) ? p.waste.provider : '';
+    if (/^[1-9]\d{3}[A-Z]{2}$/.test(pc) && Number.isInteger(nr) && nr >= 1 && nr <= 99999 && /^[A-Za-z0-9-]*$/.test(sfx)) d.waste = { postcode: pc, number: nr, suffix: sfx, provider: prov };
   }
   if (Array.isArray(p.pushTopics)) d.pushTopics = p.pushTopics.filter(x => typeof x === 'string' && /^[a-z]{2,12}$/.test(x)).slice(0, 10);
   const terms = a => Array.isArray(a) ? [...new Set(a.filter(t => typeof t === 'string').map(t => t.trim().slice(0, 60)).filter(Boolean))].slice(0, 50) : [];
@@ -4141,7 +4204,7 @@ function renderFuel(body) {
 }
 
 // ---------------------------------------------------------------- afvalkalender
-const wasteQuery = w => w ? `?postcode=${encodeURIComponent(w.postcode)}&number=${w.number}${w.suffix ? '&suffix=' + encodeURIComponent(w.suffix) : ''}` : '';
+const wasteQuery = w => w ? `?postcode=${encodeURIComponent(w.postcode)}&number=${w.number}${w.suffix ? '&suffix=' + encodeURIComponent(w.suffix) : ''}${w.provider ? '&provider=' + encodeURIComponent(w.provider) : ''}` : '';
 const wasteLabel = () => prefs.waste ? `${prefs.waste.postcode.slice(0, 4)} ${prefs.waste.postcode.slice(4)} ${prefs.waste.number}${prefs.waste.suffix ? ' ' + prefs.waste.suffix : ''}`
   : catalog?.waste_default ? t('standaardadres') : t('geen adres');
 async function loadWaste() {
@@ -4168,7 +4231,8 @@ function renderWaste(body, extra) {
     return;
   }
   if (r.not_found) {
-    body.replaceChildren(h('p', { class: 'pnote', text: t('Dit adres staat niet in de afvalkalenders die deze server kent (onder meer Den Haag, HVC, GAD, DAR en Cyclus). Controleer postcode en huisnummer.') }));
+    body.replaceChildren(h('p', { class: 'pnote', text: prefs.waste?.provider ? t('{name} kent dit adres niet. Controleer postcode en huisnummer, of kies "Automatisch zoeken".', { name: wasteProviderName(prefs.waste.provider) })
+      : t('Dit adres staat niet in de afvalkalenders die deze server kent. Controleer postcode en huisnummer.') }));
     return;
   }
   if (!r.pickups) { body.replaceChildren(h('p', { class: 'pnote', text: r.error ? t('De afvalkalender is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: r.error }) : t('De afvalkalender wordt voor het eerst opgehaald.') })); return; }
@@ -4181,9 +4245,9 @@ function renderWaste(body, extra) {
     const label = n === 0 ? t('Vandaag') : n === 1 ? t('Morgen') : fmt.wdmUTC.format(dateOnly(date));
     return h('li', { class: n <= 1 ? 'soon' : null },
       h('span', { class: 'wd' }, h('b', { text: label }), n > 1 ? h('span', { class: 'm', text: ` ${inDays(n)}` }) : null),
-      h('span', { class: 'wt' }, types.map(ty => h('span', { class: 'wtype' }, h('span', { 'aria-hidden': 'true', text: wasteIcon(ty) + ' ' }), h('span', { translate: 'no', text: ty })))));
+      h('span', { class: 'wt' }, types.map(ty => h('span', { class: 'wtype' }, h('span', { 'aria-hidden': 'true', text: wasteIcon(ty) + ' ' }), h('span', { translate: 'no', text: tr(ty) })))));
   })));
-  if (r.own) out.push(h('p', { class: 'pfoot' }, t('Bron: afvalkalender '), extLink('https://' + r.calendar + '/', r.calendar)));
+  if (r.own) out.push(h('p', { class: 'pfoot' }, t('Bron: afvalkalender '), extLink(r.home, r.calendar), prefs.waste?.provider ? '' : t(' (automatisch gevonden)')));
   else {
     const src = { opzet: t('de afvalkalender van je gemeente'), ics: t('een iCal-agenda'), home_assistant: 'Home Assistant' }[r.provider] || r.provider;
     out.push(h('p', { class: 'pfoot', text: t('Bron: {src} · standaardadres van deze server', { src }) }));
@@ -4191,6 +4255,13 @@ function renderWaste(body, extra) {
   body.replaceChildren(...out);
 }
 
+const wasteProviderName = id => catalog?.waste_providers?.find(p => p.id === id)?.name || id;
+function fillWasteProviders() {
+  const sel = $('#waste-provider');
+  sel.replaceChildren(h('option', { value: '', text: t('Automatisch zoeken'), translate: 'yes' }),
+    ...(catalog?.waste_providers || []).map(p => h('option', { value: p.id, text: p.name })));
+  sel.value = prefs.waste?.provider && catalog?.waste_providers?.some(p => p.id === prefs.waste.provider) ? prefs.waste.provider : '';
+}
 function updateWasteHint() {
   $('#waste-now').textContent = prefs.waste ? t('Nu: {addr}.', { addr: wasteLabel() }) : catalog?.waste_default ? t('Nu: het standaardadres van deze server.') : t('Nog geen adres ingesteld.');
   $('#waste-default').textContent = catalog?.waste_default ? t('Standaardadres gebruiken') : t('Adres wissen');
@@ -4210,13 +4281,19 @@ function wireWasteSettings() {
     if (!/^[1-9]\d{3}[A-Z]{2}$/.test(pc)) { msg.textContent = t('Vul een postcode in zoals 2511 AB.'); return; }
     if (!Number.isInteger(nr) || nr < 1 || nr > 99999) { msg.textContent = t('Vul een huisnummer in.'); return; }
     if (!/^[A-Za-z0-9-]{0,6}$/.test(sfx)) { msg.textContent = t('Een toevoeging bestaat uit letters of cijfers.'); return; }
-    const w = { postcode: pc, number: nr, suffix: sfx };
+    const w = { postcode: pc, number: nr, suffix: sfx, provider: $('#waste-provider').value };
     msg.classList.remove('err'); msg.textContent = t('Adres opzoeken…');
     try {
       const d = await api('api/waste' + wasteQuery(w));
-      if (d.not_found) { msg.classList.add('err'); msg.textContent = t('Dit adres staat niet in de afvalkalenders die deze server kent (onder meer Den Haag, HVC, GAD, DAR en Cyclus).'); return; }
+      if (d.not_found) {
+        msg.classList.add('err');
+        msg.textContent = w.provider ? t('{name} kent dit adres niet. Kies "Automatisch zoeken" of een andere kalender.', { name: wasteProviderName(w.provider) })
+          : t('Dit adres staat niet in de afvalkalenders die deze server kent.');
+        return;
+      }
       const addr = `${pc.slice(0, 4)} ${pc.slice(4)} ${nr}${sfx ? ' ' + sfx : ''}`;
-      setWasteAddress(w, d.error ? t('Opgeslagen; de afvalkalender is nu niet bereikbaar ({err}).', { err: tr(d.error) }) : t('De afvalkalender wordt nu getoond voor {addr}.', { addr }), d);
+      setWasteAddress(w, d.error ? t('Opgeslagen; de afvalkalender is nu niet bereikbaar ({err}).', { err: tr(d.error) })
+        : t('De afvalkalender wordt nu getoond voor {addr} ({name}).', { addr, name: d.calendar }), d);
     } catch (e) { msg.classList.add('err'); msg.textContent = t('Opzoeken lukt nu niet: {err}.', { err: tr(e.message) }); }
   };
   $('#waste-save').addEventListener('click', save);
@@ -4495,7 +4572,7 @@ function renderDigest() {
   const wp = panelData.waste?.data?.pickups;
   if (panelOn('waste') && wp?.length) {
     const soon = wp.filter(p => daysUntil(p.date) <= 1);
-    if (soon.length) cards.push(dCard('waste', 'Afval', soon.map(p => h('p', null, h('b', { text: daysUntil(p.date) === 0 ? t('Vandaag') : t('Morgen') }), ` ${wasteIcon(p.type)} `, h('span', { translate: 'no', text: p.type })))));
+    if (soon.length) cards.push(dCard('waste', 'Afval', soon.map(p => h('p', null, h('b', { text: daysUntil(p.date) === 0 ? t('Vandaag') : t('Morgen') }), ` ${wasteIcon(p.type)} `, h('span', { translate: 'no', text: tr(p.type) })))));
   }
   if (panelOn('today') && td?.enabled) {
     const nx = (td.holidays_next || [])[0], lines = [];
@@ -4736,6 +4813,7 @@ function openSettings(target) {
   $('#waste-pc').value = prefs.waste ? `${prefs.waste.postcode.slice(0, 4)} ${prefs.waste.postcode.slice(4)}` : '';
   $('#waste-nr').value = prefs.waste ? String(prefs.waste.number) : '';
   $('#waste-sfx').value = prefs.waste?.suffix || '';
+  fillWasteProviders();
   $('#waste-msg').textContent = '';
   for (const r of document.querySelectorAll('input[name="mode"]')) r.checked = r.value === viewMode;
   $('#alarm-city').value = prefs.alarmCity ? alarmCityName() : '';
@@ -4895,7 +4973,7 @@ function updateRelTimes() {
 }
 
 // ---------------------------------------------------------------- source status & changelog
-const statusDlg = $('#status-dlg'), changesDlg = $('#changes-dlg');
+const statusDlg = $('#status-dlg'), changesDlg = $('#changes-dlg'), disclaimerDlg = $('#disclaimer-dlg');
 let statusData = null;
 async function openStatus() {
   if (!statusDlg.open) statusDlg.showModal();
@@ -4996,8 +5074,9 @@ function wire() {
   $('#open-keys').addEventListener('click', openKeys);
   $('#open-status').addEventListener('click', openStatus);
   $('#open-changes').addEventListener('click', () => changesDlg.showModal());
+  $('#open-disclaimer').addEventListener('click', () => disclaimerDlg.showModal());
   $('#status-bad').addEventListener('change', renderStatus);
-  for (const d of [statusDlg, changesDlg]) {
+  for (const d of [statusDlg, changesDlg, disclaimerDlg]) {
     d.addEventListener('click', e => { if (e.target === d || e.target.closest('[data-close]')) d.close(); });
   }
   $('#keys-close').addEventListener('click', () => keysDlg.close());

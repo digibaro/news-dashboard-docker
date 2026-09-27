@@ -330,8 +330,9 @@ type Config struct {
 	// address (optional) can use the opzet calendars, an iCal link or Home Assistant.
 	Waste struct {
 		Enabled       bool     `yaml:"enabled"`
-		Providers     []string `yaml:"providers"` // base URLs of municipal calendars with the opzet API
-		Provider      string   `yaml:"provider"`  // default address: opzet | ics | home_assistant
+		Providers     []string `yaml:"providers"`     // provider ids to use (empty = all), or https URLs of extra opzet calendars
+		AppProviders  bool     `yaml:"app_providers"` // also providers that need the vendor app's key or a guest login
+		Provider      string   `yaml:"provider"`      // default address: auto | <provider id> | ics | home_assistant
 		Postcode      string   `yaml:"postcode"`
 		Number        int      `yaml:"number"`
 		Suffix        string   `yaml:"suffix"`
@@ -441,8 +442,7 @@ func defaultConfig() *Config {
 	c.Quakes.Enabled, c.Quakes.URL, c.Quakes.Days, c.Quakes.Interval = true, "https://rdsa.knmi.nl/fdsnws/event/1/query", 90, Duration(15*time.Minute)
 	c.NLAlert.Enabled, c.NLAlert.URL, c.NLAlert.Interval = true, "https://api.public-warning.app/api/v1/providers/nl-alert/alerts", Duration(2*time.Minute)
 	c.Fuel.Enabled, c.Fuel.URL, c.Fuel.Interval = true, "https://www.unitedconsumers.com/tanken/brandstofprijzen", Duration(3*time.Hour)
-	c.Waste.Enabled, c.Waste.Provider, c.Waste.Interval = true, "opzet", Duration(6*time.Hour)
-	c.Waste.Providers = defaultWasteProviders
+	c.Waste.Enabled, c.Waste.Provider, c.Waste.Interval = true, "auto", Duration(6*time.Hour)
 	c.Trending.Enabled = true
 	c.Push.MaxSubscriptions, c.Push.QuakeMinMag, c.Push.BreakingSources, c.Push.WasteHour = 50, 2.5, 6, 19
 	c.Threats.Enabled = true
@@ -498,16 +498,6 @@ func (c *Config) applyEnv() {
 	if v := os.Getenv("NDB_METRICS"); v != "" {
 		c.Server.Metrics = v == "1" || strings.EqualFold(v, "true")
 	}
-}
-
-// defaultWasteProviders: municipal waste calendars that answer the opzet REST API
-// (checked 2026-09-27). HVC, GAD, DAR, Cyclus and Blink each serve several municipalities.
-var defaultWasteProviders = []string{
-	"https://huisvuilkalender.denhaag.nl", "https://inzamelkalender.hvcgroep.nl", "https://inzamelkalender.gad.nl",
-	"https://afvalkalender.dar.nl", "https://cyclusnv.nl", "https://mijnblink.nl", "https://afvalkalender.purmerend.nl",
-	"https://afvalkalender.alphenaandenrijn.nl", "https://afvalkalender.cranendonck.nl", "https://afvalwijzer.lingewaard.nl",
-	"https://afvalkalender.peelenmaas.nl", "https://afvalkalender.schouwen-duiveland.nl", "https://afvalkalender.sudwestfryslan.nl",
-	"https://afvalkalender.venray.nl", "https://afvalkalender.voorschoten.nl", "https://afvalkalender.waalre.nl",
 }
 
 var (
@@ -683,16 +673,19 @@ func (c *Config) validate() error {
 		if w.Interval.D() < time.Hour {
 			fail("waste.interval must be at least 1h")
 		}
-		if len(w.Providers) == 0 || len(w.Providers) > 40 {
-			fail("waste.providers: 1–40 calendar URLs")
+		if len(w.Providers) > 80 {
+			fail("waste.providers: at most 80 entries")
 		}
 		for _, p := range w.Providers {
-			if !httpsURL(p) {
-				fail("waste.providers: %q must be an https URL", p)
+			if _, ok := wasteProviderByID(p); !ok && !httpsURL(p) {
+				fail("waste.providers: %q is not a known provider id or an https URL", p)
 			}
 		}
+		if len(enabledWasteProviders(c)) == 0 {
+			fail("waste.providers: no provider left (check the ids and waste.app_providers)")
+		}
 		switch w.Provider {
-		case "opzet":
+		case "auto", "opzet":
 			w.Postcode = normPostcode(w.Postcode)
 			if w.Postcode != "" && (!postcodeRe.MatchString(w.Postcode) || w.Number < 1 || w.Number > 99999 || !wasteSuffixRe.MatchString(w.Suffix)) {
 				fail("waste: default address needs a postcode like 2511AB, number 1–99999 and a suffix of at most 6 letters/digits (or leave postcode empty)")
@@ -712,7 +705,13 @@ func (c *Config) validate() error {
 				}
 			}
 		default:
-			fail("waste.provider must be opzet, ics or home_assistant")
+			p, ok := wasteProviderByID(w.Provider)
+			w.Postcode = normPostcode(w.Postcode)
+			if !ok || (p.App && !w.AppProviders) {
+				fail("waste.provider must be auto, ics, home_assistant or a provider id (app providers need waste.app_providers: true)")
+			} else if w.Postcode != "" && (!postcodeRe.MatchString(w.Postcode) || w.Number < 1 || w.Number > 99999 || !wasteSuffixRe.MatchString(w.Suffix)) {
+				fail("waste: default address needs a postcode like 2511AB, number 1–99999 and a suffix of at most 6 letters/digits")
+			}
 		}
 	}
 	if p := &c.Push; p.Enabled {
@@ -1511,6 +1510,7 @@ func (a *App) handleCatalog(w http.ResponseWriter, r *http.Request) {
 		"fuel":             cfg.Fuel.Enabled,
 		"waste":            cfg.Waste.Enabled,
 		"waste_default":    cfg.Waste.Enabled && hasWasteDefault(cfg),
+		"waste_providers":  wasteProviderList(cfg),
 		"trending":         cfg.Trending.Enabled,
 		"push":             cfg.Push.Enabled,
 		"alarms":           map[string]any{"enabled": cfg.Alarms.Enabled, "city": cfg.Alarms.City},

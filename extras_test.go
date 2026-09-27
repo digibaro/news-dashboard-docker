@@ -18,7 +18,9 @@ import (
 	"math/big"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -368,14 +370,20 @@ func TestWasteVisitorAddress(t *testing.T) {
 		}
 	}))
 	defer mine.Close()
+	pdok := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, `{"response":{"docs":[{"gemeentenaam":"Testgemeente"}]}}`)
+	}))
+	defer pdok.Close()
+	defer func(u string) { pdokURL = u }(pdokURL)
+	pdokURL = pdok.URL
 	a := newTestApp(t, validConfig)
-	a.cfg.Waste.Providers = []string{other.URL, mine.URL}
+	a.cfg.Waste.Providers = []string{other.URL, mine.URL} // extra opzet calendars; the built-in list is then off
 	h := a.routes("/")
 	if b := get(h, "GET", "/api/waste", nil).Body.String(); !strings.Contains(b, `"needs_address":true`) {
 		t.Errorf("without a default address: %s", b)
 	}
 	b := get(h, "GET", "/api/waste?postcode=2522+aa&number=3&suffix=a", nil).Body.String()
-	if !strings.Contains(b, `"type":"Rest"`) || !strings.Contains(b, `"own":true`) || strings.Contains(b, "GFT") || strings.Contains(b, "2522") {
+	if !strings.Contains(b, `"type":"Restafval"`) || !strings.Contains(b, `"own":true`) || strings.Contains(b, "GFT") || strings.Contains(b, "2522") {
 		t.Errorf("visitor address: %s", b)
 	}
 	before := lookups
@@ -390,5 +398,116 @@ func TestWasteVisitorAddress(t *testing.T) {
 		if rec := get(h, "GET", "/api/waste?"+q, nil); rec.Code != 400 {
 			t.Errorf("%s: %d", q, rec.Code)
 		}
+	}
+}
+
+func TestWasteLabels(t *testing.T) {
+	for in, want := range map[string]string{"GREEN": "GFT", "PAPER": "Papier", "PACKAGES": "PMD", "pbd": "PMD", "rst": "Restafval", "BESTAFR": "BEST-tas",
+		"Rolcontainer GFT en etensresten": "GFT", "Plastic, Metaal en Drankkartons": "PMD", "Oud papier & karton": "Papier", "Grijze container / Sortibak": "Restafval",
+		"MOBILETRANSFERPOINT": "Milieustraat op wielen", "BULKYRESTWASTE": "Grofvuil", "MAAS": "Maas", "Recyclewagen": "Recyclewagen", "Plastic+": "Plastic"} {
+		if got := wasteLabel(in); got != want {
+			t.Errorf("wasteLabel(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestAmsterdamPickups(t *testing.T) {
+	now := time.Date(2026, 9, 28, 10, 0, 0, 0, amsterdam) // Monday, ISO week 40 (even)
+	got := amsterdamPickups([]amsterdamItem{
+		{Code: "Rest", Name: "Rest", Days: "maandag, donderdag", Where: "Aan de stoep"},
+		{Code: "Papier", Name: "Papier", Days: "woensdag", Frequency: "oneven weken"},
+		{Code: "GFT", Name: "GFT", Days: "maandag, dinsdag", Where: "Container"}, // container: no pickups
+		{Code: "GA", Name: "Grof afval", Days: "vrijdag", Frequency: "9-10, 23-10-26"},
+	}, now)
+	byType := map[string][]string{}
+	for _, p := range sortPickups(got, now) {
+		byType[p.Type] = append(byType[p.Type], p.Date)
+	}
+	if r := byType["Restafval"]; len(r) < 3 || r[0] != "2026-09-28" || r[1] != "2026-10-01" {
+		t.Errorf("weekly: %v", r)
+	}
+	if p := byType["Papier"]; len(p) == 0 || p[0] != "2026-10-07" { // week 41 is odd
+		t.Errorf("odd weeks: %v", p)
+	}
+	if len(byType["GFT"]) != 0 {
+		t.Error("containers have no collection days")
+	}
+	if g := byType["Grof afval"]; len(g) != 2 || g[0] != "2026-10-09" || g[1] != "2026-10-23" {
+		t.Errorf("explicit dates: %v", g)
+	}
+}
+
+func TestWasteProviderConfig(t *testing.T) {
+	c, err := parseConfig([]byte(validConfig))
+	if err != nil {
+		t.Fatal(err)
+	}
+	all := enabledWasteProviders(c)
+	if len(all) < 45 || slices.ContainsFunc(all, func(p wasteProvider) bool { return p.App }) {
+		t.Errorf("default: %d providers, app providers must be off", len(all))
+	}
+	c.Waste.AppProviders = true
+	if n := len(enabledWasteProviders(c)); n != len(wasteProviders) {
+		t.Errorf("with app providers: %d of %d", n, len(wasteProviders))
+	}
+	c.Waste.Providers = []string{"denhaag", "https://afval.example.nl"}
+	if l := enabledWasteProviders(c); len(l) != 2 || l[0].ID != "opzet:afval.example.nl" || l[1].ID != "denhaag" {
+		t.Errorf("explicit list: %+v", l)
+	}
+	for yaml, ok := range map[string]bool{
+		"waste: { providers: [nosuchprovider] }":                                           false,
+		"waste: { provider: omrin, postcode: \"9022CB\", number: 1 }":                      false, // app provider without app_providers
+		"waste: { app_providers: true, provider: omrin, postcode: \"9022CB\", number: 1 }": true,
+		"waste: { provider: opzet }":                                                       true, // 1.10.0 name
+		"waste: { providers: [\"http://insecure.example\"] }":                              false,
+	} {
+		if _, err := parseConfig([]byte(validConfig + yaml + "\n")); (err == nil) != ok {
+			t.Errorf("%s: err=%v, want ok=%v", yaml, err, ok)
+		}
+	}
+}
+
+// Discovery asks the municipality's own calendar and the regional ones, never
+// another municipality's calendar.
+func TestWasteDiscovery(t *testing.T) {
+	var mu sync.Mutex
+	asked := map[string]int{}
+	cal := func(name string, knows bool) *httptest.Server {
+		return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			mu.Lock()
+			asked[name]++
+			mu.Unlock()
+			switch {
+			case strings.HasSuffix(r.URL.Path, "/afvalstromen"):
+				io.WriteString(w, `[{"title":"GREEN","ophaaldatum":"`+time.Now().In(amsterdam).AddDate(0, 0, 2).Format("2006-01-02")+`"}]`)
+			case knows:
+				io.WriteString(w, `[{"bagId":"123"}]`)
+			default:
+				io.WriteString(w, `[]`)
+			}
+		}))
+	}
+	own, other, regional := cal("own", false), cal("other", true), cal("regional", true)
+	defer own.Close()
+	defer other.Close()
+	defer regional.Close()
+	pdok := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, `{"response":{"docs":[{"gemeentenaam":"Eigenstad"}]}}`)
+	}))
+	defer pdok.Close()
+	defer func(u string) { pdokURL = u }(pdokURL)
+	pdokURL = pdok.URL
+	a := newTestApp(t, validConfig)
+	list := []wasteProvider{
+		{ID: "other", Name: "Anderstad", Kind: "opzet", URL: other.URL, Gemeenten: []string{"Anderstad"}},
+		{ID: "own", Name: "Eigenstad", Kind: "opzet", URL: own.URL, Gemeenten: []string{"Eigenstad"}},
+		{ID: "regional", Name: "Regio", Kind: "opzet", URL: regional.URL},
+	}
+	p, pk, err := a.discoverWaste(context.Background(), wasteAddr{Postcode: "1234AB", Number: 1}, list)
+	if err != nil || p.ID != "regional" || len(pk) != 1 || pk[0].Type != "GFT" {
+		t.Fatalf("discovery: %v %+v %v", p.ID, pk, err)
+	}
+	if asked["other"] != 0 || asked["own"] != 1 {
+		t.Errorf("asked: %v (another municipality's calendar must not be asked)", asked)
 	}
 }

@@ -749,6 +749,9 @@ func (a *App) handlePushSubscribe(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.Waste != nil {
 		if w, ok := parseWasteAddr(req.Waste.Postcode, strconv.Itoa(req.Waste.Number), req.Waste.Suffix); ok {
+			if req.Waste.Provider != "" && wasteProviderIDRe.MatchString(req.Waste.Provider) {
+				w.Provider = req.Waste.Provider
+			}
 			sub.Waste = &w
 		}
 	}
