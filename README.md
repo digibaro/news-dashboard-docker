@@ -46,7 +46,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Watchlist and mute words:** security advisories that mention your products are pinned to the top.
 - **Freshness:** every panel shows how old its data is.
 - **Thumbnails:** optional, via the built-in image proxy.
-- **Installable and offline-capable** (PWA).
+- **Installable and offline-capable** (PWA). On a phone, swipe between the news and the panels.
 - **Keyboard shortcuts:** press `?` in the app.
 - **Overview and kiosk mode:** "Vandaag in het kort" puts the essentials of today on one screen; kiosk mode is for a wall display (see below).
 
@@ -719,6 +719,9 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.13.0
+- **Phones: swipe between news and panels.** On a phone (up to 699 px wide) the page opens on the news; swipe left for all panels from top to bottom, swipe right for the news again. The tabs "Nieuws" and "Panelen" do the same (also with the arrow keys). The top bar (KNMI, Alarmeringen, NL-Alert, Terreurdreiging) and the header are the same in both views and scroll the same way; each view keeps its own scroll position. Swipes from the screen edge (the browser's back gesture) and inside sideways-scrolling parts (the hourly weather) are left alone. Links to a panel (top bar, overview cards, push notifications) open the panels view; searching opens the news view. Tablets and desktops are unchanged.
 
 ### 1.12.0
 - **NL-Alert in the top bar**, between Alarmeringen and Dreigingsniveau: "NL-Alert: in Leeuwarden" (red) while an alert is active, otherwise "NL-Alert: geen" (green). The place is taken from the first sentence (after the last "in"; after a comma only the last part; longer than 20 characters only the last word). An alert for your own area goes first, "+1" means more active alerts, and the tooltip shows the first sentence of each. Click to go to the NL-Alert panel (it is shown again if you had hidden it).

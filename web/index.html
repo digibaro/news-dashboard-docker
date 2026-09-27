@@ -834,6 +834,25 @@ textarea.json {
 .msg { margin: 8px 0 0; font-size: 13px; min-height: 1.4em; color: var(--text-2); }
 .msg.err { color: var(--sev-crit); }
 
+/* ---------- Phones: two views, swipe between them ---------- */
+.mview { display: none; }
+@media (max-width: 699px) {
+  html:not([data-mode]) .mview { display: flex; gap: 4px; margin: -4px 0 0; border-bottom: 1px solid var(--line); }
+  .mview button { flex: 1; height: 38px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--text-2);
+    font: inherit; font-size: 14px; font-weight: 600; margin-bottom: -1px; }
+  .mview button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+  .mview .dots { display: none; }
+  html:not([data-mode])[data-mview="news"] #side, html:not([data-mode])[data-mview="panels"] #news,
+  html:not([data-mode])[data-mview="panels"] #chips { display: none; }
+  html:not([data-mode]) .layout { gap: 12px; }
+  html:not([data-mode])[data-mview="panels"] .side > .panel:first-child { border-top: 0; }
+  .mv-in-l { animation: mvL .18s ease-out; }
+  .mv-in-r { animation: mvR .18s ease-out; }
+}
+@keyframes mvL { from { transform: translateX(28px); opacity: .5; } }
+@keyframes mvR { from { transform: translateX(-28px); opacity: .5; } }
+@media (prefers-reduced-motion: reduce) { .mv-in-l, .mv-in-r { animation: none; } }
+
 /* ---------- Small screens ---------- */
 @media (max-width: 1099px) {
   .seg .lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -922,6 +941,10 @@ textarea.json {
 </header>
 
 <main class="layout">
+  <div class="mview" id="mview" role="tablist" aria-label="Weergave op de telefoon">
+    <button type="button" role="tab" id="mv-news" aria-controls="news" aria-selected="true">Nieuws</button>
+    <button type="button" role="tab" id="mv-panels" aria-controls="side" aria-selected="false" tabindex="-1">Panelen</button>
+  </div>
   <section class="digest" id="digest" aria-labelledby="digest-h" tabindex="-1">
     <div class="digest-h"><h2 id="digest-h">Vandaag in het kort</h2><span class="muted" id="digest-date"></span>
       <button class="btn" type="button" id="digest-exit">Volledige weergave</button></div>
@@ -994,6 +1017,10 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.13.0</h3>
+    <ul>
+      <li>Op de telefoon: veeg naar links voor de panelen en naar rechts voor het nieuws, of gebruik de tabs "Nieuws" en "Panelen". De bovenste balk blijft in beide gelijk.</li>
+    </ul>
     <h3>Versie 1.12.0</h3>
     <ul>
       <li>NL-Alert in de bovenste balk: "NL-Alert: in Leeuwarden" zolang er een actief bericht is, anders "NL-Alert: geen". Klik om naar het NL-Alert-paneel te gaan.</li>
@@ -1092,6 +1119,10 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.13.0</h3>
+    <ul>
+      <li>On a phone: swipe left for the panels and right for the news, or use the tabs "News" and "Panels". The top bar stays the same in both.</li>
+    </ul>
     <h3>Version 1.12.0</h3>
     <ul>
       <li>NL-Alert in the top bar: "NL-Alert: in Leeuwarden" while an alert is active, otherwise "NL-Alert: none". Click to go to the NL-Alert panel.</li>
@@ -2150,6 +2181,8 @@ const EN = {
   "in": "in",
   "actief": "active",
   " (in jouw omgeving)": " (in your area)",
+  // telefoonweergave
+  "Weergave op de telefoon": "View on the phone",
 };
 
 // Sentences the server composes from parts (rain summary, directions, source names).
@@ -2750,6 +2783,7 @@ function renderNotices() {
 function setQuery(v) {
   const q = fold(v.trim());
   if (q === query) return;
+  if (q) setMobileView('news', { restore: false }); // search results are in the news view
   query = q; shown = prefs.pageSize;
   renderStream(); renderNewButton();
 }
@@ -4584,9 +4618,76 @@ function dCard(id, title, kids, wide) {
   return h('section', { class: 'dcard' + (wide ? ' wide' : ''), 'aria-labelledby': 'dc-' + id },
     h('h3', { id: 'dc-' + id }, h('button', { type: 'button', title: t('Toon het paneel'), onclick: () => showPanel(id), text: t(title) + ' →' })), kids);
 }
+// ---------------------------------------------------------------- phones: news and panels as two views
+// On a phone (≤ 699 px, normal mode) the news and the panels are two views: the
+// page opens on the news; swipe left for the panels, right for the news (or use
+// the tabs). The top bar and header stay the same in both; each view keeps its
+// own scroll position.
+const isPhone = () => matchMedia('(max-width: 699px)').matches;
+let mobileView = 'news';
+const mvScroll = { news: 0, panels: 0 };
+function setMobileView(v, { animate = true, restore = true } = {}) {
+  if (v === mobileView) return;
+  const phone = isPhone() && viewMode === 'normal';
+  if (phone) mvScroll[mobileView] = scrollY;
+  const dir = v === 'panels' ? 'mv-in-l' : 'mv-in-r';
+  mobileView = v;
+  document.documentElement.dataset.mview = v;
+  for (const [id, view] of [['#mv-news', 'news'], ['#mv-panels', 'panels']]) {
+    const b = $(id), on = view === v;
+    b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1;
+  }
+  if (!phone) return;
+  const el = v === 'panels' ? $('#side') : $('#news');
+  if (animate) { el.classList.remove('mv-in-l', 'mv-in-r'); void el.offsetWidth; el.classList.add(dir); }
+  if (restore) scrollTo({ top: mvScroll[v], behavior: 'instant' });
+}
+function wireMobileViews() {
+  document.documentElement.dataset.mview = 'news';
+  const tabs = [$('#mv-news'), $('#mv-panels')];
+  tabs[0].addEventListener('click', () => setMobileView('news'));
+  tabs[1].addEventListener('click', () => setMobileView('panels'));
+  for (const [i, b] of tabs.entries()) b.addEventListener('keydown', e => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    const other = tabs[1 - i]; other.click(); other.focus(); e.preventDefault();
+  });
+  for (const el of [$('#news'), $('#side')]) el.addEventListener('animationend', () => el.classList.remove('mv-in-l', 'mv-in-r'));
+  // swipe: mostly horizontal, at least 60 px, not from the screen edge (the
+  // browser's back gesture) and not inside something that scrolls sideways
+  let t0 = null;
+  const scrollsSideways = el => {
+    for (; el && el !== document.body; el = el.parentElement) {
+      const ox = getComputedStyle(el).overflowX;
+      if ((ox === 'auto' || ox === 'scroll') && el.scrollWidth > el.clientWidth + 2) return true;
+    }
+    return false;
+  };
+  const main = $('main.layout');
+  main.addEventListener('touchstart', e => {
+    t0 = null;
+    if (!isPhone() || viewMode !== 'normal' || e.touches.length !== 1 || document.querySelector('dialog[open]')) return;
+    const p = e.touches[0];
+    if (p.clientX < 24 || p.clientX > innerWidth - 24 || e.target.closest('input, textarea, select, [contenteditable]') || scrollsSideways(e.target)) return;
+    t0 = { x: p.clientX, y: p.clientY, at: Date.now() };
+  }, { passive: true });
+  main.addEventListener('touchend', e => {
+    if (!t0) return;
+    const p = e.changedTouches[0], dx = p.clientX - t0.x, dy = p.clientY - t0.y, dt = Date.now() - t0.at;
+    t0 = null;
+    if (Math.abs(dx) < 60 || Math.abs(dx) < 2 * Math.abs(dy) || dt > 800) return;
+    setMobileView(dx < 0 ? 'panels' : 'news');
+  }, { passive: true });
+  main.addEventListener('touchcancel', () => { t0 = null; }, { passive: true });
+  // links to a panel (e.g. from a push notification: #panel-waste)
+  const fromHash = () => { const m = /^#panel-([a-z]+)$/.exec(location.hash); if (m && PANELS[m[1]]) showPanel(m[1]); };
+  addEventListener('hashchange', fromHash);
+  return fromHash;
+}
+
 function showPanel(id) {
   setMode('normal');
-  if (id === 'news') { $('#news').focus({ preventScroll: true }); $('#news').scrollIntoView({ block: 'start' }); return; }
+  if (id === 'news') { setMobileView('news', { restore: false }); $('#news').focus({ preventScroll: true }); $('#news').scrollIntoView({ block: 'start' }); return; }
+  setMobileView('panels', { restore: false });
   if (prefs.panels.hidden[id]) { delete prefs.panels.hidden[id]; savePrefs(); buildPanels(); }
   if (prefs.panels.collapsed[id]) togglePanel(id);
   $(`#panel-${id}`)?.scrollIntoView({ block: 'start' });
@@ -5235,27 +5336,9 @@ function wire() {
   $('#kiosk-exit').addEventListener('click', () => setMode('normal'));
   document.addEventListener('visibilitychange', kioskWake);
   $('#wx-default').addEventListener('click', () => setWeatherLocation(null, 'Het weer wordt weer voor de standaardlocatie getoond.'));
-  $('#ab-nl').addEventListener('click', e => {
-    e.preventDefault();
-    if (prefs.panels.hidden.nlalert) { delete prefs.panels.hidden.nlalert; savePrefs(); buildPanels(); }
-    if (prefs.panels.collapsed.nlalert) togglePanel('nlalert');
-    $('#panel-nlalert')?.scrollIntoView({ block: 'start' });
-    $('#panel-nlalert .ptoggle')?.focus({ preventScroll: true });
-  });
-  $('#ab-p2k').addEventListener('click', e => {
-    e.preventDefault();
-    if (prefs.panels.hidden.alarms) { delete prefs.panels.hidden.alarms; savePrefs(); buildPanels(); }
-    if (prefs.panels.collapsed.alarms) togglePanel('alarms');
-    $('#panel-alarms')?.scrollIntoView({ block: 'start' });
-    $('#panel-alarms .ptoggle')?.focus({ preventScroll: true });
-  });
-  $('#wx-mini').addEventListener('click', e => {
-    e.preventDefault();
-    if (prefs.panels.hidden.weather) { delete prefs.panels.hidden.weather; savePrefs(); buildPanels(); }
-    if (prefs.panels.collapsed.weather) togglePanel('weather');
-    $('#panel-weather').scrollIntoView({ block: 'start' });
-    $('#panel-weather .ptoggle').focus({ preventScroll: true });
-  });
+  $('#ab-nl').addEventListener('click', e => { e.preventDefault(); showPanel('nlalert'); });
+  $('#ab-p2k').addEventListener('click', e => { e.preventDefault(); showPanel('alarms'); });
+  $('#wx-mini').addEventListener('click', e => { e.preventDefault(); showPanel('weather'); });
   $('#page-size').addEventListener('change', e => { prefs.pageSize = Number(e.target.value); shown = prefs.pageSize; savePrefs(); renderStream(); });
   $('#show-sum').addEventListener('change', e => { prefs.summaries = e.target.checked; savePrefs(); renderStream(); });
   $('#prefs-copy').addEventListener('click', async () => {
@@ -5289,6 +5372,7 @@ async function init() {
   applyDensity(prefs.density);
   wire();
   setMode(viewMode, false); // from prefs, or ?mode= for this visit
+  const panelFromHash = wireMobileViews();
   updateClock();
   buildPanels();
   renderSkeleton();
@@ -5316,6 +5400,7 @@ async function init() {
   await Promise.allSettled([loadNews({ replace: true }), loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(),
     loadBreaches(), loadOutages(), loadHealthPanel(), loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(), loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadTrending(), initPush()]);
   kioskFit(); // the header and top bar have their final height now
+  panelFromHash(); // e.g. a push notification that opens #panel-waste
   // intervals from config.yaml (refresh:), in seconds; defaults if the server is older
   const R = (k, def) => Math.max(60, catalog?.refresh?.[k] || def * 60) * 1000;
   every(R('news', 5), () => loadNews());
