@@ -13,7 +13,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
   - the ISC Infocon level
   - Autoriteit Persoonsgegevens enforcement news (last 31 days)
 - **Security advisories**: NCSC-NL, with the `[kans/schade]` rating parsed into badges, plus optional CERT-EU, CISA, BSI and MSRC.
-- **Top bar:** the current KNMI weather code, the number of P2000 alerts in the last hour per service for a configured area (default Den Haag), and the NCTV terrorism threat level.
+- **Top bar:** the current KNMI weather code, the number of P2000 alerts in the last hour per service for a configured area (default Den Haag), an active NL-Alert with its place, and the NCTV terrorism threat level.
 - **Vandaag:** date and week number, sunrise and sunset, moon phase, the next public holiday, the next clock change, and school holidays for regio Noord, Midden and Zuid (the visitor's region highlighted).
 - **Luchtkwaliteit:** the air quality index (1–11) and NO₂, PM2.5, PM10 and O₃ from the nearest Luchtmeetnet station. The place is chosen per visitor (default: their weather location).
 - **Hooikoorts:** the pollen forecast (grass, birch, alder, mugwort, ragweed) for 3 days at the visitor's air-quality place, with indicative levels.
@@ -719,6 +719,9 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.12.0
+- **NL-Alert in the top bar**, between Alarmeringen and Dreigingsniveau: "NL-Alert: in Leeuwarden" (red) while an alert is active, otherwise "NL-Alert: geen" (green). The place is taken from the first sentence (after the last "in"; after a comma only the last part; longer than 20 characters only the last word). An alert for your own area goes first, "+1" means more active alerts, and the tooltip shows the first sentence of each. Click to go to the NL-Alert panel (it is shown again if you had hidden it).
 
 ### 1.11.0
 - **Disclaimer** (Dutch and English) at the bottom of the page and of this README: best effort, GPL-3.0, no warranty, no support.

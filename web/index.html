@@ -501,6 +501,7 @@ table.tt { width: 100%; border-collapse: collapse; font-size: 12px; }
 .lvl-nctv4 { --lvl: var(--sev-high); }
 .lvl-nctv5 { --lvl: var(--sev-crit); }
 .lvl-none { --lvl: var(--sev-low); }
+.lvl-nl-on { --lvl: var(--sev-crit); }
 .ab .pc { margin-right: 9px; }
 .ab .pc:last-child { margin-right: 0; }
 .ab .pc b { font-weight: 650; color: var(--text); }
@@ -884,10 +885,11 @@ textarea.json {
   <symbol id="w-thunder" viewBox="0 0 24 24"><path d="M6.5 14a3.5 3.5 0 0 1-.4-6.98A5.5 5.5 0 0 1 16.8 5.6 4.2 4.2 0 0 1 17.5 14z"/><path d="M12.8 14.5l-2.6 4h3.2l-2.2 4"/></symbol>
 </svg>
 
-<div class="alertbar" id="alertbar" role="region" aria-label="Weeralarm, alarmeringen en dreigingsniveau">
+<div class="alertbar" id="alertbar" role="region" aria-label="Weeralarm, alarmeringen, NL-Alert en dreigingsniveau">
   <div class="alertbar-in">
     <a class="ab" id="ab-knmi" href="https://www.knmi.nl/nederland-nu/weer/waarschuwingen" target="_blank" rel="noopener noreferrer"><span class="d" aria-hidden="true"></span><span>KNMI: …</span></a>
     <a class="ab" id="ab-p2k" href="#panel-alarms"><span><span class="long">Alarmeringen laatste uur: </span><span class="short">Alarmeringen (uur): </span>…</span></a>
+    <a class="ab" id="ab-nl" href="#panel-nlalert"><span class="d" aria-hidden="true"></span><span>NL-Alert: …</span></a>
     <a class="ab" id="ab-nctv" href="https://www.nctv.nl/onderwerpen/d/dtn" target="_blank" rel="noopener noreferrer"><span class="d" aria-hidden="true"></span><span><span class="long">Dreigingsniveau terrorisme: </span><span class="short">Terreurdreiging: </span>…</span></a>
   </div>
 </div>
@@ -992,6 +994,10 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.12.0</h3>
+    <ul>
+      <li>NL-Alert in de bovenste balk: "NL-Alert: in Leeuwarden" zolang er een actief bericht is, anders "NL-Alert: geen". Klik om naar het NL-Alert-paneel te gaan.</li>
+    </ul>
     <h3>Versie 1.11.0</h3>
     <ul>
       <li>Afvalkalender voor veel meer gemeenten: 51 afvalinzamelaars, waaronder Almere, Amsterdam, Twente Milieu, HVC, RD4 en ROVA. De server zoekt zelf welke jouw adres kent, of je kiest er een.</li>
@@ -1086,6 +1092,10 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.12.0</h3>
+    <ul>
+      <li>NL-Alert in the top bar: "NL-Alert: in Leeuwarden" while an alert is active, otherwise "NL-Alert: none". Click to go to the NL-Alert panel.</li>
+    </ul>
     <h3>Version 1.11.0</h3>
     <ul>
       <li>Waste calendar for many more municipalities: 51 collection providers, including Almere, Amsterdam, Twente Milieu, HVC, RD4 and ROVA. The server finds the one that knows your address, or you pick one.</li>
@@ -2134,6 +2144,12 @@ const EN = {
   "Milieustraat op wielen": "Mobile recycling point",
   "Overig": "Other",
   "Plastic": "Plastic",
+  // top bar NL-Alert
+  "Weeralarm, alarmeringen, NL-Alert en dreigingsniveau": "Weather warnings, emergency alerts, NL-Alert and threat level",
+  "Geen actieve NL-Alerts.": "No active NL-Alerts.",
+  "in": "in",
+  "actief": "active",
+  " (in jouw omgeving)": " (in your area)",
 };
 
 // Sentences the server composes from parts (rain summary, directions, source names).
@@ -3291,7 +3307,7 @@ async function loadAlerts() {
   try { d = await api('api/alerts'); } catch { d = { failed: true }; }
   const on = catalog?.alerts || {};
   const bar = $('#alertbar');
-  bar.hidden = !on.nctv && !on.knmi;
+  bar.hidden = !on.nctv && !on.knmi && !catalog?.nlalert;
   const set = (id, lvlClass, parts, title, href) => {
     const a = $(id);
     a.hidden = false;
@@ -4140,6 +4156,7 @@ async function loadNLAlert() {
   try { panelData.nlalert = { data: await api('api/nlalert' + (l ? `?lat=${l.lat}&lon=${l.lon}` : '')) }; }
   catch (e) { panelData.nlalert = { ...(panelData.nlalert || {}), error: e }; }
   renderPanel('nlalert');
+  renderNLBadge();
 }
 const nlText = a => lang === 'en' && a.text_en ? a.text_en : a.text;
 function renderNLAlert(body) {
@@ -4173,6 +4190,40 @@ function renderNLAlert(body) {
   out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://actueel.nl-alert.nl/', 'NL-Alert'),
     t(' · "jouw omgeving": je weerlocatie ({name}) ligt in het gebied van het bericht', { name: wxLocName() })));
   body.replaceChildren(...out);
+}
+// Top bar: "NL-Alert: in <plaats>" for an active alert, else "NL-Alert: geen".
+// The place is the text after the last " in " of the first sentence; after a comma
+// only the last part ("Bonksel, Asten" -> Asten); longer than 20 characters: the
+// last word, usually the town ("Kalverdijkje Leeuwarden" -> Leeuwarden).
+function nlPlace(text) {
+  const first = String(text || '').split(/(?<=[.!])\s/)[0];
+  const i = first.toLowerCase().lastIndexOf(' in ');
+  if (i < 0) return null;
+  let place = first.slice(i + 4).replace(/[.!\s]+$/, '').trim();
+  if (place.includes(',')) place = place.split(',').pop().trim();
+  if (place.length > 20 && place.includes(' ')) place = place.split(/\s+/).pop();
+  return place ? (place.length > 20 ? place.slice(0, 19) + '…' : place) : null;
+}
+function renderNLBadge() {
+  const a = $('#ab-nl');
+  if (!catalog?.nlalert) { a.hidden = true; return; }
+  a.hidden = false;
+  const r = panelData.nlalert?.data;
+  const now = Date.now();
+  const act = (r?.alerts || []).filter(x => !x.withdrawn && new Date(x.start) <= now && (!x.stop || new Date(x.stop) > now))
+    .sort((x, y) => (y.near === true) - (x.near === true)); // the alert for your own area first
+  let parts, lvl = '', title = '';
+  if (!r?.alerts) parts = ['NL-Alert: ', t('onbekend')];
+  else if (!act.length) { parts = ['NL-Alert: ', h('strong', { text: t('geen') })]; lvl = 'lvl-none'; title = t('Geen actieve NL-Alerts.'); }
+  else {
+    const place = nlPlace(act[0].text);
+    parts = ['NL-Alert: ', place ? [t('in') + ' ', h('strong', { translate: 'no', text: place })] : h('strong', { text: t('actief') }),
+      act.length > 1 ? ` (+${act.length - 1})` : '', act[0].near ? h('span', { class: 'sr-only', text: t(' (in jouw omgeving)') }) : ''];
+    lvl = 'lvl-nl-on';
+    title = act.map(x => nlText(x).split(/(?<=[.!])\s/)[0]).join('\n');
+  }
+  a.title = title;
+  a.replaceChildren(h('span', { class: 'd ' + lvl, 'aria-hidden': 'true' }), h('span', null, parts));
 }
 const truncateText = (s, n) => s.length > n ? s.slice(0, n - 1).replace(/\s+\S*$/, '') + '…' : s;
 
@@ -5184,6 +5235,13 @@ function wire() {
   $('#kiosk-exit').addEventListener('click', () => setMode('normal'));
   document.addEventListener('visibilitychange', kioskWake);
   $('#wx-default').addEventListener('click', () => setWeatherLocation(null, 'Het weer wordt weer voor de standaardlocatie getoond.'));
+  $('#ab-nl').addEventListener('click', e => {
+    e.preventDefault();
+    if (prefs.panels.hidden.nlalert) { delete prefs.panels.hidden.nlalert; savePrefs(); buildPanels(); }
+    if (prefs.panels.collapsed.nlalert) togglePanel('nlalert');
+    $('#panel-nlalert')?.scrollIntoView({ block: 'start' });
+    $('#panel-nlalert .ptoggle')?.focus({ preventScroll: true });
+  });
   $('#ab-p2k').addEventListener('click', e => {
     e.preventDefault();
     if (prefs.panels.hidden.alarms) { delete prefs.panels.hidden.alarms; savePrefs(); buildPanels(); }
