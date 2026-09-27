@@ -1693,6 +1693,23 @@ func (a *App) threatJobs(cfg *Config) []Job {
 	if cfg.Utilities.Enabled {
 		jobs = append(jobs, Job{Key: "grid:outages", Sig: cfg.Utilities.LianderURL + "|" + cfg.Utilities.StedinURL, Interval: cfg.Utilities.Interval.D(), Run: a.runUtilities})
 	}
+	if cfg.NLAlert.Enabled {
+		jobs = append(jobs, Job{Key: "nlalert", Sig: cfg.NLAlert.URL, Interval: cfg.NLAlert.Interval.D(),
+			Run: a.fetchJob("nlalert", func() string { return a.config().NLAlert.URL }, "application/json", nil,
+				func(b []byte) (any, error) { return parseNLAlerts(b) }, nil)})
+	}
+	if cfg.Fuel.Enabled {
+		jobs = append(jobs, Job{Key: "fuel:gla", Sig: cfg.Fuel.URL, Interval: cfg.Fuel.Interval.D(),
+			Run: a.fetchJob("fuel:gla", func() string { return a.config().Fuel.URL }, "text/html", nil,
+				func(b []byte) (any, error) { return parseFuelPrices(b) }, nil)})
+	}
+	if w := cfg.Waste; w.Enabled && hasWasteDefault(cfg) {
+		jobs = append(jobs, Job{Key: "waste:calendar", Sig: fmt.Sprint(w.Provider, w.Providers, w.Postcode, w.Number, w.Suffix, w.ICSURL, w.HomeAssistant.URL, w.HomeAssistant.Entities),
+			Interval: w.Interval.D(), Run: a.runWaste})
+	}
+	if cfg.Push.Enabled {
+		jobs = append(jobs, Job{Key: "push:watch", Interval: time.Minute, Run: a.runPushWatch})
+	}
 	if cfg.Quakes.Enabled {
 		jobs = append(jobs, Job{Key: "knmi:quakes", Sig: fmt.Sprint(cfg.Quakes.URL, cfg.Quakes.Days), Interval: cfg.Quakes.Interval.D(), Run: a.runQuakes})
 	}

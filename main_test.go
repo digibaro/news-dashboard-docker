@@ -1042,7 +1042,7 @@ func newTestApp(t *testing.T, cfgYAML string) *App {
 	}
 	a := &App{cfg: cfg, level: new(slog.LevelVar), started: time.Now(), news: newNewsCache(), sched: newScheduler(),
 		wx: newWeatherCaches(), threats: newStateStore(), geo: newGeoCache(100), metrics: newHTTPMetrics(),
-		alarms: newTTLCache[[]Alarm](50), air: newTTLCache[[]AirComponent](20), pollen: newTTLCache[PollenData](20), p2k: newP2KCounters()}
+		alarms: newTTLCache[[]Alarm](50), air: newTTLCache[[]AirComponent](20), pollen: newTTLCache[PollenData](20), p2k: newP2KCounters(), push: newPushHub(), waste: newTTLCache[WasteResult](20)}
 	a.images = newImageProxy(func() string { return "test" })
 	a.fetcher = newFetcher(4, func() string { return "test" }, func() time.Duration { return 5 * time.Second })
 	return a
@@ -1062,7 +1062,7 @@ func TestSecurityHeadersOnEveryRoute(t *testing.T) {
 	a := newTestApp(t, validConfig+"\nfeatures: { show_images: true, proxy_images: true }\n")
 	h := a.routes("/")
 	routes := map[string]int{
-		"/": 200, "/api/catalog": 200, "/api/news": 200, "/api/threats": 200, "/api/advisories": 200, "/api/breaches": 200, "/api/outages": 200, "/api/energy": 200, "/api/air": 200, "/api/trains": 200, "/api/politics": 200, "/api/air?lat=x&lon=5": 400, "/api/today": 200, "/api/ransomware": 200, "/api/pollen?lat=x&lon=5": 400, "/api/utilities": 200, "/api/quakes": 200, "/api/economy": 200, "/api/markets": 200, "/healthz": 200,
+		"/": 200, "/api/catalog": 200, "/api/news": 200, "/api/threats": 200, "/api/advisories": 200, "/api/breaches": 200, "/api/outages": 200, "/api/energy": 200, "/api/air": 200, "/api/trains": 200, "/api/politics": 200, "/api/air?lat=x&lon=5": 400, "/api/today": 200, "/api/ransomware": 200, "/api/pollen?lat=x&lon=5": 400, "/api/utilities": 200, "/api/quakes": 200, "/api/economy": 200, "/api/markets": 200, "/api/nlalert": 200, "/api/nlalert?lat=x": 400, "/api/fuel": 200, "/api/waste": 200, "/api/trending": 200, "/api/push": 200, "/healthz": 200,
 		"/api/weather?lat=abc&lon=5": 400, "/api/geocode?q=a": 400, "/api/img?u=aHR0cHM6Ly9ldmls&s=forged": 403,
 		"/manifest.webmanifest": 200, "/icon-192.png": 200, "/sw.js": 200, "/metrics": 404, "/nope": 404, "/api/news/../../etc/passwd": 404,
 	}
@@ -1173,8 +1173,9 @@ MANY
 func TestMaliciousFeedEndToEnd(t *testing.T) {
 	body := strings.NewReplacer("LANGSUM", strings.Repeat("woord ", 3000), "LANG", strings.Repeat("x", 10000)).Replace(evilFeed)
 	var many strings.Builder
+	recent := time.Now().UTC().Add(-2 * time.Hour).Truncate(time.Hour) // within cache.max_age, whatever the date
 	for i := 0; i < 400; i++ {
-		fmt.Fprintf(&many, "<item><title>Item %d</title><link>https://evil.example/n/%d</link><pubDate>Thu, 24 Sep 2026 10:%02d:00 +0000</pubDate></item>\n", i, i, i%60)
+		fmt.Fprintf(&many, "<item><title>Item %d</title><link>https://evil.example/n/%d</link><pubDate>%s</pubDate></item>\n", i, i, recent.Add(time.Duration(i%60)*time.Minute).Format(time.RFC1123Z))
 	}
 	body = strings.Replace(body, "MANY", many.String(), 1)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

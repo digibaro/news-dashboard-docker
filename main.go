@@ -105,7 +105,7 @@ type Source struct {
 	ID             string   `yaml:"id" json:"id"`
 	Name           string   `yaml:"name" json:"name"`
 	Category       string   `yaml:"category" json:"category"`
-	URL            string   `yaml:"url" json:"-"`
+	URL            string   `yaml:"url" json:"url"`
 	Homepage       string   `yaml:"homepage" json:"homepage,omitempty"`
 	Lang           string   `yaml:"lang" json:"lang,omitempty"`
 	Region         string   `yaml:"region" json:"region,omitempty"` // province, for the "Mijn regio" preset
@@ -314,6 +314,49 @@ type Config struct {
 		Days     int      `yaml:"days"`
 		Interval Duration `yaml:"interval"`
 	} `yaml:"quakes"`
+	// NLAlert: NL-Alert panel (the public API behind actueel.nl-alert.nl; no key).
+	NLAlert struct {
+		Enabled  bool     `yaml:"enabled"`
+		URL      string   `yaml:"url"`
+		Interval Duration `yaml:"interval"`
+	} `yaml:"nlalert"`
+	// Fuel: Brandstofprijzen panel (UnitedConsumers' daily national average, GLA; personal use).
+	Fuel struct {
+		Enabled  bool     `yaml:"enabled"`
+		URL      string   `yaml:"url"`
+		Interval Duration `yaml:"interval"`
+	} `yaml:"fuel"`
+	// Waste: Afvalkalender panel. Visitors set their own address; the server's default
+	// address (optional) can use the opzet calendars, an iCal link or Home Assistant.
+	Waste struct {
+		Enabled       bool     `yaml:"enabled"`
+		Providers     []string `yaml:"providers"` // base URLs of municipal calendars with the opzet API
+		Provider      string   `yaml:"provider"`  // default address: opzet | ics | home_assistant
+		Postcode      string   `yaml:"postcode"`
+		Number        int      `yaml:"number"`
+		Suffix        string   `yaml:"suffix"`
+		ICSURL        string   `yaml:"ics_url"`
+		HomeAssistant struct {
+			URL      string   `yaml:"url"`
+			Token    string   `yaml:"token"` // long-lived access token, or NDB_HA_TOKEN
+			Entities []string `yaml:"entities"`
+		} `yaml:"home_assistant"`
+		Interval Duration `yaml:"interval"`
+	} `yaml:"waste"`
+	// Trending: words that suddenly appear in many sources' headlines (computed from the news cache).
+	Trending struct {
+		Enabled bool `yaml:"enabled"`
+	} `yaml:"trending"`
+	// Push: Web Push notifications (needs HTTPS and a VAPID key, see -gen-vapid).
+	Push struct {
+		Enabled          bool    `yaml:"enabled"`
+		Subject          string  `yaml:"subject"`           // mailto: or https: contact for the push services
+		VAPIDPrivateKey  string  `yaml:"vapid_private_key"` // or NDB_VAPID_PRIVATE_KEY
+		MaxSubscriptions int     `yaml:"max_subscriptions"`
+		QuakeMinMag      float64 `yaml:"quake_min_mag"`
+		BreakingSources  int     `yaml:"breaking_sources"` // 0 = no breaking-news messages
+		WasteHour        int     `yaml:"waste_hour"`       // local hour of the evening reminder; -1 = off
+	} `yaml:"push"`
 	Categories []Category `yaml:"categories"`
 	Presets    []Preset   `yaml:"presets"`
 	Sources    []Source   `yaml:"sources"`
@@ -396,6 +439,12 @@ func defaultConfig() *Config {
 	c.Utilities.LianderURL = "https://services1.arcgis.com/v6W5HAVrpgSg3vts/arcgis/rest/services/IStoringen_Productie_V7/FeatureServer/0"
 	c.Utilities.StedinURL = "https://www.stedin.net/api/storingen/places"
 	c.Quakes.Enabled, c.Quakes.URL, c.Quakes.Days, c.Quakes.Interval = true, "https://rdsa.knmi.nl/fdsnws/event/1/query", 90, Duration(15*time.Minute)
+	c.NLAlert.Enabled, c.NLAlert.URL, c.NLAlert.Interval = true, "https://api.public-warning.app/api/v1/providers/nl-alert/alerts", Duration(2*time.Minute)
+	c.Fuel.Enabled, c.Fuel.URL, c.Fuel.Interval = true, "https://www.unitedconsumers.com/tanken/brandstofprijzen", Duration(3*time.Hour)
+	c.Waste.Enabled, c.Waste.Provider, c.Waste.Interval = true, "opzet", Duration(6*time.Hour)
+	c.Waste.Providers = defaultWasteProviders
+	c.Trending.Enabled = true
+	c.Push.MaxSubscriptions, c.Push.QuakeMinMag, c.Push.BreakingSources, c.Push.WasteHour = 50, 2.5, 6, 19
 	c.Threats.Enabled = true
 	c.Threats.Interval = Duration(15 * time.Minute)
 	c.Threats.DailyInterval = Duration(time.Hour)
@@ -441,6 +490,8 @@ func (c *Config) applyEnv() {
 	set(&c.Cache.SnapshotPath, "NDB_SNAPSHOT_PATH")
 	set(&c.Keys.AbusechAuthKey, "ABUSECH_AUTH_KEY")
 	set(&c.Keys.NSAPIKey, "NS_API_KEY")
+	set(&c.Waste.HomeAssistant.Token, "NDB_HA_TOKEN")
+	set(&c.Push.VAPIDPrivateKey, "NDB_VAPID_PRIVATE_KEY")
 	if v := os.Getenv("NDB_TRUSTED_PROXIES"); v != "" { // e.g. the Docker gateway range
 		c.Server.TrustedProxies = strings.Split(strings.ReplaceAll(v, " ", ""), ",")
 	}
@@ -449,7 +500,20 @@ func (c *Config) applyEnv() {
 	}
 }
 
-var idRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,47}$`)
+// defaultWasteProviders: municipal waste calendars that answer the opzet REST API
+// (checked 2026-09-27). HVC, GAD, DAR, Cyclus and Blink each serve several municipalities.
+var defaultWasteProviders = []string{
+	"https://huisvuilkalender.denhaag.nl", "https://inzamelkalender.hvcgroep.nl", "https://inzamelkalender.gad.nl",
+	"https://afvalkalender.dar.nl", "https://cyclusnv.nl", "https://mijnblink.nl", "https://afvalkalender.purmerend.nl",
+	"https://afvalkalender.alphenaandenrijn.nl", "https://afvalkalender.cranendonck.nl", "https://afvalwijzer.lingewaard.nl",
+	"https://afvalkalender.peelenmaas.nl", "https://afvalkalender.schouwen-duiveland.nl", "https://afvalkalender.sudwestfryslan.nl",
+	"https://afvalkalender.venray.nl", "https://afvalkalender.voorschoten.nl", "https://afvalkalender.waalre.nl",
+}
+
+var (
+	idRe       = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,47}$`)
+	haEntityRe = regexp.MustCompile(`^[a-z_]+\.[a-z0-9_]{1,100}$`)
+)
 
 // defaultRefresh: browser refresh intervals per panel (config.yaml refresh:).
 var defaultRefresh = map[string]time.Duration{
@@ -460,13 +524,14 @@ var defaultRefresh = map[string]time.Duration{
 	"today": 60 * time.Minute, "ransomware": 30 * time.Minute,
 	"pollen": 60 * time.Minute, "utilities": 5 * time.Minute, "quakes": 15 * time.Minute,
 	"economy": 60 * time.Minute, "markets": 5 * time.Minute,
+	"nlalert": 2 * time.Minute, "fuel": 60 * time.Minute, "waste": 60 * time.Minute, "trending": 10 * time.Minute,
 	"health": 30 * time.Minute,
 }
 
 func (c *Config) validate() error {
 	for k, v := range c.Refresh {
 		if _, ok := defaultRefresh[k]; !ok {
-			return fmt.Errorf("refresh.%s: unknown panel (known: news, weather, alerts, traffic, alarms, energy, air, trains, politics, today, ransomware, pollen, utilities, quakes, economy, markets, threats, advisories, breaches, outages, ap, health)", k)
+			return fmt.Errorf("refresh.%s: unknown panel (known: news, weather, alerts, traffic, alarms, energy, air, trains, politics, today, ransomware, pollen, utilities, quakes, economy, markets, nlalert, fuel, waste, trending, threats, advisories, breaches, outages, ap, health)", k)
 		}
 		if v.D() < time.Minute || v.D() > 24*time.Hour {
 			return fmt.Errorf("refresh.%s: %s is outside 1m..24h", k, v.D())
@@ -607,6 +672,60 @@ func (c *Config) validate() error {
 	}
 	if c.Quakes.Enabled && (c.Quakes.Interval.D() < 5*time.Minute || !httpsURL(c.Quakes.URL) || c.Quakes.Days < 1 || c.Quakes.Days > 365) {
 		fail("quakes: interval must be at least 5m, url https, days 1–365")
+	}
+	if c.NLAlert.Enabled && (c.NLAlert.Interval.D() < time.Minute || !httpsURL(c.NLAlert.URL)) {
+		fail("nlalert: interval must be at least 1m and url https")
+	}
+	if c.Fuel.Enabled && (c.Fuel.Interval.D() < time.Hour || !httpsURL(c.Fuel.URL)) {
+		fail("fuel: interval must be at least 1h and url https")
+	}
+	if w := &c.Waste; w.Enabled {
+		if w.Interval.D() < time.Hour {
+			fail("waste.interval must be at least 1h")
+		}
+		if len(w.Providers) == 0 || len(w.Providers) > 40 {
+			fail("waste.providers: 1–40 calendar URLs")
+		}
+		for _, p := range w.Providers {
+			if !httpsURL(p) {
+				fail("waste.providers: %q must be an https URL", p)
+			}
+		}
+		switch w.Provider {
+		case "opzet":
+			w.Postcode = normPostcode(w.Postcode)
+			if w.Postcode != "" && (!postcodeRe.MatchString(w.Postcode) || w.Number < 1 || w.Number > 99999 || !wasteSuffixRe.MatchString(w.Suffix)) {
+				fail("waste: default address needs a postcode like 2511AB, number 1–99999 and a suffix of at most 6 letters/digits (or leave postcode empty)")
+			}
+		case "ics":
+			if w.ICSURL != "" && !isHTTPURL(w.ICSURL) {
+				fail("waste.ics_url must be an http(s) URL")
+			}
+		case "home_assistant":
+			ha := w.HomeAssistant
+			if ha.URL != "" && (!isHTTPURL(ha.URL) || ha.Token == "" || len(ha.Entities) == 0 || len(ha.Entities) > 10) {
+				fail("waste.home_assistant: url (http/https), token (or NDB_HA_TOKEN) and 1–10 entities are required")
+			}
+			for _, e := range ha.Entities {
+				if !haEntityRe.MatchString(e) {
+					fail("waste.home_assistant.entities: %q is not an entity id like sensor.afval_rest", e)
+				}
+			}
+		default:
+			fail("waste.provider must be opzet, ics or home_assistant")
+		}
+	}
+	if p := &c.Push; p.Enabled {
+		if _, _, err := parseVAPIDKey(p.VAPIDPrivateKey); err != nil {
+			fail("%v (push.vapid_private_key or NDB_VAPID_PRIVATE_KEY)", err)
+		}
+		if !strings.HasPrefix(p.Subject, "mailto:") && !httpsURL(p.Subject) {
+			fail("push.subject must be a mailto: address or https URL (the push services contact you there)")
+		}
+		if p.MaxSubscriptions < 1 || p.MaxSubscriptions > 1000 || p.QuakeMinMag < 0 || p.QuakeMinMag > 9 ||
+			p.BreakingSources < 0 || p.BreakingSources > 9 || p.WasteHour < -1 || p.WasteHour > 23 {
+			fail("push: max_subscriptions 1–1000, quake_min_mag 0–9, breaking_sources 0–9 (0 = off), waste_hour -1–23")
+		}
 	}
 	if in := &c.Outages.Internet; c.Outages.Enabled && in.Enabled {
 		in.Country = strings.ToUpper(strings.TrimSpace(in.Country))
@@ -794,19 +913,23 @@ type App struct {
 	cfg    *Config
 	cfgMod time.Time
 
-	fetcher *Fetcher
-	sched   *Scheduler
-	news    *NewsCache
-	wx      *weatherCaches
-	threats *stateStore // threat panels and advisories
-	geo     *geoCache
-	images  *imageProxy
-	metrics *httpMetrics
-	vild    atomic.Pointer[vildTable] // NDW location table for road names
-	alarms  *ttlCache[[]Alarm]        // P2000 alerts per city slug
-	air     *ttlCache[[]AirComponent] // pollutant values per Luchtmeetnet station
-	pollen  *ttlCache[PollenData]     // pollen forecast per ~10 km cell
-	p2k     map[string]*p2kCounter    // national alerts per service, last hour
+	fetcher  *Fetcher
+	sched    *Scheduler
+	news     *NewsCache
+	wx       *weatherCaches
+	threats  *stateStore // threat panels and advisories
+	geo      *geoCache
+	images   *imageProxy
+	metrics  *httpMetrics
+	vild     atomic.Pointer[vildTable] // NDW location table for road names
+	alarms   *ttlCache[[]Alarm]        // P2000 alerts per city slug
+	air      *ttlCache[[]AirComponent] // pollutant values per Luchtmeetnet station
+	pollen   *ttlCache[PollenData]     // pollen forecast per ~10 km cell
+	p2k      map[string]*p2kCounter    // national alerts per service, last hour
+	trend    trendCache                // trending words, recomputed at most every 5 min
+	waste    *ttlCache[WasteResult]    // pickups per visitor address
+	wasteIdx wasteIndex                // address -> municipal calendar
+	push     *pushHub                  // Web Push subscriptions and watcher state
 }
 
 func (a *App) config() *Config {
@@ -822,6 +945,11 @@ func (a *App) applyConfig(cfg *Config) {
 	a.cfg = cfg
 	a.mu.Unlock()
 	a.level.Set(*parseLevel(cfg.Server.LogLevel))
+	if cfg.Push.Enabled && a.push != nil {
+		if err := a.push.setKey(cfg.Push.VAPIDPrivateKey); err != nil {
+			slog.Error("push disabled", "err", err)
+		}
+	}
 	if old != nil {
 		if old.Server.Listen != cfg.Server.Listen || old.Server.BasePath != cfg.Server.BasePath {
 			slog.Warn("server.listen/base_path changed; restart required to apply")
@@ -956,7 +1084,8 @@ func run(cfgPath string) error {
 
 	a := &App{cfgPath: cfgPath, level: level, started: time.Now(), news: newNewsCache(), sched: newScheduler(), wx: newWeatherCaches(),
 		threats: newStateStore(), geo: newGeoCache(10000), metrics: newHTTPMetrics(),
-		alarms: newTTLCache[[]Alarm](500), air: newTTLCache[[]AirComponent](200), pollen: newTTLCache[PollenData](300), p2k: newP2KCounters()}
+		alarms: newTTLCache[[]Alarm](500), air: newTTLCache[[]AirComponent](200), pollen: newTTLCache[PollenData](300), p2k: newP2KCounters(),
+		push: newPushHub(), waste: newTTLCache[WasteResult](1000)}
 	if st, err := os.Stat(cfgPath); err == nil {
 		a.cfgMod = st.ModTime()
 	}
@@ -972,6 +1101,7 @@ func run(cfgPath string) error {
 		}
 	}
 	a.applyConfig(cfg)
+	a.loadPushState()
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -1015,11 +1145,19 @@ func main() {
 	only := flag.String("only", "", "with -check-feeds: comma-separated source ids to check")
 	healthcheck := flag.Bool("healthcheck", false, "query /healthz on the local server and exit 0/1 (for Docker HEALTHCHECK)")
 	showVersion := flag.Bool("version", false, "print version and exit")
+	genVAPID := flag.Bool("gen-vapid", false, "print a new VAPID key for push notifications (NDB_VAPID_PRIVATE_KEY) and exit")
 	flag.Parse()
 
 	switch {
 	case *showVersion:
 		fmt.Println("nieuwsdashboard", version)
+	case *genVAPID:
+		k, err := genVAPIDKey()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		fmt.Println("NDB_VAPID_PRIVATE_KEY=" + k)
 	case *healthcheck:
 		os.Exit(runHealthcheck(*cfgPath))
 	case *checkFeeds:
@@ -1104,6 +1242,10 @@ func securityHeaders(next http.Handler) http.Handler {
 		h.Set("Cross-Origin-Resource-Policy", "same-origin")
 		h.Set("Permissions-Policy", "geolocation=(self), camera=(), microphone=(), payment=(), usb=(), "+
 			"interest-cohort=(), browsing-topics=(), accelerometer=(), gyroscope=(), magnetometer=()")
+		if r.Method == http.MethodPost && pushPostPath(r.URL.Path) {
+			next.ServeHTTP(w, r)
+			return
+		}
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
 			h.Set("Allow", "GET, HEAD")
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -1111,6 +1253,16 @@ func securityHeaders(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// pushPostPath: the only URLs that accept POST (push subscriptions; checked again in pushRequest).
+func pushPostPath(p string) bool {
+	for _, s := range []string{"/api/push/subscribe", "/api/push/unsubscribe", "/api/push/test"} {
+		if strings.HasSuffix(p, s) {
+			return true
+		}
+	}
+	return false
 }
 
 func (a *App) routes(basePath string) http.Handler {
@@ -1144,6 +1296,14 @@ func (a *App) routes(basePath string) http.Handler {
 	handle("GET /api/economy", a.handleEconomy)
 	handle("GET /api/markets", a.handleMarkets)
 	handle("GET /api/alarms", a.handleAlarms)
+	handle("GET /api/nlalert", a.handleNLAlert)
+	handle("GET /api/fuel", a.handleFuel)
+	handle("GET /api/waste", a.handleWaste)
+	handle("GET /api/trending", a.handleTrending)
+	handle("GET /api/push", a.handlePushInfo)
+	handle("POST /api/push/subscribe", a.handlePushSubscribe)
+	handle("POST /api/push/unsubscribe", a.handlePushUnsubscribe)
+	handle("POST /api/push/test", a.handlePushTest)
 	handle("GET /healthz", a.handleHealth)
 	handle("GET /metrics", a.handleMetrics)
 
@@ -1347,6 +1507,12 @@ func (a *App) handleCatalog(w http.ResponseWriter, r *http.Request) {
 		"quakes":           cfg.Quakes.Enabled,
 		"economy":          cfg.Economy.Enabled,
 		"markets":          cfg.Markets.Enabled,
+		"nlalert":          cfg.NLAlert.Enabled,
+		"fuel":             cfg.Fuel.Enabled,
+		"waste":            cfg.Waste.Enabled,
+		"waste_default":    cfg.Waste.Enabled && hasWasteDefault(cfg),
+		"trending":         cfg.Trending.Enabled,
+		"push":             cfg.Push.Enabled,
 		"alarms":           map[string]any{"enabled": cfg.Alarms.Enabled, "city": cfg.Alarms.City},
 		"alerts":           map[string]bool{"nctv": cfg.Alerts.NCTV.Enabled, "knmi": cfg.Alerts.KNMI},
 		"presets":          cfg.Presets,
@@ -1537,6 +1703,15 @@ func (a *App) otherFeeds(cfg *Config) []FeedStatus {
 	}
 	if cfg.Markets.Enabled {
 		add("yahoo:markets", "Yahoo Finance · beurs", "daily")
+	}
+	if cfg.NLAlert.Enabled {
+		add("nlalert", "NL-Alert", "alert")
+	}
+	if cfg.Fuel.Enabled {
+		add("fuel:gla", "UnitedConsumers · brandstofprijzen", "daily")
+	}
+	if cfg.Waste.Enabled && hasWasteDefault(cfg) {
+		add("waste:calendar", "Afvalkalender (standaardadres)", "daily")
 	}
 	if cfg.Outages.Enabled && cfg.Outages.Internet.Enabled {
 		add("ioda:internet", "IODA · internetverstoringen", "outage")
@@ -2077,5 +2252,27 @@ self.addEventListener('fetch', (e) => {
     const hit = (await c.match(req)) || (req.mode === 'navigate' ? await c.match('./') : undefined);
     return hit ? markOffline(hit) : Response.error();
   }));
+});
+
+// Push notifications: the payload is JSON {title, body, url, tag}.
+self.addEventListener('push', (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch { d = { body: e.data ? e.data.text() : '' }; }
+  e.waitUntil(self.registration.showNotification(d.title || 'Nieuws Hub', {
+    body: d.body || '', tag: d.tag || undefined, icon: 'icon-192.png', badge: 'icon-192.png', data: { url: d.url || '' },
+  }));
+});
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const u = String(e.notification.data?.url || '');
+  const target = /^https:\/\//.test(u) ? u : new URL(u.startsWith('#') ? './' + u : './', self.registration.scope).href;
+  e.waitUntil((async () => {
+    if (!/^https:\/\//.test(u) || u.startsWith(self.registration.scope)) {
+      const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      for (const w of wins) if (w.url.startsWith(self.registration.scope)) { await w.focus(); return w.navigate ? w.navigate(target) : null; }
+    }
+    return self.clients.openWindow(target);
+  })());
 });
 `

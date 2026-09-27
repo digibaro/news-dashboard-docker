@@ -17,8 +17,11 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Vandaag:** date and week number, sunrise and sunset, moon phase, the next public holiday, the next clock change, and school holidays for regio Noord, Midden and Zuid (the visitor's region highlighted).
 - **Luchtkwaliteit:** the air quality index (1–11) and NO₂, PM2.5, PM10 and O₃ from the nearest Luchtmeetnet station. The place is chosen per visitor (default: their weather location).
 - **Hooikoorts:** the pollen forecast (grass, birch, alder, mugwort, ragweed) for 3 days at the visitor's air-quality place, with indicative levels.
-- **Aardbevingen:** earthquakes in and around the Netherlands from KNMI, with magnitude, depth and induced (gas extraction) events marked.
+- **Aardbevingen:** earthquakes in and around the Netherlands from KNMI in the last 31 days, with magnitude, depth and induced (gas extraction) events marked.
 - **Kritieke infrastructuur:** current electricity and gas outages at Liander and Stedin (place, status, expected repair time, customers affected), planned work and outages resolved in the last 24 h.
+- **NL-Alert:** active and recent NL-Alerts (last 31 days), marked when the visitor's weather location lies inside the alert area.
+- **Afvalkalender:** the next waste collection days. Each visitor sets an own address (postcode and house number) under Instellingen, like the places for alarms and air quality; the server finds the municipal waste calendar that knows it (16 calendars, e.g. Den Haag, HVC, GAD, DAR, Cyclus). An optional default address can also come from an iCal link or Home Assistant.
+- **Brandstofprijzen:** the national average recommended pump price (GLA) for Euro95, diesel and LPG, with the change since yesterday.
 - **Treinstoringen:** current rail disruptions and engineering works from the NS Disruptions API (needs a free key).
 - **Economie in cijfers:** Dutch inflation (with the euro-area figure and a 12-month trend), unemployment, the ECB deposit rate and the euro in dollars, from Eurostat and the ECB.
 - **Beurs:** the AEX, AMX, BEL 20, DAX, Euro Stoxx 50, S&P 500 and Nasdaq, Brent oil, gold and bitcoin, plus the top 3 risers and fallers of the AEX (delayed prices, Yahoo Finance).
@@ -35,8 +38,11 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 
 **Reading features:**
 - **First visit:** pick topics (presets) instead of 80 switches.
-- **Story grouping:** the same story from several outlets becomes one item, with "Ook bij: …" links.
-- **Read state:** read/unread plus a "Bewaard" list.
+- **Story grouping:** the same story from several outlets becomes one item, with "Ook bij: …" links and a **coverage view** (which outlets, when, and who reported first).
+- **Trending:** words and names that suddenly appear in many headlines in the last 3 hours; click one to search.
+- **Read state:** read/unread plus a "Bewaard" list with **notes, labels** and export to Markdown or JSON.
+- **OPML:** export the chosen sources, or import a list from another reader (only feeds that exist on this server are turned on).
+- **Push notifications** (opt-in, per device): NL-Alert in your area, KNMI code orange/red, NCTV threat level, earthquakes, big news and the evening before waste collection. See [Push notifications](#push-notifications).
 - **Watchlist and mute words:** security advisories that mention your products are pinned to the top.
 - **Freshness:** every panel shows how old its data is.
 - **Thumbnails:** optional, via the built-in image proxy.
@@ -59,7 +65,7 @@ It is built as **one Go binary with the frontend embedded, plus one `config.yaml
 3. [Adding or fixing a news source](#adding-or-fixing-a-news-source)
 4. [Install on an ISPConfig VPS (systemd)](#install-on-an-ispconfig-vps-systemd)
 5. [Docker on an ISPConfig VPS](#docker-on-an-ispconfig-vps)
-6. [Updating](#updating)
+6. [Updating](#updating) · [Push notifications](#push-notifications)
 7. [Data sources, terms and licences](#data-sources-terms-and-licences)
 8. [Privacy and disk writes](#privacy-and-disk-writes)
 9. [Security](#security)
@@ -148,15 +154,20 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 | `fetch` | `user_agent` (**put your site and e-mail here**), default refresh `interval`, `timeout`, `max_concurrent` (max 2 per host is fixed) |
 | `cache` | `max_items_per_source`, `max_age`, `snapshot_path` (empty = no disk writes, see below) |
 | `features` | `show_images` (keep feed images), `proxy_images` (serve them through `/api/img`, see below), `geolocation` (ip-api lookups), `allow_custom_feeds` (reserved, see below) |
-| `refresh` | how often an open browser tab asks the server for new data, per panel: `news`, `alerts`, `weather`, `today`, `air`, `pollen`, `traffic`, `trains`, `alarms`, `quakes`, `energy`, `economy`, `markets`, `politics`, `threats`, `advisories`, `breaches`, `ransomware`, `utilities`, `outages`, `ap`, `health` (1m–24h, see below) |
+| `refresh` | how often an open browser tab asks the server for new data, per panel: `news`, `alerts`, `weather`, `today`, `air`, `pollen`, `traffic`, `trains`, `alarms`, `quakes`, `nlalert`, `energy`, `fuel`, `economy`, `markets`, `waste`, `trending`, `politics`, `threats`, `advisories`, `breaches`, `ransomware`, `utilities`, `outages`, `ap`, `health` (1m–24h, see below) |
 | `keys` | `abusech_auth_key` (optional), `ns_api_key` (Treinstoringen) |
 | `energy` | Energieprijzen: `enabled`, `url`, `interval` (min. 15m), `vat` (0.21), `electricity_extra` / `gas_extra` (€ added per kWh / m³, e.g. energy tax and markup; default 0) |
 | `air` | Luchtkwaliteit: `enabled`, `base` (Luchtmeetnet API), `stations_url` (RIVM station list, CSV), `interval` (min. 15m) |
 | `trains` | Treinstoringen: `enabled`, `url` (NS Disruptions API v3), `interval` (min. 2m). Needs `keys.ns_api_key` |
 | `pollen` | Hooikoorts: `enabled`, `url` (Open-Meteo Air Quality API) |
 | `utilities` | Kritieke infrastructuur: `enabled`, `liander_url` (ArcGIS layer), `stedin_url`, `interval` (min. 2m) |
-| `quakes` | Aardbevingen: `enabled`, `url` (KNMI FDSN), `days` (1–365, default 90), `interval` (min. 5m) |
+| `quakes` | Aardbevingen: `enabled`, `url` (KNMI FDSN), `days` (1–365, default 90; the panel shows the last 31 days, the overview card the last 7), `interval` (min. 5m) |
 | `economy` | Economie in cijfers: `enabled`, `eurostat_base`, `ecb_base`, `interval` (default 6h, min. 1h) |
+| `nlalert` | NL-Alert: `enabled`, `url`, `interval` (default 2m, min. 1m) |
+| `fuel` | Brandstofprijzen: `enabled`, `url` (UnitedConsumers page), `interval` (default 3h, min. 1h) |
+| `waste` | Afvalkalender: `enabled`, `providers` (base URLs of municipal calendars with the opzet API; default: 16 calendars, see *Data sources*), `interval` (default 6h, min. 1h). Visitors set their own address in the browser. Optional **default address** (for visitors without one, and their push reminders) via `provider`: **opzet** `postcode`, `number`, `suffix` · **ics** `ics_url` · **home_assistant** `home_assistant.url`, `home_assistant.token` (or `NDB_HA_TOKEN`), `home_assistant.entities` (1–10 sensor ids). |
+| `trending` | Trending words above the news: `enabled` (computed from the news cache, no extra requests) |
+| `push` | Push notifications (off by default): `enabled`, `subject` (`mailto:` or https contact), `vapid_private_key` (or `NDB_VAPID_PRIVATE_KEY`), `max_subscriptions` (default 50), `quake_min_mag` (2.5), `breaking_sources` (6; 0 = off), `waste_hour` (19; -1 = off). See [Push notifications](#push-notifications). |
 | `markets` | Beurs: `enabled`, `url` (Yahoo spark), `interval` (default 15m, min. 5m), `indices` (1–20, shown in order) and `stocks` (max. 60, the source of the top 3 risers and fallers), each `{ symbol, name }`. The default stocks are the AEX constituents; Euronext reviews them every quarter. |
 | `today` | Vandaag: `enabled`, `school_url` (Rijksoverheid school holidays) |
 | `ransomware` | Ransomware NL: `enabled`, `base` (ransomware.live API v2), `countries` (ISO codes, default `[NL]`, max. 5), `interval` (min. 10m) |
@@ -212,6 +223,10 @@ There are two separate rates:
 | Energieprijzen | 30m | 1h |
 | Economie in cijfers | 60m | 6h (monthly and daily figures) |
 | Beurs | 5m | 15m (prices are delayed ~15 min) |
+| NL-Alert | 2m | 2m |
+| Brandstofprijzen | 60m | 3h (the GLA changes once a day) |
+| Afvalkalender | 60m | 6h |
+| Trending | 10m | computed at most every 5 min |
 | Politiek vandaag | 15m | 30m |
 | Alarmeringen | 2m | 2m per city |
 | Cyberdreigingen | 15m | 15m (ISC minimum), 30-day summary 1h |
@@ -472,6 +487,32 @@ A restart starts with an empty cache, which fills within about 30 seconds. If yo
 
 ---
 
+## Push notifications
+
+Visitors can get notifications on their phone or computer, also when the dashboard is closed. They choose the topics under *Instellingen → Meldingen*:
+- NL-Alert in their area (their weather location)
+- KNMI code orange or red
+- a change of the NCTV threat level
+- earthquakes from `push.quake_min_mag`
+- big news: a story that `push.breaking_sources` sources reported within an hour
+- waste: the evening before collection, at `push.waste_hour`, for the address set on that device (or the default address)
+
+**Setup** (once):
+1. The dashboard must be served over **HTTPS** (browsers only allow push on secure sites; `localhost` also works for testing).
+2. Create a VAPID key:
+   - Docker: `docker compose run --rm nieuwsdashboard -gen-vapid`
+   - systemd: `/usr/local/bin/nieuwsdashboard -gen-vapid`
+3. Put the printed `NDB_VAPID_PRIVATE_KEY=...` line in `.env` (Docker) or the unit's environment file. Keep it secret and keep it: a new key means every device has to turn notifications on again.
+4. In `config.yaml`: `push.enabled: true` and `push.subject: "mailto:you@example.nl"` (the push services contact you there if something is wrong).
+5. Restart. The *Meldingen* section appears in the settings.
+
+Notes:
+- **iPhone and iPad:** push works only when the dashboard is added to the home screen (Share → Add to Home Screen) and opened from there (iOS 16.4 or later).
+- **After a restart** without `cache.snapshot_path`, the server has forgotten the subscriptions; they return automatically when each device opens the dashboard again. With a snapshot path they are kept.
+- The first minute after a start only records the current state, so a restart never repeats old alerts.
+
+---
+
 ## Data sources, terms and licences
 
 The server fetches everything; browsers only talk to the dashboard itself.
@@ -501,6 +542,10 @@ The server fetches everything; browsers only talk to the dashboard itself.
 | [Open-Meteo](https://open-meteo.com/) (CAMS) | Hooikoorts | Air Quality API, pollen from the Copernicus Atmosphere Monitoring Service (CC BY 4.0). Levels are indicative thresholds per pollen type (grains/m³, daily maximum), not a medical scale. |
 | [Eurostat](https://ec.europa.eu/eurostat) | Economie in cijfers | HICP inflation (`prc_hicp_minr`) and unemployment (`une_rt_m`, seasonally adjusted), JSON-stat API, no key. Reuse allowed with attribution ([Eurostat copyright notice](https://ec.europa.eu/eurostat/about-us/policies/copyright)). Inflation is the European HICP measure, which can differ slightly from CBS's national CPI. |
 | [ECB Data Portal](https://data.ecb.europa.eu/) | Economie in cijfers | Deposit facility rate and the EUR/USD reference rate, SDMX API, no key; reuse allowed with attribution. |
+| [NL-Alert](https://actueel.nl-alert.nl/) | NL-Alert | The public JSON API behind actueel.nl-alert.nl (`api.public-warning.app`), no key. Alerts include their broadcast areas; "in jouw omgeving" is a point-in-polygon check on the server with the visitor's weather location. |
+| [UnitedConsumers](https://www.unitedconsumers.com/tanken/brandstofprijzen) | Brandstofprijzen | The daily *gemiddelde landelijke adviesprijs* (GLA). There is **no open API**: the price table is read from the public page once every 3 hours. UnitedConsumers claims copyright on the data on its site, so this is for **personal use only**; turn it off with `fuel.enabled: false` for public or commercial use. CBS publishes official daily pump prices (table 80416ned), but its OData hosts are not reachable from every network. |
+| Municipal waste calendars | Afvalkalender | The "opzet" REST API that many municipalities use for their waste calendar, no key. Default list (checked September 2026): Den Haag, HVC, GAD, DAR, Cyclus, Blink, Purmerend, Alphen aan den Rijn, Cranendonck, Lingewaard, Peel en Maas, Schouwen-Duiveland, Súdwest-Fryslân, Venray, Voorschoten and Waalre. A visitor's address is asked at all of them in parallel once; the matching calendar is remembered. Municipalities with another system (e.g. Amsterdam, Rotterdam, Utrecht, Ximmio or Mijn Afvalwijzer) are not supported yet. For the default address also: any iCal link, or your own Home Assistant (REST API with a long-lived token). |
+| Push services | Meldingen | Messages go through the browser vendor's push service (Google FCM, Mozilla, Apple, Microsoft). The content is end-to-end encrypted (RFC 8291); the service sees only the timing and size. |
 | [Yahoo Finance](https://finance.yahoo.com/) | Beurs | **Unofficial** "spark" endpoint without a key: delayed prices, **personal use only** under Yahoo's terms, and it may change or stop without notice. Free official APIs with European stocks either forbid display (Twelve Data free plan) or cover only the US (EODHD demo); Euronext's own data is encrypted and not used. Turn the panel off with `markets.enabled: false` for public or commercial use. |
 | [KNMI](https://www.knmi.nl/nederland-nu/seismologie/aardbevingen) | Aardbevingen | FDSN event service (`rdsa.knmi.nl`), open data; each quake links to its KNMI page. Only earthquakes and induced events; explosions, quarry blasts and sonic booms are left out. |
 | [Liander](https://www.liander.nl/storingen-en-onderhoud) | Kritieke infrastructuur | The public ArcGIS feature service `IStoringen_Productie_V7` (Alliander) behind Liander's outage map: status, cause, expected repair time and a customer count per outage. No explicit licence; attribution shown. |
@@ -535,7 +580,9 @@ A URL sets the mode for that visit only, without changing the saved choice: `htt
   - Feed titles and summaries are stripped of all HTML on the server and rendered as text in the browser.
   - Links are limited to `http(s)` and open with `rel="noopener noreferrer"`.
 - **"Gebruik mijn locatie"** rounds coordinates to 2 decimals (~1 km) in the browser, and sends them only to this server.
-- **Read state, "Bewaard", watchlist and mute words** live in `localStorage`. The service worker keeps the last good responses in the browser's cache for offline use; the server stores nothing per user.
+- **Afvalkalender address:** kept in the browser. The server uses it only to ask the municipal calendars, keeps the result up to 6 hours in memory, and never logs it.
+- **Push notifications** are opt-in per device. The server keeps each subscription (the push-service URL and two keys, the chosen topics, the language, the weather location rounded to ~1 km and, for the waste reminder, the address) in memory; with `cache.snapshot_path` set also in `<snapshot>.push.json` (mode 0600). Turning notifications off removes it.
+- **Read state, "Bewaard" (including notes and labels), watchlist and mute words** live in `localStorage`. The service worker keeps the last good responses in the browser's cache for offline use; the server stores nothing per user.
 - **Thumbnails** are off per visitor by default (*Instellingen → Weergave*). When on, they come from `/api/img`, so publishers never see the visitor. The proxy:
   - only fetches URLs this server signed itself (HMAC with a random key per process), so it is not an open proxy
   - checks every connection *after DNS resolution* and on each redirect, and refuses private, loopback, link-local (incl. `169.254.169.254`), CGNAT and other special-purpose ranges (IPv4 and IPv6)
@@ -556,6 +603,7 @@ A URL sets the mode for that visit only, without changing the saved choice: `htt
   - Links must be `http(s)` without credentials; titles and summaries are capped at 300 characters.
   - Responses are capped at 5 MB, 10 s and 3 redirects.
   - XML entities are never expanded, and absurdly nested XML is skipped.
+- **Only GET, except push:** every route answers only GET/HEAD, except `POST /api/push/{subscribe,unsubscribe,test}`. Those accept only same-origin requests (`Sec-Fetch-Site: same-origin`, or a matching `Origin`), JSON bodies of at most 4 KB with no unknown fields, and are rate-limited per IP. Subscriptions are accepted only for the push services of the major browsers (FCM, Mozilla, Apple, Microsoft) over https on the default port, so the server never posts to an arbitrary URL.
 - **Outbound requests from user input:** only the image proxy fetches addresses that originate outside the configuration. It accepts only URLs this server signed, and checks every connection's IP after DNS resolution (so also redirects and DNS rebinding) against private and special-purpose ranges. See *Privacy*.
 - **Abuse limits:**
   - Weather, geocoding and image requests that cause upstream traffic are rate-limited per client IP.
@@ -609,6 +657,12 @@ All JSON responses:
 | `GET /api/pollen?lat=&lon=` | Hooikoorts: `days` (3 × daily maximum per pollen type, grains/m³) and `now` |
 | `GET /api/utilities` | Kritieke infrastructuur: per grid operator the `active` and `planned` outages (energy, place, status, reported, estimate, customers) and `resolved_24h` |
 | `GET /api/economy` | Economie in cijfers: `inflation` and `unemployment` (13 months), `inflation_ea`, `rate` with `rate_since`, `eurusd` (last 2 days) |
+| `GET /api/nlalert?lat=&lon=` | NL-Alert: `alerts` of the last 31 days (text, English text, start, stop, withdrawn, `near` for the given point or the configured weather location) and the number `active` |
+| `GET /api/fuel` | Brandstofprijzen: `date` and `prices` (fuel, name, price per litre, change in cents) |
+| `GET /api/waste?postcode=&number=&suffix=` | Afvalkalender for the given address (`own`, `pickups`, `calendar`, or `not_found`); without parameters the server's default address (`needs_address` when there is none). The address is not echoed |
+| `GET /api/trending` | Trending: up to 8 `terms` with the number of `sources` in the last 3 hours |
+| `GET /api/push` | Push: `enabled`, the VAPID public `key` and the available `topics` |
+| `POST /api/push/subscribe` · `/unsubscribe` · `/test` | Register, remove or test this device's subscription (same-origin JSON only) |
 | `GET /api/markets` | Beurs: `indices` in config order and `stocks` sorted by daily change (symbol, name, price, change_pct, prev_close, time) |
 | `GET /api/quakes` | Aardbevingen: the quakes of the last `days` (time, place, magnitude, depth, induced, KNMI link) |
 | `GET /api/today` | Vandaag: `date`, `week`, `holidays_today`, `holidays_next`, `moon` (`phase`, `illumination`, `next_full`, `next_new`, `moment`), `clock_change`, `school.regions` (noord/midden/zuid: current or next holiday) |
@@ -665,6 +719,21 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.10.0
+- **New panel NL-Alert** (after Alarmeringen): active and recent NL-Alerts of the last 31 days, with the Dutch or English text, and "in jouw omgeving" when the visitor's weather location lies inside the alert area. Source: the public API behind actueel.nl-alert.nl.
+- **New panel Afvalkalender** (after Vandaag): the next collection days. Every visitor sets an own address under *Instellingen*, like the places for alarms and air quality; the server finds the municipal calendar that knows it (16 calendars with the opzet API, e.g. Den Haag, HVC, GAD, DAR, Cyclus). An optional default address can use these calendars, an iCal link or Home Assistant sensors. The push reminder uses each device's own address.
+- **New panel Brandstofprijzen** (after Energieprijzen): the daily national average recommended price (GLA) for Euro95, diesel and LPG, with the change since yesterday (UnitedConsumers; see *Data sources*).
+- **Push notifications** (off by default; see [Push notifications](#push-notifications)): NL-Alert in your area, KNMI code orange/red, NCTV threat level, earthquakes, big news and the waste reminder. Web Push with end-to-end encryption, built on the Go standard library; `-gen-vapid` creates the key.
+- **Trending** above the news: names and words that suddenly appear in many headlines in the last 3 hours; click to search. Can be turned off under *Weergave*.
+- **Coverage view** per grouped story: every outlet with its time, the first one marked, and how much later the others followed.
+- **Bewaard:** notes and labels per article, a label filter, search in notes, and export to Markdown or JSON.
+- **OPML** export and import of sources under *Instellingen → Bronnen* (import only turns on feeds that exist on this server).
+- **Aardbevingen:** only quakes from the last 31 days, like AP and Gezondheid. The overview card still covers the last 7 days.
+- **Overview:** an NL-Alert card (active or last 24 h), a waste card (collection today or tomorrow) and fuel prices in the Beurs en economie card.
+- **Energieprijzen:** a price just below zero shows as €0,00 instead of -€0,00.
+- `/api/catalog` now includes each source's feed URL (for the OPML export).
+- New config sections `nlalert`, `fuel`, `waste`, `trending` and `push`, and their `refresh` keys.
 
 ### 1.9.1
 - **Logo:** the favicon's icon now appears in front of "Nieuws Hub" in the top bar.

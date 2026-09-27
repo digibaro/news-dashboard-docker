@@ -206,6 +206,57 @@ markets:
     - { symbol: "RAND.AS",  name: "Randstad" }
     - { symbol: "MT.AS",    name: "ArcelorMittal" }
 
+# NL-Alert: public warnings sent to phones in an area (the API behind actueel.nl-alert.nl, no key).
+nlalert:
+  enabled: true
+  url: "https://api.public-warning.app/api/v1/providers/nl-alert/alerts"
+  interval: 2m                    # min. 1m
+
+# Brandstofprijzen: UnitedConsumers' daily national average pump price (GLA). There is no open
+# API: the price table is read from the public page, for personal use only (see the README).
+fuel:
+  enabled: true
+  url: "https://www.unitedconsumers.com/tanken/brandstofprijzen"
+  interval: 3h                    # the GLA changes once a day; min. 1h
+
+# Afvalkalender: the next waste collection days. Like the places for weather and air quality,
+# every visitor sets an own address under Instellingen (postcode and house number, kept in the
+# browser); the server finds the municipal waste calendar that knows it.
+waste:
+  enabled: true
+  # providers: municipal calendars with the "opzet" REST API. Default: 16 calendars (Den Haag, HVC,
+  #   GAD, DAR, Cyclus, Blink, Purmerend and more, see the README). A list here replaces the default.
+  # Optional default address, for visitors who did not set one (and their push reminders):
+  #   opzet          - postcode and number, looked up at the calendars above
+  #   ics            - an iCal link from your municipality or waste company
+  #   home_assistant - your existing waste sensors in Home Assistant (afvalbeheer, afvalwijzer, ...)
+  provider: opzet
+  postcode: ""                    # e.g. "2511AB"; empty = no default address
+  number: 0
+  suffix: ""                      # house letter or addition, e.g. "A"
+  ics_url: ""
+  home_assistant:
+    url: ""                       # e.g. "http://homeassistant.local:8123" (reachable from this server)
+    token: ""                     # long-lived access token; better: NDB_HA_TOKEN in .env
+    entities: []                  # e.g. [sensor.afvalwijzer_gft, sensor.afvalwijzer_restafval]
+  interval: 6h                    # default address; visitor addresses are cached 6 h; min. 1h
+
+# Trending: words that suddenly appear in many headlines (computed from the news cache, no requests).
+trending:
+  enabled: true
+
+# Push notifications (Web Push). Needs HTTPS and a VAPID key; create one with
+#   docker compose run --rm nieuwsdashboard -gen-vapid
+# and put the printed NDB_VAPID_PRIVATE_KEY=... line in .env.
+push:
+  enabled: false
+  subject: "mailto:you@example.nl"  # the push services (Google, Mozilla, Apple, Microsoft) may contact you here
+  vapid_private_key: ""           # better: NDB_VAPID_PRIVATE_KEY in .env
+  max_subscriptions: 50           # devices; the oldest is dropped when full
+  quake_min_mag: 2.5              # earthquakes from this magnitude
+  breaking_sources: 6             # "widely reported": this many sources within an hour; 0 = off
+  waste_hour: 19                  # evening reminder for tomorrow's collection; -1 = off
+
 alerts:
   nctv: { enabled: true, url: "https://www.nctv.nl/onderwerpen/d/dtn", interval: 6h }
   knmi: true
@@ -285,6 +336,10 @@ refresh:
   quakes: 15m
   economy: 60m
   markets: 5m
+  nlalert: 2m
+  fuel: 60m
+  waste: 60m
+  trending: 10m
   outages: 10m
   ap: 30m
   health: 30m

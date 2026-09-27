@@ -627,6 +627,57 @@ table.tt { width: 100%; border-collapse: collapse; font-size: 12px; }
 @media (max-width: 1099px) { .vsk { height: 293px; } }
 @media (max-width: 699px) { .vsk { height: 310px; } }
 
+.btn[hidden], .opt[hidden], .trend[hidden], #set-push[hidden] { display: none; }
+
+/* ---------- NL-Alert ---------- */
+.nl-on { color: var(--sev-crit); }
+.nl-active { border: 1px solid var(--sev-crit); border-left-width: 4px; border-radius: 6px; padding: 8px 10px; margin: 8px 0; font-size: 13px; }
+.nl-active p { margin: 0; }
+.nl-active .nl-h { font-size: 12px; color: var(--text-2); margin-bottom: 4px; }
+.nl-active.near .nl-h b { color: var(--sev-crit); }
+.nl-list li > span { display: block; }
+.nlsk { height: 405px; }
+@media (max-width: 1099px) { .nlsk { height: 424px; } }
+@media (max-width: 699px) { .nlsk { height: 520px; } }
+
+/* ---------- Brandstofprijzen ---------- */
+.fuel .chg { min-width: 6em; }
+.fusk { height: 124px; }
+@media (max-width: 699px) { .fusk { height: 141px; } }
+
+/* ---------- Afvalkalender ---------- */
+.waste { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+.waste li { display: flex; gap: 10px; padding: 5px 0; border-top: 1px solid var(--line); align-items: baseline; }
+.waste li:first-child { border-top: 0; }
+.waste li.soon .wd b { color: var(--accent); }
+.waste .wd { flex: none; width: 9.5em; }
+.waste .wd .m { color: var(--text-3); font-size: 12px; }
+.waste .wt { display: flex; flex-wrap: wrap; gap: 4px 12px; min-width: 0; }
+.wask { height: 90px; }
+@media (max-width: 699px) { .wask { height: 107px; } }
+
+/* ---------- Trending and coverage ---------- */
+.trend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 10px; }
+.trend .tl { font-size: 12px; font-weight: 650; color: var(--text-2); text-transform: uppercase; letter-spacing: .03em; margin-right: 2px; }
+.tchip { font: inherit; font-size: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); border-radius: 999px; padding: 2px 10px; cursor: pointer; min-height: 24px; }
+.tchip:hover { border-color: var(--line-strong); }
+.tchip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.rel .covbtn { font: inherit; font-size: inherit; background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; text-decoration: underline; min-height: 24px; }
+.cov { list-style: none; margin: 4px 0 6px; padding: 6px 8px; border-left: 2px solid var(--line-strong); font-size: 12px; display: grid; gap: 3px; }
+.cov li { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+.cov .ct { color: var(--text-3); font-variant-numeric: tabular-nums; }
+.cov a { flex: 1 1 14rem; min-width: 0; }
+.cov .tag.first { color: var(--accent); }
+
+/* ---------- Bewaard: notes, labels, export ---------- */
+.saved-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 10px; font-size: 12px; }
+.saved-bar .sp { flex: 1; }
+.saved-bar .tl { font-weight: 650; color: var(--text-2); }
+.snote { margin-top: 4px; font-size: 12px; }
+.snote .nt { margin: 0 0 2px; white-space: pre-wrap; color: var(--text-2); }
+.snote .tags { margin: 0 0 2px; display: flex; gap: 4px; flex-wrap: wrap; }
+.snote textarea, .snote input { width: 100%; margin: 4px 0; }
+
 /* ---------- Economie in cijfers ---------- */
 .egrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .etile { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-width: 0; }
@@ -880,6 +931,7 @@ textarea.json {
     <div id="welcome" hidden></div>
     <div class="live" aria-live="polite"><button class="newbtn" id="new-items" type="button" hidden></button></div>
     <div class="notices" id="notices"></div>
+    <div class="trend" id="trending" role="group" aria-label="Trending onderwerpen" hidden></div>
     <div id="stream" aria-busy="true"></div>
     <button class="more" id="more" type="button" hidden>Meer berichten</button>
   </section>
@@ -914,6 +966,15 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.10.0</h3>
+    <ul>
+      <li>Nieuw paneel NL-Alert: actieve en recente NL-Alerts, met of het bericht jouw omgeving betreft.</li>
+      <li>Nieuwe panelen Afvalkalender (je ophaaldagen) en Brandstofprijzen (gemiddelde adviesprijs per liter).</li>
+      <li>Pushmeldingen (als de beheerder ze aanzet): NL-Alert, KNMI code oranje/rood, dreigingsniveau, aardbevingen, groot nieuws en afval.</li>
+      <li>Trending onderwerpen boven het nieuws, en per verhaal een dekkingsoverzicht: welke bronnen, en wie het eerst meldde.</li>
+      <li>Bewaard: notities, labels en exporteren naar Markdown of JSON. Bronnen exporteren en importeren als OPML.</li>
+      <li>Aardbevingen: alleen de afgelopen 31 dagen.</li>
+    </ul>
     <h3>Versie 1.9.0</h3>
     <ul>
       <li>Nieuw paneel Economie in cijfers: inflatie, werkloosheid, de ECB-rente en de euro in dollar (Eurostat, ECB).</li>
@@ -994,6 +1055,15 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.10.0</h3>
+    <ul>
+      <li>New panel NL-Alert: active and recent NL-Alerts, and whether a message covers your area.</li>
+      <li>New panels Waste collection (your pickup days) and Fuel prices (average recommended price per litre).</li>
+      <li>Push notifications (when the administrator enables them): NL-Alert, KNMI code orange/red, threat level, earthquakes, big news and waste.</li>
+      <li>Trending topics above the news, and per story a coverage view: which outlets, and who reported first.</li>
+      <li>Saved: notes, labels and export to Markdown or JSON. Export and import sources as OPML.</li>
+      <li>Earthquakes: only the last 31 days.</li>
+    </ul>
     <h3>Version 1.9.0</h3>
     <ul>
       <li>New panel Economy in figures: inflation, unemployment, the ECB rate and the euro in dollars (Eurostat, ECB).</li>
@@ -1106,6 +1176,13 @@ textarea.json {
       <div class="qpresets" id="qpresets" role="group" aria-label="Snel een onderwerp toevoegen"></div>
       <input class="field" type="search" id="src-filter" placeholder="Zoek een bron" aria-label="Zoek een bron" autocomplete="off">
       <div id="src-groups"></div>
+      <div class="row">
+        <button class="btn" type="button" id="opml-export">Exporteren (OPML)</button>
+        <button class="btn" type="button" id="opml-import">Importeren (OPML)</button>
+        <input type="file" id="opml-file" accept=".opml,.xml,text/xml,text/x-opml,application/xml" hidden>
+      </div>
+      <p class="hint">Importeren zet alleen bronnen aan die op deze server staan; andere feeds worden overgeslagen.</p>
+      <p class="msg" id="opml-msg" role="status"></p>
     </section>
     <section aria-labelledby="set-wx-h" id="set-wx">
       <h3 id="set-wx-h">Weerlocatie</h3>
@@ -1145,6 +1222,19 @@ textarea.json {
       <div class="row"><button class="btn" type="button" id="air-wx">Zelfde als weerlocatie</button></div>
       <p class="msg" id="air-msg" role="status"></p>
     </section>
+    <section aria-labelledby="set-waste-h" id="set-waste">
+      <h3 id="set-waste-h">Adres voor de afvalkalender</h3>
+      <p class="hint" id="waste-now"></p>
+      <div class="row" style="margin-top:0">
+        <input class="field" style="width:7.5rem" id="waste-pc" placeholder="Postcode" aria-label="Postcode" autocomplete="postal-code" maxlength="7" spellcheck="false">
+        <input class="field" style="width:5.5rem" id="waste-nr" placeholder="Huisnr." aria-label="Huisnummer" inputmode="numeric" maxlength="5">
+        <input class="field" style="width:5.5rem" id="waste-sfx" placeholder="Toev." aria-label="Toevoeging (letter of toevoeging)" maxlength="6" spellcheck="false">
+        <button class="btn" type="button" id="waste-save">Opslaan</button>
+      </div>
+      <div class="row"><button class="btn" type="button" id="waste-default">Standaardadres</button></div>
+      <p class="hint">Je adres blijft in deze browser. De server gebruikt het alleen om de afvalkalender van je gemeente op te vragen en onthoudt de uitkomst hooguit 6 uur in het geheugen.</p>
+      <p class="msg" id="waste-msg" role="status"></p>
+    </section>
     <section aria-labelledby="set-view-h">
       <h3 id="set-view-h">Weergave</h3>
       <div class="opt"><span id="lbl-mode">Modus<small>Overzicht: het belangrijkste van vandaag op één scherm. Kiosk: voor een wandscherm; groter en schuift vanzelf door. Ook via het adres: ?mode=digest of ?mode=kiosk.</small></span>
@@ -1180,6 +1270,7 @@ textarea.json {
       <label class="opt"><span>Samenvattingen tonen</span><input type="checkbox" class="switch" role="switch" id="show-sum"></label>
       <label class="opt"><span>Zelfde verhaal samenvoegen<small>Artikelen van verschillende bronnen over hetzelfde nieuws worden één bericht.</small></span><input type="checkbox" class="switch" role="switch" id="opt-group"></label>
       <label class="opt"><span>Gelezen berichten verbergen</span><input type="checkbox" class="switch" role="switch" id="opt-hideread"></label>
+      <label class="opt"><span>Trending onderwerpen tonen<small>Woorden die in de afgelopen 3 uur opvallend vaak in koppen staan.</small></span><input type="checkbox" class="switch" role="switch" id="opt-trending"></label>
       <label class="opt" id="opt-images-row" hidden><span>Afbeeldingen tonen<small>Via deze server: uitgevers zien je bezoek niet.</small></span><input type="checkbox" class="switch" role="switch" id="opt-images"></label>
     </section>
     <section aria-labelledby="set-watch-h" id="set-watch">
@@ -1188,6 +1279,17 @@ textarea.json {
       <label class="opt"><span>Volgen</span><input class="field" style="max-width:62%" id="watch-in" placeholder="bijv. WordPress, Fortinet, Utrecht" autocomplete="off"></label>
       <label class="opt"><span>Verbergen</span><input class="field" style="max-width:62%" id="mute-in" placeholder="bijv. songfestival, royalty" autocomplete="off"></label>
       <p class="msg" id="watch-msg" role="status"></p>
+    </section>
+    <section aria-labelledby="set-push-h" id="set-push" hidden>
+      <h3 id="set-push-h">Meldingen</h3>
+      <p class="hint">Krijg een melding op dit apparaat, ook als het dashboard dicht is. Voor NL-Alerts wordt je weerlocatie (afgerond op ongeveer 1 km) naar deze server gestuurd, en voor de afvalmelding je adres.</p>
+      <div id="push-topics" role="group" aria-labelledby="set-push-h"></div>
+      <div class="row">
+        <button class="btn primary" type="button" id="push-on">Meldingen aanzetten</button>
+        <button class="btn" type="button" id="push-test" hidden>Testmelding</button>
+        <button class="btn" type="button" id="push-off" hidden>Uitzetten</button>
+      </div>
+      <p class="msg" id="push-msg" role="status"></p>
     </section>
     <section aria-labelledby="set-panels-h">
       <h3 id="set-panels-h">Panelen</h3>
@@ -1218,13 +1320,16 @@ const KEY = 'ndb:prefs', SEEN_KEY = 'ndb:seen', READ_KEY = 'ndb:read', SAVED_KEY
 const PANELS = {
   weather: 'Weer',
   today: 'Vandaag',
+  waste: 'Afvalkalender',
   air: 'Luchtkwaliteit',
   pollen: 'Hooikoorts',
   traffic: 'Verkeer',
   trains: 'Treinstoringen',
   alarms: 'Alarmeringen',
+  nlalert: 'NL-Alert',
   quakes: 'Aardbevingen',
   energy: 'Energieprijzen',
+  fuel: 'Brandstofprijzen',
   economy: 'Economie in cijfers',
   markets: 'Beurs',
   politics: 'Politiek vandaag',
@@ -1242,7 +1347,7 @@ const MIN = 60e3;
 const DEFAULTS = {
   v: 2, theme: 'auto', sources: null, known: [], pageSize: 60, summaries: true,
   density: 'compact', category: 'all', weather: null, threatTab: 'ips', advFilter: 'all',
-  lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, watch: [], mute: [],
+  lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, trending: true, pushTopics: null, waste: null, watch: [], mute: [],
   panels: { order: PANEL_IDS.slice(), collapsed: {}, hidden: {} },
 };
 
@@ -1779,9 +1884,9 @@ const EN = {
   "Dit paneel staat uit in config.yaml (quakes.enabled).": "This panel is disabled in config.yaml (quakes.enabled).",
   "KNMI is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.": "KNMI is unreachable ({err}); retrying automatically.",
   "Aardbevingen worden voor het eerst opgehaald.": "Earthquakes are being fetched for the first time.",
-  " beving in de afgelopen 30 dagen": " earthquake in the last 30 days",
-  " bevingen in de afgelopen 30 dagen": " earthquakes in the last 30 days",
-  " · sterkste in {n} dagen: ": " · strongest in {n} days: ",
+  " beving in de afgelopen {n} dagen": " earthquake in the last {n} days",
+  " bevingen in de afgelopen {n} dagen": " earthquakes in the last {n} days",
+  " · sterkste: ": " · strongest: ",
   "diepte {d} km": "depth {d} km",
   "geïnduceerd": "induced",
   "Veroorzaakt door menselijke activiteit, zoals gaswinning": "Caused by human activity, such as gas extraction",
@@ -1840,6 +1945,135 @@ const EN = {
   "ECB {v}": "ECB {v}",
   "Eurostat en ECB · economie": "Eurostat and ECB · economy",
   "Yahoo Finance · beurs": "Yahoo Finance · markets",
+  // 1.10: NL-Alert, Brandstofprijzen, Afvalkalender, trending, dekking, bewaard, OPML, meldingen
+  "Afvalkalender": "Waste collection",
+  "NL-Alert": "NL-Alert",
+  "Brandstofprijzen": "Fuel prices",
+  "Afval": "Waste",
+  "NL-Alerts konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.": "NL-Alerts could not be loaded ({err}). Retrying automatically.",
+  "Dit paneel staat uit in config.yaml (nlalert.enabled).": "This panel is disabled in config.yaml (nlalert.enabled).",
+  "NL-Alert is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.": "NL-Alert is unreachable ({err}); retrying automatically.",
+  "NL-Alerts worden voor het eerst opgehaald.": "NL-Alerts are being fetched for the first time.",
+  "1 actieve NL-Alert": "1 active NL-Alert",
+  "{n} actieve NL-Alerts": "{n} active NL-Alerts",
+  "Geen actieve NL-Alerts": "No active NL-Alerts",
+  " · {n} in de afgelopen 31 dagen": " · {n} in the last 31 days",
+  "In jouw omgeving": "In your area",
+  "Elders in Nederland": "Elsewhere in the Netherlands",
+  "jouw omgeving": "your area",
+  "ingetrokken": "withdrawn",
+  "Geen NL-Alerts in de afgelopen 31 dagen.": "No NL-Alerts in the last 31 days.",
+  " · \"jouw omgeving\": je weerlocatie ({name}) ligt in het gebied van het bericht": " · \"your area\": your weather location ({name}) lies within the message area",
+  " · in jouw omgeving": " · in your area",
+  "Afgelopen 24 uur": "Last 24 hours",
+  "Brandstofprijzen konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.": "Fuel prices could not be loaded ({err}). Retrying automatically.",
+  "Dit paneel staat uit in config.yaml (fuel.enabled).": "This panel is disabled in config.yaml (fuel.enabled).",
+  "UnitedConsumers is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.": "UnitedConsumers is unreachable ({err}); retrying automatically.",
+  "Brandstofprijzen worden voor het eerst opgehaald.": "Fuel prices are being fetched for the first time.",
+  "{c} ct": "{c} ct",
+  "Gemiddelde adviesprijs per liter": "Average recommended price per litre",
+  "Adviesprijs van {date}, verschil met gisteren · ": "Recommended price of {date}, change since yesterday · ",
+  "aan de pomp is het vaak goedkoper · Bron: ": "often cheaper at the pump · Source: ",
+  "Euro95 (E10)": "Euro95 (E10)",
+  "De afvalkalender kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.": "The waste calendar could not be loaded ({err}). Retrying automatically.",
+  "Stel je adres in onder waste in config.yaml (gemeentelijke afvalkalender, iCal-link of Home Assistant).": "Set your address under waste in config.yaml (municipal waste calendar, iCal link or Home Assistant).",
+  "De afvalkalender is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.": "The waste calendar is unreachable ({err}); retrying automatically.",
+  "De afvalkalender wordt voor het eerst opgehaald.": "The waste calendar is being fetched for the first time.",
+  "Geen ophaaldagen gevonden in de kalender.": "No collection days found in the calendar.",
+  "de afvalkalender van je gemeente": "your municipality's waste calendar",
+  "een iCal-agenda": "an iCal calendar",
+  "Bron: {src} · adres ingesteld op de server": "Source: {src} · address set on the server",
+  "Trending": "Trending",
+  "Trending onderwerpen": "Trending topics",
+  "In {n} bronnen in de afgelopen 3 uur. Klik om te zoeken.": "In {n} sources in the last 3 hours. Click to search.",
+  "Trending onderwerpen tonen": "Show trending topics",
+  "Woorden die in de afgelopen 3 uur opvallend vaak in koppen staan.": "Words that appear unusually often in headlines in the last 3 hours.",
+  "Dekking ({n} bronnen)": "Coverage ({n} sources)",
+  "eerst": "first",
+  "+{n} min": "+{n} min",
+  "+{n} u": "+{n} h",
+  "Notitie en labels wijzigen": "Edit note and labels",
+  "Notitie of labels toevoegen": "Add a note or labels",
+  "Notitie": "Note",
+  "Labels, gescheiden door komma's": "Labels, separated by commas",
+  "labels, bijv. werk, later lezen": "labels, e.g. work, read later",
+  "Annuleren": "Cancel",
+  "Labels:": "Labels:",
+  "Exporteren:": "Export:",
+  "Bewaarde berichten": "Saved articles",
+  "Labels": "Labels",
+  "Geen bewaarde berichten met label #{tag}.": "No saved articles with label #{tag}.",
+  "Exporteren (OPML)": "Export (OPML)",
+  "Importeren (OPML)": "Import (OPML)",
+  "Importeren zet alleen bronnen aan die op deze server staan; andere feeds worden overgeslagen.": "Import only turns on sources that exist on this server; other feeds are skipped.",
+  "{n} bronnen geëxporteerd.": "{n} sources exported.",
+  "Dit bestand is te groot voor een OPML-lijst (max. 1 MB).": "This file is too large for an OPML list (max. 1 MB).",
+  "Dit is geen geldig OPML-bestand.": "This is not a valid OPML file.",
+  "{n} feeds gelezen: {a} bronnen aangezet, {b} stonden al aan. ": "{n} feeds read: {a} sources turned on, {b} were already on. ",
+  "{k} feeds staan niet in de configuratie van deze server en zijn overgeslagen.": "{k} feeds are not in this server's configuration and were skipped.",
+  "Krijg een melding op dit apparaat, ook als het dashboard dicht is. Voor NL-Alerts wordt je weerlocatie (afgerond op ongeveer 1 km) naar deze server gestuurd.": "Get notified on this device, even when the dashboard is closed. For NL-Alerts your weather location (rounded to about 1 km) is sent to this server.",
+  "Meldingen aanzetten": "Turn on notifications",
+  "Testmelding": "Test notification",
+  "Uitzetten": "Turn off",
+  "Dreigingsniveau NCTV verandert": "NCTV threat level changes",
+  "KNMI code oranje of rood": "KNMI code orange or red",
+  "NL-Alert in jouw omgeving (je weerlocatie)": "NL-Alert in your area (your weather location)",
+  "Aardbeving vanaf M{m}": "Earthquake from M{m}",
+  "Groot nieuws: {n} of meer bronnen binnen een uur": "Big news: {n} or more sources within an hour",
+  "Afval: de avond vóór de ophaaldag ({h}:00)": "Waste: the evening before collection ({h}:00)",
+  "Deze browser ondersteunt geen pushmeldingen. Op iPhone en iPad: zet het dashboard eerst op je beginscherm (Deel → Zet op beginscherm) en open het daar.": "This browser does not support push notifications. On iPhone and iPad: first add the dashboard to your home screen (Share → Add to Home Screen) and open it there.",
+  "Meldingen zijn geblokkeerd in je browser. Sta ze toe via het slotje naast het adres.": "Notifications are blocked in your browser. Allow them via the padlock next to the address.",
+  "Meldingen staan aan op dit apparaat.": "Notifications are on for this device.",
+  "Onderwerpen bijgewerkt.": "Topics updated.",
+  "Je hebt geen toestemming gegeven voor meldingen.": "You did not allow notifications.",
+  "Meldingen aanzetten is mislukt: {err}": "Turning on notifications failed: {err}",
+  "Meldingen staan uit op dit apparaat.": "Notifications are off for this device.",
+  "Testmelding verstuurd.": "Test notification sent.",
+  "meldingen staan uit": "notifications are off",
+  "alleen vanaf deze site": "only from this site",
+  "dit apparaat is niet aangemeld": "this device is not registered",
+  "de pushdienst kent dit apparaat niet meer; zet meldingen opnieuw aan": "the push service no longer knows this device; turn notifications on again",
+  "onbekende of ongeldige pushdienst": "unknown or invalid push service",
+  "te veel verzoeken": "too many requests",
+  "UnitedConsumers · brandstofprijzen": "UnitedConsumers · fuel prices",
+  // 1.10: adres voor de afvalkalender
+  "standaardadres": "default address",
+  "geen adres": "no address",
+  "Adres voor de afvalkalender wijzigen (nu {name})": "Change the waste calendar address (now {name})",
+  "Dit paneel staat uit in config.yaml (waste.enabled).": "This panel is disabled in config.yaml (waste.enabled).",
+  "Stel je adres in om je ophaaldagen te zien.": "Set your address to see your collection days.",
+  "Adres instellen": "Set address",
+  "Dit adres staat niet in de afvalkalenders die deze server kent (onder meer Den Haag, HVC, GAD, DAR en Cyclus). Controleer postcode en huisnummer.": "This address is not in the waste calendars this server knows (including Den Haag, HVC, GAD, DAR and Cyclus). Check the postcode and house number.",
+  "Dit adres staat niet in de afvalkalenders die deze server kent (onder meer Den Haag, HVC, GAD, DAR en Cyclus).": "This address is not in the waste calendars this server knows (including Den Haag, HVC, GAD, DAR and Cyclus).",
+  "Bron: afvalkalender ": "Source: waste calendar ",
+  "Bron: {src} · standaardadres van deze server": "Source: {src} · this server's default address",
+  "Adres voor de afvalkalender": "Address for the waste calendar",
+  "Postcode": "Postcode",
+  "Huisnr.": "No.",
+  "Huisnummer": "House number",
+  "Toev.": "Add.",
+  "Toevoeging (letter of toevoeging)": "Addition (letter or suffix)",
+  "Standaardadres": "Default address",
+  "Je adres blijft in deze browser. De server gebruikt het alleen om de afvalkalender van je gemeente op te vragen en onthoudt de uitkomst hooguit 6 uur in het geheugen.": "Your address stays in this browser. The server only uses it to ask your municipality's waste calendar and keeps the result in memory for at most 6 hours.",
+  "Nu: {addr}.": "Now: {addr}.",
+  "Nu: het standaardadres van deze server.": "Now: this server's default address.",
+  "Nog geen adres ingesteld.": "No address set yet.",
+  "Standaardadres gebruiken": "Use the default address",
+  "Adres wissen": "Clear address",
+  "Vul een postcode in zoals 2511 AB.": "Enter a postcode like 2511 AB.",
+  "Vul een huisnummer in.": "Enter a house number.",
+  "Een toevoeging bestaat uit letters of cijfers.": "An addition consists of letters or digits.",
+  "Adres opzoeken…": "Looking up the address…",
+  "Opgeslagen; de afvalkalender is nu niet bereikbaar ({err}).": "Saved; the waste calendar is unreachable right now ({err}).",
+  "De afvalkalender wordt nu getoond voor {addr}.": "The waste calendar now shows {addr}.",
+  "Opzoeken lukt nu niet: {err}.": "Lookup failed: {err}.",
+  "De afvalkalender toont weer het standaardadres.": "The waste calendar shows the default address again.",
+  "Adres gewist.": "Address cleared.",
+  "Afval: de avond vóór de ophaaldag ({h}:00), voor je adres": "Waste: the evening before collection ({h}:00), for your address",
+  "Krijg een melding op dit apparaat, ook als het dashboard dicht is. Voor NL-Alerts wordt je weerlocatie (afgerond op ongeveer 1 km) naar deze server gestuurd, en voor de afvalmelding je adres.": "Get notified on this device, even when the dashboard is closed. For NL-Alerts your weather location (rounded to about 1 km) is sent to this server, and for the waste reminder your address.",
+  "postcode of huisnummer ongeldig": "postcode or house number invalid",
+  "verouderd: de afvalkalender is nu niet bereikbaar": "outdated: the waste calendar is unreachable right now",
+  "de afvalkalenders zijn niet bereikbaar": "the waste calendars are unreachable",
 };
 
 // Sentences the server composes from parts (rain summary, directions, source names).
@@ -1980,7 +2214,12 @@ function sanitize(p) {
     d.alarmCityName = typeof p.alarmCityName === 'string' ? p.alarmCityName.slice(0, 60) : null;
   }
   if (['all', 'high', 'new', 'watch'].includes(p.advFilter)) d.advFilter = p.advFilter;
-  for (const k of ['onboarded', 'group', 'hideRead', 'images']) if (typeof p[k] === 'boolean') d[k] = p[k];
+  for (const k of ['onboarded', 'group', 'hideRead', 'images', 'trending']) if (typeof p[k] === 'boolean') d[k] = p[k];
+  if (p.waste && typeof p.waste === 'object') {
+    const pc = String(p.waste.postcode || '').toUpperCase().replace(/\s+/g, ''), nr = Number(p.waste.number), sfx = String(p.waste.suffix || '').trim().slice(0, 6);
+    if (/^[1-9]\d{3}[A-Z]{2}$/.test(pc) && Number.isInteger(nr) && nr >= 1 && nr <= 99999 && /^[A-Za-z0-9-]*$/.test(sfx)) d.waste = { postcode: pc, number: nr, suffix: sfx };
+  }
+  if (Array.isArray(p.pushTopics)) d.pushTopics = p.pushTopics.filter(x => typeof x === 'string' && /^[a-z]{2,12}$/.test(x)).slice(0, 10);
   const terms = a => Array.isArray(a) ? [...new Set(a.filter(t => typeof t === 'string').map(t => t.trim().slice(0, 60)).filter(Boolean))].slice(0, 50) : [];
   d.watch = terms(p.watch);
   d.mute = terms(p.mute);
@@ -2059,19 +2298,21 @@ function toggleRead(li) {
   else { readMap[it.id] = Date.now(); li.classList.add('read'); }
   persistRead();
 }
+const tagList = s => [...new Set(String(s || '').split(',').map(x => x.trim().toLowerCase().slice(0, 24)).filter(Boolean))].slice(0, 8);
 let saved = (() => {
   const a = store.get(SAVED_KEY);
   if (!Array.isArray(a)) return [];
   return a.filter(x => x && typeof x.id === 'string' && typeof x.title === 'string' && safeHref(x.url) && typeof x.source === 'string')
     .slice(0, 200).map(x => ({ id: x.id, source: x.source, title: x.title.slice(0, 300), summary: typeof x.summary === 'string' ? x.summary.slice(0, 400) : '',
-      url: x.url, published: x.published, savedAt: Number(x.savedAt) || 0, date: new Date(x.published) }));
+      url: x.url, published: x.published, savedAt: Number(x.savedAt) || 0, date: new Date(x.published),
+      note: typeof x.note === 'string' ? x.note.slice(0, 500) : '', tags: Array.isArray(x.tags) ? tagList(x.tags.filter(tg => typeof tg === 'string').join(',')) : [] }));
 })();
 const isSaved = id => saved.some(x => x.id === id);
 function toggleSaved(it) {
   if (isSaved(it.id)) saved = saved.filter(x => x.id !== it.id);
   else saved.unshift({ id: it.id, source: it.source, title: it.title, summary: it.summary || '', url: it.url, published: it.published, savedAt: Date.now(), date: new Date(it.published) });
   saved = saved.slice(0, 200);
-  store.set(SAVED_KEY, saved.map(({ date, ...x }) => x));
+  persistSaved();
   for (const b of document.querySelectorAll(`#stream .item[data-id="${it.id}"] .bm`)) b.setAttribute('aria-pressed', String(isSaved(it.id)));
   buildChips();
   if (prefs.category === 'saved') renderStream();
@@ -2275,7 +2516,7 @@ function matchesFilter(it) {
   if (prefs.hideRead && isRead(it)) return false;
   return matchesQuery(it);
 }
-function renderAll() { renderWelcome(); buildChips(); renderStream(); renderNotices(); renderMeta(); renderNewButton(); if (viewMode === 'digest') queueDigest(); }
+function renderAll() { renderWelcome(); buildChips(); renderTrending(); renderStream(); renderNotices(); renderMeta(); renderNewButton(); if (viewMode === 'digest') queueDigest(); }
 function renderMeta() {
   // freshness of the server data: the most recent successful fetch among the chosen sources
   const ts = enabledIds().map(id => status[id]?.fetched_at).filter(Boolean).map(t => new Date(t)).sort((a, b) => b - a)[0];
@@ -2347,15 +2588,24 @@ function renderStream() {
 function renderSaved() {
   const stream = $('#stream');
   $('#more').hidden = true;
-  const list = saved.filter(matchesQuery);
+  const noteHay = x => fold(`${x.note || ''} ${(x.tags || []).join(' ')}`);
+  const list = saved.filter(x => (!savedTag || x.tags?.includes(savedTag)) && (matchesQuery(x) || (query && query.split(/\s+/).every(q => noteHay(x).includes(q)))));
+  const tags = new Map();
+  for (const x of saved) for (const tg of x.tags || []) tags.set(tg, (tags.get(tg) || 0) + 1);
+  const bar = saved.length ? h('div', { class: 'saved-bar' },
+    tags.size ? [h('span', { class: 'tl', text: t('Labels:') }), ...[...tags].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([tg, n]) =>
+      h('button', { type: 'button', class: 'tchip', 'aria-pressed': String(savedTag === tg), onclick: () => { savedTag = savedTag === tg ? null : tg; renderSaved(); } }, `#${tg} (${n})`))] : null,
+    h('span', { class: 'sp' }), h('span', { text: t('Exporteren:') }),
+    h('button', { type: 'button', class: 'btn', onclick: () => exportSaved('md'), text: 'Markdown' }),
+    h('button', { type: 'button', class: 'btn', onclick: () => exportSaved('json'), text: 'JSON' })) : null;
   if (!list.length) {
-    stream.replaceChildren(h('div', { class: 'empty' }, h('p', { text: saved.length
-      ? t('Geen bewaarde berichten gevonden voor “{q}”.', { q: $('#q').value.trim() })
-      : 'Nog niets bewaard. Bewaar een bericht met het bladwijzer-icoon, of met de toets s.' })));
+    stream.replaceChildren(...[bar, h('div', { class: 'empty' }, h('p', { text: saved.length
+      ? (savedTag && !query ? t('Geen bewaarde berichten met label #{tag}.', { tag: savedTag }) : t('Geen bewaarde berichten gevonden voor “{q}”.', { q: $('#q').value.trim() }))
+      : 'Nog niets bewaard. Bewaar een bericht met het bladwijzer-icoon, of met de toets s.' }))].filter(Boolean));
     return;
   }
-  stream.replaceChildren(h('section', { class: 'day' }, h('h3', { id: 'd-saved', text: t('Bewaard ({n})', { n: list.length }) }),
-    h('ul', { class: 'items', 'aria-labelledby': 'd-saved' }, list.map(itemEl))));
+  stream.replaceChildren(bar, h('section', { class: 'day' }, h('h3', { id: 'd-saved', text: t('Bewaard ({n})', { n: list.length }) }),
+    h('ul', { class: 'items', 'aria-labelledby': 'd-saved' }, list.map(it => { const li = itemEl(it); li.firstElementChild.append(savedExtra(it)); return li; }))));
 }
 function itemEl(it) {
   const isNew = newIds.has(it.id), img = prefs.images && it.image && !it.image.startsWith('http:') ? it.image : null;
@@ -2366,7 +2616,9 @@ function itemEl(it) {
         watchMatch(it) ? h('span', { class: 'tag watch', text: t('volglijst') }) : null, extLink(it.url, it.title)),
       it.summary ? h('p', { class: 'sum', text: it.summary }) : null,
       related.length ? h('p', { class: 'rel' }, t('Ook bij: '), related.map((r, i) => [i ? ', ' : '',
-        h('a', { href: safeHref(r.url), target: '_blank', rel: 'noopener noreferrer', title: r.title, 'data-rid': r.id, text: srcName(r.source) })])) : null,
+        h('a', { href: safeHref(r.url), target: '_blank', rel: 'noopener noreferrer', title: r.title, 'data-rid': r.id, text: srcName(r.source) })]),
+        ' · ', h('button', { type: 'button', class: 'covbtn', 'aria-expanded': 'false', onclick: e => toggleCoverage(e.currentTarget, it),
+          text: t('Dekking ({n} bronnen)', { n: related.length + 1 }) })) : null,
       h('div', { class: 'meta' },
         h('span', { class: 'src' }, h('span', { class: 'dot', style: `--h:${hue(it.source)}` }), h('span', { text: srcName(it.source) })),
         timeEl(it.date),
@@ -2471,6 +2723,9 @@ const freshOf = {
   ap: () => { const s = panelData.ap?.status; return s && { ts: s.fetched_at, max: 65, stale: !!s.error }; },
   alarms: () => { const d = panelData.alarms?.data; return d?.enabled && { ts: d.fetched_at, max: 6, stale: !!d.stale }; },
   traffic: () => { const d = panelData.traffic?.data; return d?.enabled && { ts: d.fetched_at, max: 15, stale: !!d.error }; },
+  nlalert: () => { const d = panelData.nlalert?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 12, stale: !!d.error }; },
+  fuel: () => { const d = panelData.fuel?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 400, stale: !!d.error }; },
+  waste: () => { const d = panelData.waste?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 780, stale: !!d.error }; },
   economy: () => { const d = panelData.economy?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 780, stale: !!d.error }; },
   markets: () => { const d = panelData.markets?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 40, stale: !!d.error }; },
   pollen: () => { const d = panelData.pollen?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 130, stale: !!d.stale }; },
@@ -2501,6 +2756,9 @@ const panelRenderers = {
   ransomware: renderRansomware,
   pollen: renderPollen,
   economy: renderEconomy,
+  nlalert: renderNLAlert,
+  fuel: renderFuel,
+  waste: renderWaste,
   markets: renderMarkets,
   utilities: renderUtilities,
   quakes: renderQuakes,
@@ -2683,6 +2941,8 @@ function setWeatherLocation(loc, msg) {
   renderPanel('weather');
   loadWeather();
   if (!prefs.air) { loadAir(); loadPollen(); } // they follow the weather location
+  panelData.nlalert = null; renderPanel('nlalert'); loadNLAlert();
+  pushSub().then(sub => sub && Notification.permission === 'granted' && pushRegister(sub)).catch(() => {}); // NL-Alert area follows the place
 }
 function updateWxLocHint() {
   const w = prefs.weather;
@@ -3253,7 +3513,8 @@ async function loadEnergy() {
   renderPanel('energy');
 }
 let energyDay = 'today';
-const eur = (v, d = 2) => new Intl.NumberFormat(locale(), { style: 'currency', currency: 'EUR', minimumFractionDigits: d, maximumFractionDigits: d }).format(v);
+const eur = (v, d = 2) => new Intl.NumberFormat(locale(), { style: 'currency', currency: 'EUR', minimumFractionDigits: d, maximumFractionDigits: d })
+  .format(Math.abs(v) < 0.5 / 10 ** d ? 0 : v); // no "-€0.00" for prices just below zero
 const hourSpan = (from, hours) => `${fmt.time.format(from)}–${fmt.time.format(new Date(+from + hours * 36e5))}`;
 function cheapestWindow(pts, n = 3) {
   let best = null;
@@ -3675,6 +3936,9 @@ function renderUtilities(body) {
 }
 
 // ---------------------------------------------------------------- aardbevingen (KNMI)
+const RECENT_DAYS = 31; // Aardbevingen, AP and Gezondheid show only items of the last 31 days
+const recentSince = () => Math.floor(Date.now() / 1000) - RECENT_DAYS * 86400;
+const isRecent = it => Date.now() - new Date(it.published) <= RECENT_DAYS * 864e5;
 async function loadQuakes() {
   try { panelData.quakes = { data: await api('api/quakes') }; }
   catch (e) { panelData.quakes = { ...(panelData.quakes || {}), error: e }; }
@@ -3689,17 +3953,17 @@ function renderQuakes(body) {
   if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('Aardbevingen konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
   if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (quakes.enabled).' })); return; }
   if (!r.quakes) { body.replaceChildren(h('p', { class: 'pnote', text: r.error ? t('KNMI is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: r.error }) : t('Aardbevingen worden voor het eerst opgehaald.') })); return; }
-  const qs = r.quakes, out = [], month = qs.filter(q => Date.now() - new Date(q.time) < 30 * 864e5);
+  const qs = r.quakes.filter(q => Date.now() - new Date(q.time) <= RECENT_DAYS * 864e5), out = [];
   const strongest = qs.reduce((a, q) => (q.mag != null && (a == null || q.mag > a.mag) ? q : a), null);
-  out.push(h('p', { class: 'eline' }, h('b', { text: String(month.length) }), t(month.length === 1 ? ' beving in de afgelopen 30 dagen' : ' bevingen in de afgelopen 30 dagen'),
-    strongest ? [t(' · sterkste in {n} dagen: ', { n: r.days }), h('b', { text: magText(strongest) }), ` ${strongest.place} (${fmt.short.format(new Date(strongest.time))})`] : null));
   if (qs.length) {
+    out.push(h('p', { class: 'eline' }, h('b', { text: String(qs.length) }), t(qs.length === 1 ? ' beving in de afgelopen {n} dagen' : ' bevingen in de afgelopen {n} dagen', { n: RECENT_DAYS }),
+      strongest ? [t(' · sterkste: '), h('b', { text: magText(strongest) }), ` ${strongest.place} (${fmt.short.format(new Date(strongest.time))})`] : null));
     out.push(h('ul', { class: 'plist' }, qs.slice(0, 6).map(q => h('li', null,
       h('span', { class: 'mag ' + magClass(q.mag), text: magText(q) }), h('span', { translate: 'no' }, extLink(q.url, q.place)),
       h('div', { class: 'm' }, h('span', { text: `${fmt.short.format(new Date(q.time))} ${fmt.time.format(new Date(q.time))}` }), h('span', { text: t('diepte {d} km', { d: q.depth_km.toLocaleString(locale()) }) }),
         q.induced ? h('span', { class: 'tag plain', title: t('Veroorzaakt door menselijke activiteit, zoals gaswinning'), text: t('geïnduceerd') }) : null)))));
   } else {
-    out.push(h('p', { class: 'pnote', text: t('Geen aardbevingen in de afgelopen {n} dagen.', { n: r.days }) }));
+    out.push(h('p', { class: 'pnote', text: t('Geen aardbevingen in de afgelopen {n} dagen.', { n: RECENT_DAYS }) }));
   }
   out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://www.knmi.nl/nederland-nu/seismologie/aardbevingen', 'KNMI'), t(' (open data) · explosies en luchtknallen weggelaten')));
   body.replaceChildren(...out);
@@ -3806,6 +4070,379 @@ function renderMarkets(body) {
   body.replaceChildren(...out);
 }
 
+// ---------------------------------------------------------------- NL-Alert
+const nlLoc = () => prefs.weather || null;
+async function loadNLAlert() {
+  const l = nlLoc();
+  try { panelData.nlalert = { data: await api('api/nlalert' + (l ? `?lat=${l.lat}&lon=${l.lon}` : '')) }; }
+  catch (e) { panelData.nlalert = { ...(panelData.nlalert || {}), error: e }; }
+  renderPanel('nlalert');
+}
+const nlText = a => lang === 'en' && a.text_en ? a.text_en : a.text;
+function renderNLAlert(body) {
+  const st = panelData.nlalert;
+  if (!st) { body.replaceChildren(h('div', { class: 'tsk nlsk', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:85%' }))); return; }
+  const r = st.data;
+  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('NL-Alerts konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
+  if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (nlalert.enabled).' })); return; }
+  if (!r.alerts) { body.replaceChildren(h('p', { class: 'pnote', text: r.error ? t('NL-Alert is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: r.error }) : t('NL-Alerts worden voor het eerst opgehaald.') })); return; }
+  const now = Date.now();
+  const isActive = a => !a.withdrawn && new Date(a.start) <= now && (!a.stop || new Date(a.stop) > now);
+  const active = r.alerts.filter(isActive), rest = r.alerts.filter(a => !isActive(a));
+  const when = a => `${fmt.short.format(new Date(a.start))} ${fmt.time.format(new Date(a.start))}`;
+  const out = [h('p', { class: 'eline' }, active.length
+    ? h('b', { class: 'nl-on', text: t(active.length === 1 ? '1 actieve NL-Alert' : '{n} actieve NL-Alerts', { n: active.length }) })
+    : t('Geen actieve NL-Alerts'), t(' · {n} in de afgelopen 31 dagen', { n: r.alerts.length }))];
+  for (const a of active) {
+    out.push(h('div', { class: 'nl-active' + (a.near ? ' near' : ''), role: 'alert' },
+      h('p', { class: 'nl-h' }, h('b', { text: a.near ? t('In jouw omgeving') : t('Elders in Nederland') }), ` · ${when(a)}`),
+      h('p', { translate: 'no', text: nlText(a) })));
+  }
+  if (rest.length) {
+    out.push(h('ul', { class: 'plist nl-list' }, rest.slice(0, 5).map(a => h('li', null,
+      h('span', { translate: 'no', text: truncateText(nlText(a), 150) }),
+      h('div', { class: 'm' }, h('span', { text: when(a) }),
+        a.near ? h('span', { class: 'tag plain', text: t('jouw omgeving') }) : null,
+        a.withdrawn ? h('span', { class: 'tag plain', text: t('ingetrokken') }) : null)))));
+  } else if (!active.length) {
+    out.push(h('p', { class: 'pnote', text: t('Geen NL-Alerts in de afgelopen 31 dagen.') }));
+  }
+  out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://actueel.nl-alert.nl/', 'NL-Alert'),
+    t(' · "jouw omgeving": je weerlocatie ({name}) ligt in het gebied van het bericht', { name: wxLocName() })));
+  body.replaceChildren(...out);
+}
+const truncateText = (s, n) => s.length > n ? s.slice(0, n - 1).replace(/\s+\S*$/, '') + '…' : s;
+
+// ---------------------------------------------------------------- brandstofprijzen
+async function loadFuel() {
+  try { panelData.fuel = { data: await api('api/fuel') }; }
+  catch (e) { panelData.fuel = { ...(panelData.fuel || {}), error: e }; }
+  renderPanel('fuel');
+}
+const euro3 = v => '€ ' + v.toLocaleString(locale(), { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+function renderFuel(body) {
+  const st = panelData.fuel;
+  if (!st) { body.replaceChildren(h('div', { class: 'tsk fusk', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:85%' }))); return; }
+  const r = st.data;
+  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('Brandstofprijzen konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
+  if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (fuel.enabled).' })); return; }
+  const d = r.data;
+  if (!d) { body.replaceChildren(h('p', { class: 'pnote', text: r.error ? t('UnitedConsumers is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: r.error }) : t('Brandstofprijzen worden voor het eerst opgehaald.') })); return; }
+  const chg = c => {
+    const cls = c > 0 ? 'down' : c < 0 ? 'up' : 'flat'; // dearer is bad news: red
+    return h('span', { class: 'chg ' + cls }, h('span', { 'aria-hidden': 'true', text: c > 0 ? '▲ ' : c < 0 ? '▼ ' : '' }),
+      c === 0 ? t('gelijk') : t('{c} ct', { c: (c > 0 ? '+' : '') + c.toLocaleString(locale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }) }));
+  };
+  const out = [h('ul', { class: 'mkt fuel', 'aria-label': t('Gemiddelde adviesprijs per liter') }, d.prices.map(p =>
+    h('li', null, h('span', { class: 'mn', text: tr(p.name) }), h('span', { class: 'mp', text: euro3(p.price) }), chg(p.change))))];
+  out.push(h('p', { class: 'pfoot' }, d.date ? t('Adviesprijs van {date}, verschil met gisteren · ', { date: fmt.date.format(dateOnly(d.date)) }) : '',
+    t('aan de pomp is het vaak goedkoper · Bron: '), extLink('https://www.unitedconsumers.com/tanken/brandstofprijzen', 'UnitedConsumers')));
+  body.replaceChildren(...out);
+}
+
+// ---------------------------------------------------------------- afvalkalender
+const wasteQuery = w => w ? `?postcode=${encodeURIComponent(w.postcode)}&number=${w.number}${w.suffix ? '&suffix=' + encodeURIComponent(w.suffix) : ''}` : '';
+const wasteLabel = () => prefs.waste ? `${prefs.waste.postcode.slice(0, 4)} ${prefs.waste.postcode.slice(4)} ${prefs.waste.number}${prefs.waste.suffix ? ' ' + prefs.waste.suffix : ''}`
+  : catalog?.waste_default ? t('standaardadres') : t('geen adres');
+async function loadWaste() {
+  try { panelData.waste = { data: await api('api/waste' + wasteQuery(prefs.waste)) }; }
+  catch (e) { panelData.waste = { ...(panelData.waste || {}), error: e }; }
+  renderPanel('waste');
+}
+function wasteIcon(type) {
+  const s = type.toLowerCase();
+  return /gft|groente|tuin|bio/.test(s) ? '🍏' : /pmd|plastic|pbd|blik|verpakking/.test(s) ? '🧴' : /papier|karton/.test(s) ? '📦'
+    : /glas/.test(s) ? '🍾' : /textiel|kleding/.test(s) ? '👕' : /kerst/.test(s) ? '🎄' : /grof|snoei/.test(s) ? '🪵' : '🗑️';
+}
+function renderWaste(body, extra) {
+  const st = panelData.waste;
+  const change = h('button', { class: 'linkbtn', type: 'button', onclick: () => openSettings('waste'), 'aria-label': t('Adres voor de afvalkalender wijzigen (nu {name})', { name: wasteLabel() }), text: t('wijzigen') });
+  extra.replaceChildren(h('span', { translate: 'no', text: wasteLabel() + ' · ' }), change);
+  if (!st) { body.replaceChildren(h('div', { class: 'tsk wask', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:85%' }))); return; }
+  const r = st.data;
+  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('De afvalkalender kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
+  if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (waste.enabled).' })); return; }
+  if (r.needs_address) {
+    body.replaceChildren(h('p', { class: 'pnote', text: t('Stel je adres in om je ophaaldagen te zien.') }),
+      h('button', { class: 'btn', type: 'button', onclick: () => openSettings('waste'), text: t('Adres instellen') }));
+    return;
+  }
+  if (r.not_found) {
+    body.replaceChildren(h('p', { class: 'pnote', text: t('Dit adres staat niet in de afvalkalenders die deze server kent (onder meer Den Haag, HVC, GAD, DAR en Cyclus). Controleer postcode en huisnummer.') }));
+    return;
+  }
+  if (!r.pickups) { body.replaceChildren(h('p', { class: 'pnote', text: r.error ? t('De afvalkalender is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: r.error }) : t('De afvalkalender wordt voor het eerst opgehaald.') })); return; }
+  const days = new Map();
+  for (const p of r.pickups) { if (!days.has(p.date)) days.set(p.date, []); days.get(p.date).push(p.type); }
+  const out = [];
+  if (!days.size) out.push(h('p', { class: 'pnote', text: t('Geen ophaaldagen gevonden in de kalender.') }));
+  else out.push(h('ul', { class: 'waste' }, [...days].slice(0, 6).map(([date, types]) => {
+    const n = daysUntil(date);
+    const label = n === 0 ? t('Vandaag') : n === 1 ? t('Morgen') : fmt.wdmUTC.format(dateOnly(date));
+    return h('li', { class: n <= 1 ? 'soon' : null },
+      h('span', { class: 'wd' }, h('b', { text: label }), n > 1 ? h('span', { class: 'm', text: ` ${inDays(n)}` }) : null),
+      h('span', { class: 'wt' }, types.map(ty => h('span', { class: 'wtype' }, h('span', { 'aria-hidden': 'true', text: wasteIcon(ty) + ' ' }), h('span', { translate: 'no', text: ty })))));
+  })));
+  if (r.own) out.push(h('p', { class: 'pfoot' }, t('Bron: afvalkalender '), extLink('https://' + r.calendar + '/', r.calendar)));
+  else {
+    const src = { opzet: t('de afvalkalender van je gemeente'), ics: t('een iCal-agenda'), home_assistant: 'Home Assistant' }[r.provider] || r.provider;
+    out.push(h('p', { class: 'pfoot', text: t('Bron: {src} · standaardadres van deze server', { src }) }));
+  }
+  body.replaceChildren(...out);
+}
+
+function updateWasteHint() {
+  $('#waste-now').textContent = prefs.waste ? t('Nu: {addr}.', { addr: wasteLabel() }) : catalog?.waste_default ? t('Nu: het standaardadres van deze server.') : t('Nog geen adres ingesteld.');
+  $('#waste-default').textContent = catalog?.waste_default ? t('Standaardadres gebruiken') : t('Adres wissen');
+  $('#waste-default').hidden = !prefs.waste;
+}
+function setWasteAddress(w, msg, data) {
+  prefs.waste = w; savePrefs(); updateWasteHint();
+  const m = $('#waste-msg'); m.classList.remove('err'); m.textContent = msg;
+  if (data) { panelData.waste = { data }; renderPanel('waste'); } else { panelData.waste = null; renderPanel('waste'); loadWaste(); }
+  pushSub().then(sub => sub && Notification.permission === 'granted' && pushRegister(sub)).catch(() => {}); // the reminder follows the address
+}
+function wireWasteSettings() {
+  const msg = $('#waste-msg');
+  const save = async () => {
+    const pc = $('#waste-pc').value.toUpperCase().replace(/\s+/g, ''), nr = Number($('#waste-nr').value.trim()), sfx = $('#waste-sfx').value.trim();
+    msg.classList.add('err');
+    if (!/^[1-9]\d{3}[A-Z]{2}$/.test(pc)) { msg.textContent = t('Vul een postcode in zoals 2511 AB.'); return; }
+    if (!Number.isInteger(nr) || nr < 1 || nr > 99999) { msg.textContent = t('Vul een huisnummer in.'); return; }
+    if (!/^[A-Za-z0-9-]{0,6}$/.test(sfx)) { msg.textContent = t('Een toevoeging bestaat uit letters of cijfers.'); return; }
+    const w = { postcode: pc, number: nr, suffix: sfx };
+    msg.classList.remove('err'); msg.textContent = t('Adres opzoeken…');
+    try {
+      const d = await api('api/waste' + wasteQuery(w));
+      if (d.not_found) { msg.classList.add('err'); msg.textContent = t('Dit adres staat niet in de afvalkalenders die deze server kent (onder meer Den Haag, HVC, GAD, DAR en Cyclus).'); return; }
+      const addr = `${pc.slice(0, 4)} ${pc.slice(4)} ${nr}${sfx ? ' ' + sfx : ''}`;
+      setWasteAddress(w, d.error ? t('Opgeslagen; de afvalkalender is nu niet bereikbaar ({err}).', { err: tr(d.error) }) : t('De afvalkalender wordt nu getoond voor {addr}.', { addr }), d);
+    } catch (e) { msg.classList.add('err'); msg.textContent = t('Opzoeken lukt nu niet: {err}.', { err: tr(e.message) }); }
+  };
+  $('#waste-save').addEventListener('click', save);
+  for (const id of ['#waste-pc', '#waste-nr', '#waste-sfx']) $(id).addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); save(); } });
+  $('#waste-default').addEventListener('click', () => {
+    for (const id of ['#waste-pc', '#waste-nr', '#waste-sfx']) $(id).value = '';
+    setWasteAddress(null, catalog?.waste_default ? t('De afvalkalender toont weer het standaardadres.') : t('Adres gewist.'));
+  });
+}
+
+// ---------------------------------------------------------------- trending
+let trendData = null;
+async function loadTrending() {
+  if (!catalog?.trending) return;
+  try { trendData = await api('api/trending'); } catch { /* keep the last list */ }
+  renderTrending();
+}
+function renderTrending() {
+  const box = $('#trending');
+  const terms = trendData?.enabled ? trendData.terms || [] : [];
+  if (!prefs.trending || !terms.length || prefs.category === 'saved') { box.hidden = true; box.replaceChildren(); return; }
+  box.hidden = false;
+  box.replaceChildren(h('span', { class: 'tl', text: t('Trending') }), ...terms.map(x => {
+    const on = query && query === fold(x.term);
+    return h('button', { type: 'button', class: 'tchip', translate: 'no', 'aria-pressed': String(!!on),
+      title: t('In {n} bronnen in de afgelopen 3 uur. Klik om te zoeken.', { n: x.sources }),
+      onclick: () => { const q = $('#q'); q.value = on ? '' : x.term; setQuery(q.value); renderTrending(); } }, x.term);
+  }));
+}
+
+// ---------------------------------------------------------------- coverage (same story at other outlets)
+function coverageList(it) {
+  const all = [it, ...(it.related || [])].filter(r => safeHref(r.url)).map(r => ({ ...r, d: new Date(r.published) })).sort((a, b) => a.d - b.d);
+  const first = all[0]?.d;
+  return h('ol', { class: 'cov' }, all.map((r, i) => {
+    const mins = Math.round((r.d - first) / 60e3);
+    const lag = i === 0 ? t('eerst') : mins < 60 ? t('+{n} min', { n: mins }) : t('+{n} u', { n: Math.round(mins / 60) });
+    return h('li', null,
+      h('span', { class: 'ct', text: fmt.time.format(r.d) }),
+      h('span', { class: 'src' }, h('span', { class: 'dot', style: `--h:${hue(r.source)}` }), h('span', { text: srcName(r.source) })),
+      h('a', { href: safeHref(r.url), target: '_blank', rel: 'noopener noreferrer', 'data-rid': r.id, text: r.title }),
+      h('span', { class: 'tag plain' + (i === 0 ? ' first' : ''), text: lag }));
+  }));
+}
+function toggleCoverage(btn, it) {
+  const open = btn.getAttribute('aria-expanded') === 'true';
+  btn.setAttribute('aria-expanded', String(!open));
+  const p = btn.closest('.rel');
+  if (open) p.nextElementSibling?.classList.contains('cov') && p.nextElementSibling.remove();
+  else p.after(coverageList(it));
+}
+
+// ---------------------------------------------------------------- saved: notes, labels, export
+let savedTag = null;
+function persistSaved() { store.set(SAVED_KEY, saved.map(({ date, ...x }) => x)); }
+function savedExtra(it) {
+  const box = h('div', { class: 'snote' });
+  const show = () => {
+    box.replaceChildren(
+      it.note ? h('p', { class: 'nt', text: it.note }) : null,
+      it.tags?.length ? h('p', { class: 'tags' }, it.tags.map(tg => h('span', { class: 'tag plain', text: '#' + tg }))) : null,
+      h('button', { type: 'button', class: 'linkbtn', text: it.note || it.tags?.length ? t('Notitie en labels wijzigen') : t('Notitie of labels toevoegen'), onclick: edit }));
+  };
+  const edit = () => {
+    const ta = h('textarea', { class: 'field', rows: '3', maxlength: '500', 'aria-label': t('Notitie'), placeholder: t('Notitie') });
+    ta.value = it.note || '';
+    const tags = h('input', { class: 'field', 'aria-label': t('Labels, gescheiden door komma\'s'), placeholder: t('labels, bijv. werk, later lezen') });
+    tags.value = (it.tags || []).join(', ');
+    box.replaceChildren(ta, tags, h('div', { class: 'row' },
+      h('button', { type: 'button', class: 'btn primary', text: t('Opslaan'), onclick: () => {
+        it.note = ta.value.trim().slice(0, 500); it.tags = tagList(tags.value);
+        persistSaved(); if (savedTag && !it.tags.includes(savedTag)) savedTag = null;
+        renderSaved();
+      } }),
+      h('button', { type: 'button', class: 'btn', text: t('Annuleren'), onclick: show })));
+    ta.focus();
+  };
+  show();
+  return box;
+}
+function downloadFile(name, type, text) {
+  const a = h('a', { href: URL.createObjectURL(new Blob([text], { type })), download: name });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+function exportSaved(kind) {
+  const stamp = dayKey(new Date());
+  const rows = saved.map(x => ({ title: x.title, url: x.url, source: srcName(x.source), published: x.published,
+    saved: x.savedAt ? new Date(x.savedAt).toISOString() : null, note: x.note || '', tags: x.tags || [] }));
+  if (kind === 'json') { downloadFile(`nieuws-hub-bewaard-${stamp}.json`, 'application/json', JSON.stringify(rows, null, 2)); return; }
+  const md = [`# ${t('Bewaarde berichten')} (${fmt.date.format(new Date())})`, ''];
+  for (const x of rows) {
+    md.push(`- [${x.title.replace(/[[\]]/g, '')}](${x.url}) — ${x.source}, ${fmt.date.format(new Date(x.published))}`);
+    if (x.tags.length) md.push(`  - ${t('Labels')}: ${x.tags.map(tg => '#' + tg).join(' ')}`);
+    if (x.note) md.push(`  - ${t('Notitie')}: ${x.note.replace(/\n+/g, ' ')}`);
+  }
+  downloadFile(`nieuws-hub-bewaard-${stamp}.md`, 'text/markdown', md.join('\n') + '\n');
+}
+
+// ---------------------------------------------------------------- OPML (sources of this server only)
+const feedKey = u => String(u || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/+$/, '');
+const xmlAttr = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+function exportOPML() {
+  const on = new Set(enabledIds());
+  const lines = ['<?xml version="1.0" encoding="UTF-8"?>', '<opml version="2.0">',
+    `  <head><title>Nieuws Hub</title><dateCreated>${new Date().toUTCString()}</dateCreated></head>`, '  <body>'];
+  for (const c of catalog.categories) {
+    const srcs = catalog.sources.filter(s => s.category === c.id && on.has(s.id) && s.url);
+    if (!srcs.length) continue;
+    lines.push(`    <outline text="${xmlAttr(loc(c, 'name'))}">`);
+    for (const s of srcs) lines.push(`      <outline type="rss" text="${xmlAttr(s.name)}" title="${xmlAttr(s.name)}" xmlUrl="${xmlAttr(s.url)}"${s.homepage ? ` htmlUrl="${xmlAttr(s.homepage)}"` : ''}/>`);
+    lines.push('    </outline>');
+  }
+  lines.push('  </body>', '</opml>');
+  downloadFile(`nieuws-hub-bronnen-${dayKey(new Date())}.opml`, 'text/x-opml', lines.join('\n') + '\n');
+  $('#opml-msg').textContent = t('{n} bronnen geëxporteerd.', { n: [...on].filter(id => srcById.has(id)).length });
+}
+async function importOPML(file) {
+  const msg = $('#opml-msg');
+  if (!file) return;
+  if (file.size > 1 << 20) { msg.textContent = t('Dit bestand is te groot voor een OPML-lijst (max. 1 MB).'); return; }
+  const doc = new DOMParser().parseFromString(await file.text(), 'text/xml');
+  if (doc.querySelector('parsererror') || doc.documentElement.nodeName.toLowerCase() !== 'opml') { msg.textContent = t('Dit is geen geldig OPML-bestand.'); return; }
+  const byKey = new Map(catalog.sources.filter(s => s.url).map(s => [feedKey(s.url), s.id]));
+  const urls = [...doc.querySelectorAll('outline[xmlUrl], outline[xmlurl]')].map(o => o.getAttribute('xmlUrl') || o.getAttribute('xmlurl'));
+  const found = new Set(), unknown = [];
+  for (const u of urls) { const id = byKey.get(feedKey(u)); if (id) found.add(id); else unknown.push(u); }
+  let added = 0;
+  for (const id of found) { const cb = $(`#src-groups input[data-id="${id}"]`); if (cb && !cb.checked) { cb.checked = true; added++; } }
+  if (added) { onSourceToggle(); buildQuickPresets(); }
+  msg.textContent = t('{n} feeds gelezen: {a} bronnen aangezet, {b} stonden al aan. ', { n: urls.length, a: added, b: found.size - added })
+    + (unknown.length ? t('{k} feeds staan niet in de configuratie van deze server en zijn overgeslagen.', { k: unknown.length }) : '');
+}
+
+// ---------------------------------------------------------------- push notifications
+let pushInfo = null;
+const PUSH_LABELS = {
+  nctv: () => t('Dreigingsniveau NCTV verandert'),
+  knmi: () => t('KNMI code oranje of rood'),
+  nlalert: () => t('NL-Alert in jouw omgeving (je weerlocatie)'),
+  quakes: () => t('Aardbeving vanaf M{m}', { m: (pushInfo?.quake_min_mag ?? 2.5).toLocaleString(locale()) }),
+  breaking: () => t('Groot nieuws: {n} of meer bronnen binnen een uur', { n: pushInfo?.breaking_sources ?? 6 }),
+  waste: () => t('Afval: de avond vóór de ophaaldag ({h}:00), voor je adres', { h: pushInfo?.waste_hour ?? 19 }),
+};
+const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && window.isSecureContext;
+const b64ToBytes = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0));
+async function postJSON(path, body) {
+  const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(body) });
+  let j = null; try { j = await r.json(); } catch { /* empty */ }
+  if (!r.ok) throw new Error(j?.error || 'HTTP ' + r.status);
+  return j;
+}
+async function pushSub() {
+  if (!pushSupported()) return null;
+  const reg = await navigator.serviceWorker.getRegistration();
+  return reg ? reg.pushManager.getSubscription() : null;
+}
+function pushTopicsChosen() {
+  const avail = pushInfo?.topics || [];
+  return Array.isArray(prefs.pushTopics) ? prefs.pushTopics.filter(x => avail.includes(x)) : avail.filter(x => x !== 'breaking');
+}
+async function pushRegister(sub) {
+  const j = sub.toJSON(), l = prefs.weather || catalog?.weather_location;
+  return postJSON('api/push/subscribe', { endpoint: j.endpoint, keys: j.keys, topics: pushTopicsChosen(), lang, waste: prefs.waste || undefined,
+    lat: l && Number.isFinite(l.lat) ? l.lat : undefined, lon: l && Number.isFinite(l.lon) ? l.lon : undefined });
+}
+async function initPush() {
+  if (!catalog?.push) return;
+  try { pushInfo = await api('api/push'); } catch { pushInfo = null; }
+  if (!pushInfo?.enabled) return;
+  $('#set-push').hidden = false;
+  try { // keep the server in sync (it forgets subscriptions on a restart without snapshot)
+    const sub = await pushSub();
+    if (sub && Notification.permission === 'granted') await pushRegister(sub);
+  } catch { /* shown when the settings open */ }
+}
+async function renderPushSettings() {
+  const sec = $('#set-push');
+  if (!pushInfo?.enabled) { sec.hidden = true; return; }
+  const msg = $('#push-msg');
+  if (!pushSupported()) {
+    $('#push-topics').replaceChildren(); for (const id of ['#push-on', '#push-off', '#push-test']) $(id).hidden = true;
+    msg.textContent = t('Deze browser ondersteunt geen pushmeldingen. Op iPhone en iPad: zet het dashboard eerst op je beginscherm (Deel → Zet op beginscherm) en open het daar.');
+    return;
+  }
+  const sub = await pushSub().catch(() => null);
+  const chosen = new Set(pushTopicsChosen());
+  $('#push-topics').replaceChildren(...pushInfo.topics.map(tp => h('label', { class: 'opt' }, h('span', { text: PUSH_LABELS[tp]?.() || tp }),
+    h('input', { type: 'checkbox', class: 'switch', role: 'switch', 'data-topic': tp, checked: chosen.has(tp), onchange: onPushTopic }))));
+  $('#push-on').hidden = !!sub; $('#push-off').hidden = !sub; $('#push-test').hidden = !sub;
+  if (Notification.permission === 'denied') msg.textContent = t('Meldingen zijn geblokkeerd in je browser. Sta ze toe via het slotje naast het adres.');
+  else msg.textContent = sub ? t('Meldingen staan aan op dit apparaat.') : '';
+}
+async function onPushTopic() {
+  prefs.pushTopics = [...$('#push-topics').querySelectorAll('input:checked')].map(c => c.dataset.topic);
+  savePrefs();
+  const sub = await pushSub().catch(() => null);
+  if (sub) { try { await pushRegister(sub); $('#push-msg').textContent = t('Onderwerpen bijgewerkt.'); } catch (e) { $('#push-msg').textContent = tr(e.message); } }
+}
+async function pushOn() {
+  const msg = $('#push-msg');
+  try {
+    if (await Notification.requestPermission() !== 'granted') { msg.textContent = t('Je hebt geen toestemming gegeven voor meldingen.'); return; }
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    const key = b64ToBytes(pushInfo.key);
+    const same = sub?.options?.applicationServerKey && new Uint8Array(sub.options.applicationServerKey).every((b, i) => b === key[i]);
+    if (sub && !same) { await sub.unsubscribe(); sub = null; } // the server has a new key
+    sub ||= await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+    await pushRegister(sub);
+  } catch (e) { msg.textContent = t('Meldingen aanzetten is mislukt: {err}', { err: tr(e.message) }); return; }
+  await renderPushSettings();
+}
+async function pushOff() {
+  const sub = await pushSub().catch(() => null);
+  if (sub) { try { await postJSON('api/push/unsubscribe', { endpoint: sub.endpoint }); } catch { /* removed locally anyway */ } await sub.unsubscribe(); }
+  await renderPushSettings();
+  $('#push-msg').textContent = t('Meldingen staan uit op dit apparaat.');
+}
+async function pushTest() {
+  const sub = await pushSub().catch(() => null);
+  if (!sub) return;
+  try { await postJSON('api/push/test', { endpoint: sub.endpoint }); $('#push-msg').textContent = t('Testmelding verstuurd.'); }
+  catch (e) { $('#push-msg').textContent = tr(e.message); }
+}
+
 // ---------------------------------------------------------------- overzicht (digest) & kiosk
 const urlMode = new URLSearchParams(location.search).get('mode');
 let viewMode = 'normal', digestQueued = false, kioskTimer = null, kioskPauseUntil = 0, wakeLock = null;
@@ -3845,6 +4482,21 @@ function renderDigest() {
       tm ? h('p', { text: t('Morgen {min} tot {max}, {desc}', { min: deg(tm.min), max: deg(tm.max), desc: tr(tm.desc).toLowerCase() }) }) : null]));
   }
   const td = panelData.today?.data;
+  const nla = panelData.nlalert?.data?.alerts;
+  if (panelOn('nlalert') && nla) {
+    const act = nla.filter(a => !a.withdrawn && new Date(a.start) <= Date.now() && (!a.stop || new Date(a.stop) > Date.now()));
+    const recent = nla.filter(a => Date.now() - new Date(a.start) < 864e5);
+    if (act.length || recent.length) {
+      const a = act[0] || recent[0];
+      cards.push(dCard('nlalert', 'NL-Alert', [h('p', null, h('b', { class: act.length ? 'nl-on' : null, text: act.length ? t(act.length === 1 ? '1 actieve NL-Alert' : '{n} actieve NL-Alerts', { n: act.length }) : t('Afgelopen 24 uur') }),
+        a.near ? t(' · in jouw omgeving') : ''), h('p', { translate: 'no', text: truncateText(nlText(a), 160) })]));
+    }
+  }
+  const wp = panelData.waste?.data?.pickups;
+  if (panelOn('waste') && wp?.length) {
+    const soon = wp.filter(p => daysUntil(p.date) <= 1);
+    if (soon.length) cards.push(dCard('waste', 'Afval', soon.map(p => h('p', null, h('b', { text: daysUntil(p.date) === 0 ? t('Vandaag') : t('Morgen') }), ` ${wasteIcon(p.type)} `, h('span', { translate: 'no', text: p.type })))));
+  }
   if (panelOn('today') && td?.enabled) {
     const nx = (td.holidays_next || [])[0], lines = [];
     for (const hd of td.holidays_today || []) lines.push(h('p', null, '🎉 ', h('b', { text: tr(hd.name) })));
@@ -3877,14 +4529,15 @@ function renderDigest() {
       win ? h('p', { text: t('Goedkoopst vandaag: {span} ({p})', { span: hourSpan(win.from, 3), p: eur(win.avg) }) }) : null,
       winT ? h('p', { text: t('Goedkoopst morgen: {span} ({p})', { span: hourSpan(winT.from, 3), p: eur(winT.avg) }) }) : null]));
   }
-  const mk = panelData.markets?.data?.data, ec = panelData.economy?.data?.data;
-  if ((panelOn('markets') && mk?.indices?.length) || (panelOn('economy') && ec)) {
+  const mk = panelData.markets?.data?.data, ec = panelData.economy?.data?.data, fu = panelData.fuel?.data?.data;
+  if ((panelOn('markets') && mk?.indices?.length) || (panelOn('economy') && ec) || (panelOn('fuel') && fu?.prices?.length)) {
     const aex = mk?.indices?.find(q => q.symbol === '^AEX'), st = mk?.stocks || [], lines = [];
     if (panelOn('markets') && aex) lines.push(h('p', null, h('span', { class: 'big', text: price2(aex.price) }), ' AEX ', chgEl(aex.change_pct)));
     if (panelOn('markets') && st.length >= 2) lines.push(h('p', { translate: 'no', text: `▲ ${st[0].name} ${st[0].change_pct > 0 ? '+' : ''}${st[0].change_pct.toLocaleString(locale())}% · ▼ ${st.at(-1).name} ${st.at(-1).change_pct.toLocaleString(locale())}%` }));
     if (panelOn('economy') && ec) lines.push(h('p', { text: [ec.inflation?.at(-1) ? t('inflatie {v}', { v: pct1(ec.inflation.at(-1).value) }) : null, ec.unemployment?.at(-1) ? t('werkloosheid {v}', { v: pct1(ec.unemployment.at(-1).value) }) : null,
       ec.rate ? t('ECB {v}', { v: ec.rate.value.toLocaleString(locale(), { minimumFractionDigits: 2 }) + '%' }) : null].filter(Boolean).join(' · ') }));
-    cards.push(dCard(panelOn('markets') ? 'markets' : 'economy', 'Beurs en economie', lines));
+    if (panelOn('fuel') && fu?.prices?.length) lines.push(h('p', { text: fu.prices.filter(p => p.fuel !== 'lpg').map(p => `${tr(p.name).replace(' (E10)', '')} ${euro3(p.price)}`).join(' · ') }));
+    cards.push(dCard(panelOn('markets') ? 'markets' : panelOn('economy') ? 'economy' : 'fuel', 'Beurs en economie', lines));
   }
   const air = panelData.air?.data;
   if (panelOn('air') && air?.lki) {
@@ -4018,9 +4671,6 @@ const AP_ACTIONS = [
   [/\bboetes?\b/i, 'Boete', 'sev-critical'],
   [/\bberisping\b/i, 'Berisping', 'sev-medium'],
 ];
-const RECENT_DAYS = 31; // AP and Gezondheid show only items of the last 31 days
-const recentSince = () => Math.floor(Date.now() / 1000) - RECENT_DAYS * 86400;
-const isRecent = it => Date.now() - new Date(it.published) <= RECENT_DAYS * 864e5;
 async function loadAP() {
   if (!srcById.has('ap')) { panelData.ap = { missing: true }; renderPanel('ap'); return; }
   try {
@@ -4068,6 +4718,10 @@ function openSettings(target) {
   $('#show-sum').checked = prefs.summaries;
   $('#opt-group').checked = prefs.group;
   $('#opt-hideread').checked = prefs.hideRead;
+  $('#opt-trending').checked = prefs.trending;
+  $('#opt-trending').closest('label').hidden = !catalog.trending;
+  $('#opml-msg').textContent = '';
+  renderPushSettings();
   $('#opt-images').checked = prefs.images;
   $('#opt-images-row').hidden = !catalog.features?.show_images;
   $('#watch-in').value = prefs.watch.join(', ');
@@ -4077,6 +4731,12 @@ function openSettings(target) {
   updateAlarmHint();
   updateAirHint();
   $('#set-air').hidden = !catalog.air;
+  $('#set-waste').hidden = !catalog.waste;
+  updateWasteHint();
+  $('#waste-pc').value = prefs.waste ? `${prefs.waste.postcode.slice(0, 4)} ${prefs.waste.postcode.slice(4)}` : '';
+  $('#waste-nr').value = prefs.waste ? String(prefs.waste.number) : '';
+  $('#waste-sfx').value = prefs.waste?.suffix || '';
+  $('#waste-msg').textContent = '';
   for (const r of document.querySelectorAll('input[name="mode"]')) r.checked = r.value === viewMode;
   $('#alarm-city').value = prefs.alarmCity ? alarmCityName() : '';
   $('#alarm-msg').textContent = '';
@@ -4085,9 +4745,9 @@ function openSettings(target) {
   if (!dlg.open) dlg.showModal();
   loadHealth();
   if (typeof target === 'string') { // called from a button with a section or category to show
-    const el = target === 'watch' ? $('#set-watch') : target === 'presets' ? $('#set-src-h') : target === 'air' ? $('#set-air') : $(`#src-groups [data-cat="${target}"]`);
+    const el = target === 'watch' ? $('#set-watch') : target === 'presets' ? $('#set-src-h') : target === 'air' ? $('#set-air') : target === 'waste' ? $('#set-waste') : $(`#src-groups [data-cat="${target}"]`);
     el?.scrollIntoView({ block: 'start' });
-    (target === 'watch' ? $('#watch-in') : target === 'presets' ? $('#qpresets button:not([disabled])') : target === 'air' ? $('#air-search') : el?.querySelector('input'))?.focus({ preventScroll: true });
+    (target === 'watch' ? $('#watch-in') : target === 'presets' ? $('#qpresets button:not([disabled])') : target === 'air' ? $('#air-search') : target === 'waste' ? $('#waste-pc') : el?.querySelector('input'))?.focus({ preventScroll: true });
   }
 }
 function buildQuickPresets() {
@@ -4359,6 +5019,13 @@ function wire() {
   });
   $('#opt-group').addEventListener('change', e => { prefs.group = e.target.checked; savePrefs(); sourcesDirty = true; });
   $('#opt-hideread').addEventListener('change', e => { prefs.hideRead = e.target.checked; savePrefs(); renderStream(); });
+  $('#opt-trending').addEventListener('change', e => { prefs.trending = e.target.checked; savePrefs(); renderTrending(); });
+  $('#opml-export').addEventListener('click', exportOPML);
+  $('#opml-import').addEventListener('click', () => $('#opml-file').click());
+  $('#opml-file').addEventListener('change', e => { importOPML(e.target.files[0]).catch(err => { $('#opml-msg').textContent = tr(err.message); }); e.target.value = ''; });
+  $('#push-on').addEventListener('click', pushOn);
+  $('#push-off').addEventListener('click', pushOff);
+  $('#push-test').addEventListener('click', pushTest);
   $('#opt-images').addEventListener('change', e => { prefs.images = e.target.checked; savePrefs(); renderStream(); });
   const saveTerms = () => {
     const parse = v => [...new Set(v.split(',').map(t => t.trim()).filter(Boolean))].slice(0, 50);
@@ -4432,6 +5099,7 @@ function wire() {
   });
   $('#wx-geo').addEventListener('click', useMyLocation);
   wireAirSettings();
+  wireWasteSettings();
   for (const r of document.querySelectorAll('input[name="mode"]')) r.addEventListener('change', () => setMode(r.value));
   $('#digest-exit').addEventListener('click', () => setMode('normal'));
   $('#kiosk-exit').addEventListener('click', () => setMode('normal'));
@@ -4509,7 +5177,7 @@ async function init() {
   buildChips();
   if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
   await Promise.allSettled([loadNews({ replace: true }), loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(),
-    loadBreaches(), loadOutages(), loadHealthPanel(), loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(), loadMarkets()]);
+    loadBreaches(), loadOutages(), loadHealthPanel(), loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(), loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadTrending(), initPush()]);
   kioskFit(); // the header and top bar have their final height now
   // intervals from config.yaml (refresh:), in seconds; defaults if the server is older
   const R = (k, def) => Math.max(60, catalog?.refresh?.[k] || def * 60) * 1000;
@@ -4533,6 +5201,10 @@ async function init() {
   every(R('quakes', 15), loadQuakes);
   every(R('economy', 60), loadEconomy);
   every(R('markets', 5), loadMarkets);
+  every(R('nlalert', 2), loadNLAlert);
+  every(R('fuel', 60), loadFuel);
+  every(R('waste', 60), loadWaste);
+  every(R('trending', 10), loadTrending);
   every(R('outages', 10), loadOutages);
   every(R('health', 30), loadHealthPanel);
   setInterval(tick, 15e3);
