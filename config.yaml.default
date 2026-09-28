@@ -361,6 +361,8 @@ outages:
     - { id: cloudflare, name: "Cloudflare",      format: statuspage, url: "https://www.cloudflarestatus.com/api/v2/summary.json", homepage: "https://www.cloudflarestatus.com/" }
     - { id: azure,      name: "Microsoft Azure", format: rss,        url: "https://azure.status.microsoft/en-us/status/feed/", homepage: "https://azure.status.microsoft/" }
     - { id: m365,       name: "Microsoft 365",   format: m365,       url: "https://status.cloud.microsoft/api/posts/m365Consumer", homepage: "https://status.cloud.microsoft/" }
+    - { id: gcp,        name: "Google Cloud",    format: gcp,        url: "https://status.cloud.google.com/incidents.json", homepage: "https://status.cloud.google.com/" }
+    - { id: stackit,    name: "STACKIT",         format: statuspage, url: "https://status.stackit.cloud/api/v2/summary.json", homepage: "https://status.stackit.cloud/" }
   # Internet in Nederland: outage events detected by IODA (Georgia Tech; no key, attribution shown) for the
   # country and the networks below, last 7 days. Find more AS numbers at https://bgp.he.net.
   internet:

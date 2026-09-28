@@ -38,7 +38,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Alarmeringen:** the latest P2000 alerts for your city from Zwaailicht.nl, grouped as Brandweer, Ambulance, Politie and Lifeliner (at most 2 each). The city is chosen per visitor under Instellingen.
 - **Datalekken:** the latest 3 Dutch and 3 other data breaches at organisations, from Have I Been Pwned: number of accounts, leak date, and what data leaked.
 - **Ransomware NL:** organisations claimed by ransomware groups on their leak sites (ransomware.live), with counts, the most active groups and the latest claims. No links to leak sites and no descriptions.
-- **Storingen:** **internet in the Netherlands** on top, then the status of Akamai, AWS, Cloudflare, Microsoft Azure and Microsoft 365 (in the order of `config.yaml`); internet: outages detected by IODA for the country and KPN, VodafoneZiggo, Odido and DELTA Fiber. Any service with an Atlassian Statuspage or RSS status feed can be added in `config.yaml`.
+- **Storingen:** **internet in the Netherlands** on top, then the status of Akamai, AWS, Cloudflare, Microsoft Azure, Microsoft 365, Google Cloud and STACKIT (in the order of `config.yaml`); internet: outages detected by IODA for the country and KPN, VodafoneZiggo, Odido and DELTA Fiber. Any service with an Atlassian Statuspage or RSS status feed can be added in `config.yaml`.
 - **Gezondheid:** RIVM news of the last 31 days, filtered to health alerts (infectious diseases, vaccination, heat, smog).
 - **Themes**: Licht / Donker (true black) / Auto.
 - **Language**: Nederlands / English / Auto (browser language), switchable at the top and under Instellingen → Weergave. Only the interface is translated; news, advisories and alerts stay in their original language.
@@ -193,7 +193,7 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 | `traffic` | `enabled`, `interval` (min. 2m), `url` (NDW DATEX II publication), `vild_base` (where the VILD location tables live) |
 | `alarms` | `enabled`, `city` (default city slug, e.g. `den-haag`), `base` (feed URL prefix), `interval` (cache per city, min. 1m); `counts` for the top bar: `label`, `cities` (one or more slugs, e.g. a whole safety region), `interval` (1m–10m) |
 | `breaches` | Datalekken panel: `enabled`, `url` (HIBP breach list), `interval` (min. 1h, default 3h), `include_sensitive` (default `false`) |
-| `outages` | `enabled`, `interval` (min. 5m), `internet` (`enabled`, `base`, `country`, `networks`: `asn` + `name`, max. 10, `interval` min. 10m), `providers`: `id`, `name`, `url`, `homepage`, `format` (`statuspage` / `rss` / `m365`) |
+| `outages` | `enabled`, `interval` (min. 5m), `internet` (`enabled`, `base`, `country`, `networks`: `asn` + `name`, max. 10, `interval` min. 10m), `providers`: `id`, `name`, `url`, `homepage`, `format` (`statuspage` for any Atlassian Statuspage `summary.json` / `rss` / `m365` / `gcp` for Google Cloud's `incidents.json`) |
 | `advisories` | advisory feeds: `format: ncsc` (parses the NCSC title) or `rss` (any feed, severity from keywords) |
 | `categories`, `sources` | news categories (`short` = chip label; `name_en`/`short_en` for the English interface) and feeds (`region` = province, for the "Mijn regio" preset) |
 | `presets` | topics offered on the first visit and under Instellingen → Bronnen: a list of `sources`, or `region: true` for the broadcaster matching the visitor's weather province; `name_en`/`description_en` for the English interface |
@@ -554,7 +554,7 @@ The server fetches everything; browsers only talk to the dashboard itself.
 | [NCTV](https://www.nctv.nl/onderwerpen/d/dtn) | terrorism threat level | Public page. There is no feed or structured field, so only the sentence "… niveau N op een schaal van 5" is read, every 6 h. If the wording changes the badge says *onbekend*; it never guesses. This is the one deliberate exception to "no HTML scraping". |
 | KNMI via MeteoAlarm | top-bar weather code | KNMI's own RSS (`rss_KNMIwaarschuwingen.xml`) has not been updated since October 2023, so the code comes from the MeteoAlarm feed that carries KNMI's warnings. |
 | [NDW](https://www.ndw.nu/) | traffic | Open data (Rijkswaterstaat, provinces, municipalities), polled every 5 min (≈ 260 KB). ANWB has no public API, and its site is not scraped. Road names come from NDW's VILD location table: only its ~400 KB table is read from the 42 MB zip with HTTP range requests, kept in memory and refreshed weekly or when NDW switches versions. |
-| Akamai, AWS, Cloudflare, Azure, Microsoft 365 | outages | The providers' public status feeds. Microsoft 365 uses the JSON behind status.cloud.microsoft (consumer services, undocumented). The health of your own tenant would need Microsoft Graph with an app registration. |
+| Akamai, AWS, Cloudflare, Azure, Microsoft 365, Google Cloud, STACKIT | outages | The providers' public status feeds. Microsoft 365 uses the JSON behind status.cloud.microsoft (consumer services, undocumented). Google Cloud publishes `incidents.json` (all incidents with start, end, severity and affected locations; no key); STACKIT (Schwarz Digits) uses Atlassian Statuspage. The health of your own tenant would need Microsoft Graph with an app registration. |
 | [RIVM](https://www.rivm.nl/) | health alerts | Public RSS. |
 | [EnergyZero](https://www.energyzero.nl/) | Energieprijzen | The public price API behind EnergyZero's website (day-ahead EPEX prices). Not officially documented and no published terms (checked September 2026); fetched hourly, two small requests. |
 | [Luchtmeetnet](https://www.luchtmeetnet.nl/) / [RIVM](https://data.rivm.nl/data/luchtmeetnet/) | Luchtkwaliteit | The index (every 30 min, ≈3 requests for all stations) and pollutants (on demand, cached 30 min) from the Luchtmeetnet API. Station locations come from RIVM's `luchtmeetnet_meetlocaties.csv`, one file checked daily, so no per-station API calls: the API answers bursts with HTTP 429. RIVM: "a free service from which no rights can be derived"; attribution shown. |
@@ -754,6 +754,10 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.17.0
+- **Storingen:** the status of **Google Cloud** (from `status.cloud.google.com/incidents.json`: ongoing incidents with the affected regions, e.g. europe-west4, and those resolved in the last 24 h) and **STACKIT** (its Atlassian Statuspage).
+- New outage format `gcp`.
 
 ### 1.16.0
 - **Satellietbeeld:** a new panel with the latest Meteosat image of the Benelux from EUMETSAT (new every 10 minutes), true colour by day and clouds with city lights at night, with coastlines and borders. The server fetches it and serves it itself.

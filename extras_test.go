@@ -832,3 +832,41 @@ func TestWiki(t *testing.T) {
 		t.Errorf("disabled: %s", b)
 	}
 }
+
+func TestParseGCP(t *testing.T) {
+	now := time.Date(2026, 9, 28, 12, 0, 0, 0, time.UTC)
+	body := `[
+	 {"begin":"2026-09-28T09:00:00+00:00","end":null,"modified":"2026-09-28T11:00:00+00:00","external_desc":"Cloud Run <b>errors</b>","severity":"medium",
+	  "status_impact":"SERVICE_DISRUPTION","uri":"incidents/abc","currently_affected_locations":[{"title":"Netherlands (europe-west4)","id":"europe-west4"}]},
+	 {"begin":"2026-09-27T20:00:00+00:00","end":"2026-09-28T02:00:00+00:00","modified":"2026-09-28T03:00:00+00:00","external_desc":"BigQuery outage","severity":"high",
+	  "status_impact":"SERVICE_OUTAGE","uri":"incidents/def","currently_affected_locations":[]},
+	 {"begin":"2026-09-01T14:44:00+00:00","end":"2026-09-01T18:52:00+00:00","modified":"2026-09-10T21:20:16+00:00","external_desc":"Old incident","severity":"high",
+	  "status_impact":"SERVICE_OUTAGE","uri":"incidents/old"},
+	 {"begin":"2026-09-28T10:00:00+00:00","end":null,"modified":"2026-09-28T10:00:00+00:00","external_desc":"Planned change notice","severity":"low",
+	  "status_impact":"SERVICE_INFORMATION","uri":"incidents/info"}]`
+	v, err := parseGCP([]byte(body), now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := v.(OutageData)
+	if d.Status != "minor" || len(d.Incidents) != 3 {
+		t.Fatalf("status %q, %d incidents: %+v", d.Status, len(d.Incidents), d.Incidents)
+	}
+	in := d.Incidents[0]
+	if in.Title != "Cloud Run errors (europe-west4)" || in.URL != "https://status.cloud.google.com/incidents/abc" || in.Status != "verstoring" || in.Resolved {
+		t.Errorf("ongoing: %+v", in)
+	}
+	if !d.Incidents[1].Resolved || d.Incidents[1].Status != "opgelost" || d.Incidents[2].Status != "informatie" {
+		t.Errorf("resolved/info: %+v", d.Incidents[1:])
+	}
+	v, _ = parseGCP([]byte(`[{"end":"","modified":"2026-09-28T11:00:00+00:00","external_desc":"Global outage","severity":"high","status_impact":"SERVICE_OUTAGE","uri":"incidents/x"}]`), now)
+	if v.(OutageData).Status != "major" {
+		t.Error("an ongoing outage is major")
+	}
+	if v, _ := parseGCP([]byte(`[]`), now); v.(OutageData).Status != "ok" {
+		t.Error("no incidents is ok")
+	}
+	if _, err := parseGCP([]byte(`<html>`), now); err == nil {
+		t.Error("HTML must fail")
+	}
+}

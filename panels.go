@@ -1768,6 +1768,7 @@ func (a *App) threatJobs(cfg *Config) []Job {
 			parse := map[string]func([]byte) (any, error){
 				"statuspage": parseStatuspage, "m365": parseM365,
 				"rss": func(b []byte) (any, error) { return parseStatusRSS(b, time.Now()) },
+				"gcp": func(b []byte) (any, error) { return parseGCP(b, time.Now()) },
 			}[p.Format]
 			jobs = append(jobs, Job{Key: "outage:" + p.ID, Sig: p.URL + "|" + p.Format, Interval: cfg.Outages.Interval.D(),
 				Run: a.fetchJob("outage:"+p.ID, func() string { return p.URL }, "application/json, application/rss+xml;q=0.9, */*;q=0.5", nil, parse, nil)})
@@ -2625,8 +2626,9 @@ func (a *App) handleBreaches(w http.ResponseWriter, r *http.Request) {
 
 // ---------------------------------------------------------------------------
 // Outages of online services (status pages). Formats: statuspage (Atlassian
-// Statuspage summary.json, used by Cloudflare and many others), rss (Azure, AWS)
-// and m365 (the Microsoft 365 public status page).
+// Statuspage summary.json, used by Cloudflare, STACKIT and many others), rss
+// (Azure, AWS), m365 (the Microsoft 365 public status page) and gcp (Google
+// Cloud incidents.json).
 
 type OutageIncident struct {
 	Title    string    `json:"title"`
@@ -2741,6 +2743,64 @@ func parseStatusRSS(body []byte, now time.Time) (any, error) {
 		}
 		if len(d.Incidents) < 10 {
 			d.Incidents = append(d.Incidents, OutageIncident{Title: title, URL: safeURL(r.Link, nil), Updated: t.UTC(), Resolved: resolved})
+		}
+	}
+	return d, nil
+}
+
+// parseGCP reads status.cloud.google.com/incidents.json: incidents without an end
+// are ongoing (an outage or high severity is major, a disruption minor, an
+// informational notice leaves the status ok); those that ended in the last 24 h
+// are shown as resolved. The affected locations (e.g. europe-west4) follow the title.
+func parseGCP(body []byte, now time.Time) (any, error) {
+	var list []struct {
+		End          string `json:"end"`
+		Modified     string `json:"modified"`
+		Desc         string `json:"external_desc"`
+		Severity     string `json:"severity"`
+		StatusImpact string `json:"status_impact"`
+		URI          string `json:"uri"`
+		Current      []struct {
+			ID string `json:"id"`
+		} `json:"currently_affected_locations"`
+	}
+	if err := json.Unmarshal(body, &list); err != nil {
+		return nil, fmt.Errorf("gcp: %w", err)
+	}
+	d := OutageData{Status: "ok", Incidents: []OutageIncident{}}
+	for _, in := range list {
+		upd, _ := parseDate(in.Modified)
+		ended, hasEnd := parseDate(in.End)
+		resolved := in.End != ""
+		if resolved && (!hasEnd || now.Sub(ended) > 24*time.Hour) {
+			continue
+		}
+		title := plainText(in.Desc)
+		if title == "" {
+			continue
+		}
+		status := map[string]string{"SERVICE_OUTAGE": "storing", "SERVICE_DISRUPTION": "verstoring", "SERVICE_INFORMATION": "informatie"}[in.StatusImpact]
+		if resolved {
+			status = "opgelost"
+		} else if in.StatusImpact != "SERVICE_INFORMATION" {
+			if in.StatusImpact == "SERVICE_OUTAGE" || in.Severity == "high" {
+				d.Status = "major"
+			} else if d.Status == "ok" {
+				d.Status = "minor"
+			}
+		}
+		var locs []string
+		for _, l := range in.Current {
+			if id := plainText(l.ID); id != "" && len(locs) < 3 {
+				locs = append(locs, id)
+			}
+		}
+		if len(locs) > 0 {
+			title += " (" + strings.Join(locs, ", ") + ")"
+		}
+		if len(d.Incidents) < 10 {
+			d.Incidents = append(d.Incidents, OutageIncident{Title: truncate(title, 160), URL: safeURL("https://status.cloud.google.com/"+strings.TrimPrefix(in.URI, "/"), nil),
+				Status: status, Updated: upd.UTC(), Resolved: resolved})
 		}
 	}
 	return d, nil

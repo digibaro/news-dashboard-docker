@@ -858,8 +858,8 @@ func (c *Config) validate() error {
 		if strings.TrimSpace(s.Name) == "" || !isHTTPURL(s.URL) {
 			fail("%s: needs a name and an http(s) url", where)
 		}
-		if s.Format != "statuspage" && s.Format != "rss" && s.Format != "m365" {
-			fail("%s: format must be statuspage, rss or m365", where)
+		if s.Format != "statuspage" && s.Format != "rss" && s.Format != "m365" && s.Format != "gcp" {
+			fail("%s: format must be statuspage, rss, m365 or gcp", where)
 		}
 	}
 	advIDs := map[string]bool{}
