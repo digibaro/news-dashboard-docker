@@ -4,7 +4,6 @@
 
 <img width="1148" height="779" alt="Image" src="https://github.com/user-attachments/assets/f2d6a544-6912-41b4-b63b-eea1ad19ae20" />
 
-
 A fast, privacy-friendly **single-page news dashboard in Dutch, with an English interface**. It combines:
 
 - **News** from about 80 selectable RSS/Atom feeds: NL, regional, tech & security, data breaches, finance, sport, international and Belgium.
