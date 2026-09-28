@@ -302,10 +302,8 @@ func (a *App) runWaste(ctx context.Context) error {
 func sortPickups(list []WastePickup, now time.Time) []WastePickup {
 	today := now.In(amsterdam).Format("2006-01-02")
 	out := []WastePickup{}
-	seen := map[string]bool{}
 	for _, p := range list {
-		if p.Date >= today && !seen[p.Type+p.Date] {
-			seen[p.Type+p.Date] = true
+		if p.Date >= today {
 			out = append(out, p)
 		}
 	}
@@ -315,10 +313,19 @@ func sortPickups(list []WastePickup, now time.Time) []WastePickup {
 		}
 		return out[i].Type < out[j].Type
 	})
-	if len(out) > 12 {
-		out = out[:12]
+	// only the next collection per waste type, not the repeating cycle
+	next := out[:0]
+	seen := map[string]bool{}
+	for _, p := range out {
+		if !seen[strings.ToLower(p.Type)] {
+			seen[strings.ToLower(p.Type)] = true
+			next = append(next, p)
+		}
 	}
-	return out
+	if len(next) > 12 {
+		next = next[:12]
+	}
+	return next
 }
 
 func parseOpzetStreams(body []byte) ([]WastePickup, error) {

@@ -90,6 +90,11 @@ func TestWasteParsers(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := sortPickups(op, now)
+	cycle := sortPickups([]WastePickup{{"PMD", "2026-10-05"}, {"Restafval", "2026-10-07"}, {"PMD", "2026-10-19"}, {"GFT", "2026-10-12"},
+		{"Restafval", "2026-10-21"}, {"GFT", "2026-10-26"}, {"Oud", "2026-09-01"}}, now)
+	if len(cycle) != 3 || cycle[0] != (WastePickup{"PMD", "2026-10-05"}) || cycle[1] != (WastePickup{"Restafval", "2026-10-07"}) || cycle[2] != (WastePickup{"GFT", "2026-10-12"}) {
+		t.Errorf("only the next date per type: %+v", cycle)
+	}
 	if len(got) != 2 || got[0] != (WastePickup{"Rest", "2026-10-02"}) || got[1].Type != "Papier" {
 		t.Errorf("opzet: %+v", got)
 	}
@@ -421,7 +426,8 @@ func TestAmsterdamPickups(t *testing.T) {
 		{Code: "GA", Name: "Grof afval", Days: "vrijdag", Frequency: "9-10, 23-10-26"},
 	}, now)
 	byType := map[string][]string{}
-	for _, p := range sortPickups(got, now) {
+	slices.SortFunc(got, func(a, b WastePickup) int { return strings.Compare(a.Date, b.Date) })
+	for _, p := range got {
 		byType[p.Type] = append(byType[p.Type], p.Date)
 	}
 	if r := byType["Restafval"]; len(r) < 3 || r[0] != "2026-09-28" || r[1] != "2026-10-01" {

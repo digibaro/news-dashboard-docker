@@ -741,6 +741,9 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 
 ## Changelog
 
+### 1.14.1
+- **Afvalkalender:** only the next collection per waste type (for example PMD 5 Oct, Restafval 7 Oct, GFT 12 Oct) instead of the repeating cycle, which showed the same type several times.
+
 ### 1.14.0
 - **New panel Vanavond aan de hemel** (after Hooikoorts): when it gets dark, the moon (phase, rise and set), the planets visible tonight with the time and direction, the chance of northern lights from NOAA's Kp forecast, tonight's clouds and active meteor showers. Positions are computed locally and checked against NASA/JPL Horizons.
 - **New panel Sportagenda** (after Beurs): Formula 1 from the open Jolpica API (next race and qualifying, last podium, standings) and the mountain bike and athletics European/World Championships from a calendar in `config.yaml` (`sports.events`), with matching headlines during and just after a championship. Visitors choose their sports under *Instellingen*; the server offers `sports.sports`.
