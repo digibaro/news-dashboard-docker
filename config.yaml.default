@@ -35,6 +35,7 @@ features:
 keys:                             # all optional; env vars override
   abusech_auth_key: ""            # optional, free key from https://auth.abuse.ch/ (or ABUSECH_AUTH_KEY)
   ns_api_key: ""                  # NS Disruptions API for Treinstoringen (or NS_API_KEY)
+  nvd_api_key: ""                 # optional, free key from https://nvd.nist.gov/developers (or NVD_API_KEY); faster Kwetsbaarheden
 
 weather:
   # region (province) is matched against MeteoAlarm warning areas; country picks the warning feed.
@@ -249,6 +250,49 @@ waste:
 trending:
   enabled: true
 
+# Teken en muggen: an estimate of tick and mosquito activity from the weather forecast (Open-Meteo);
+# there is no open source with measurements. Follows the visitor's air/pollen place.
+insects:
+  enabled: true
+  url: "https://api.open-meteo.com/v1/forecast"
+
+# Vanavond aan de hemel: darkness, moon, visible planets (computed here), the northern-lights chance
+# (NOAA SWPC Kp forecast, public domain) and clouds (Open-Meteo). Follows the visitor's weather location.
+sky:
+  enabled: true
+  kp_url: "https://services.swpc.noaa.gov/products/noaa-planetary-k-index-forecast.json"
+  clouds_url: "https://api.open-meteo.com/v1/forecast"
+
+# Sportagenda: Formula 1 from the open Jolpica API (the successor of Ergast), and championships from the
+# events below (the UCI and World Athletics have no open API). Visitors choose among these sports in
+# Instellingen. During and just after a championship, matching headlines from your news sources are shown.
+sports:
+  enabled: true
+  sports: [f1, mtb, athletics]    # f1, mtb (mountainbike EK/WK), athletics (atletiek EK/WK)
+  f1_url: "https://api.jolpi.ca/ergast/f1"
+  interval: 1h                    # F1: 3 requests per interval; min. 15m
+  events:                         # dates checked on Wikipedia, September 2026
+    - { sport: mtb, name: "WK mountainbike 2026", start: "2026-08-26", end: "2026-08-30", place: "Val di Sole (Italië)", url: "https://www.uci.org/discipline/mountain-bike/", keywords: ["WK mountainbike", "mountainbike", "MTB"] }
+    # TODO: add the EK mountainbike 2027 and WK mountainbike 2027 once the dates are published.
+    - { sport: athletics, name: "EK atletiek 2026", start: "2026-08-10", end: "2026-08-16", place: "Birmingham (Verenigd Koninkrijk)", url: "https://www.european-athletics.com", keywords: ["EK atletiek", "atletiek"] }
+    - { sport: athletics, name: "EK indoor atletiek 2027", start: "2027-03-04", end: "2027-03-07", place: "Valencia (Spanje)", url: "https://www.european-athletics.com", keywords: ["EK indoor", "atletiek"] }
+    - { sport: athletics, name: "WK atletiek 2027", start: "2027-09-10", end: "2027-09-19", place: "Peking (China)", url: "https://worldathletics.org", keywords: ["WK atletiek", "atletiek"] }
+    - { sport: athletics, name: "EK atletiek 2028", start: "2028-06-03", end: "2028-06-08", place: "Chorzów (Polen)", url: "https://www.european-athletics.com", keywords: ["EK atletiek", "atletiek"] }
+
+# Kwetsbaarheden in mijn software: CVEs of the last `days` days for these products (NVD API 2.0), with the
+# EPSS exploit probability (FIRST.org) and CISA's list of actively exploited vulnerabilities. No key needed;
+# keys.nvd_api_key (or NVD_API_KEY) makes it faster. The panel asks you to fill in products until you do.
+vulns:
+  enabled: true
+  products: []                    # e.g. [Fortinet, WordPress, Synology, "Home Assistant"]; max. 20
+  days: 30                        # 1–120
+  interval: 6h                    # min. 1h; without a key about 7 s per product
+
+# Look of the page for all visitors.
+ui:
+  accent: ""                      # accent colour, e.g. "#00a4dc"; empty = the default blue. Made readable
+                                  # automatically (darker in light mode, lighter in dark mode).
+
 # Push notifications (Web Push). Needs HTTPS and a VAPID key; create one with
 #   docker compose run --rm nieuwsdashboard -gen-vapid
 # and put the printed NDB_VAPID_PRIVATE_KEY=... line in .env.
@@ -344,6 +388,10 @@ refresh:
   fuel: 60m
   waste: 60m
   trending: 10m
+  insects: 60m
+  sky: 30m
+  sports: 30m
+  vulns: 60m
   outages: 10m
   ap: 30m
   health: 30m

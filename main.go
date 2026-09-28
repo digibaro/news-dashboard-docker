@@ -35,6 +35,7 @@ import (
 	"os/signal"
 	"regexp"
 	"runtime"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -175,7 +176,8 @@ type Config struct {
 	Refresh map[string]Duration `yaml:"refresh"`
 	Keys    struct {
 		AbusechAuthKey string `yaml:"abusech_auth_key"`
-		NSAPIKey       string `yaml:"ns_api_key"` // NS Disruptions API (Treinstoringen)
+		NSAPIKey       string `yaml:"ns_api_key"`  // NS Disruptions API (Treinstoringen)
+		NVDAPIKey      string `yaml:"nvd_api_key"` // optional: faster NVD requests (Kwetsbaarheden)
 	} `yaml:"keys"`
 	Weather struct {
 		Location   Location          `yaml:"location"`
@@ -358,6 +360,39 @@ type Config struct {
 		BreakingSources  int     `yaml:"breaking_sources"` // 0 = no breaking-news messages
 		WasteHour        int     `yaml:"waste_hour"`       // local hour of the evening reminder; -1 = off
 	} `yaml:"push"`
+	// Insects: Teken en muggen panel (an estimate from the Open-Meteo forecast).
+	Insects struct {
+		Enabled bool   `yaml:"enabled"`
+		URL     string `yaml:"url"`
+	} `yaml:"insects"`
+	// Sky: Vanavond aan de hemel panel (computed; NOAA Kp forecast, Open-Meteo clouds).
+	Sky struct {
+		Enabled   bool   `yaml:"enabled"`
+		KpURL     string `yaml:"kp_url"`
+		CloudsURL string `yaml:"clouds_url"`
+	} `yaml:"sky"`
+	// Sports: Sportagenda panel (F1 via Jolpica; championships from events).
+	Sports struct {
+		Enabled  bool         `yaml:"enabled"`
+		Sports   []string     `yaml:"sports"` // f1, mtb, athletics; visitors choose among these
+		F1URL    string       `yaml:"f1_url"`
+		Interval Duration     `yaml:"interval"`
+		Events   []SportEvent `yaml:"events"`
+	} `yaml:"sports"`
+	// Vulns: Kwetsbaarheden in mijn software (NVD, EPSS, CISA KEV).
+	Vulns struct {
+		Enabled  bool     `yaml:"enabled"`
+		Products []string `yaml:"products"`
+		Days     int      `yaml:"days"`
+		Interval Duration `yaml:"interval"`
+		NVDURL   string   `yaml:"nvd_url"`
+		EPSSURL  string   `yaml:"epss_url"`
+		KEVURL   string   `yaml:"kev_url"`
+	} `yaml:"vulns"`
+	// UI: server-wide look.
+	UI struct {
+		Accent string `yaml:"accent"` // e.g. "#00a4dc"; empty = the default blue
+	} `yaml:"ui"`
 	Categories []Category `yaml:"categories"`
 	Presets    []Preset   `yaml:"presets"`
 	Sources    []Source   `yaml:"sources"`
@@ -444,6 +479,12 @@ func defaultConfig() *Config {
 	c.Fuel.Enabled, c.Fuel.URL, c.Fuel.Interval = true, "https://www.unitedconsumers.com/tanken/brandstofprijzen", Duration(3*time.Hour)
 	c.Waste.Enabled, c.Waste.Provider, c.Waste.Interval = true, "auto", Duration(6*time.Hour)
 	c.Trending.Enabled = true
+	c.Insects.Enabled, c.Insects.URL = true, "https://api.open-meteo.com/v1/forecast"
+	c.Sky.Enabled, c.Sky.KpURL, c.Sky.CloudsURL = true, "https://services.swpc.noaa.gov/products/noaa-planetary-k-index-forecast.json", "https://api.open-meteo.com/v1/forecast"
+	c.Sports.Enabled, c.Sports.Sports, c.Sports.F1URL, c.Sports.Interval = true, []string{"f1", "mtb", "athletics"}, "https://api.jolpi.ca/ergast/f1", Duration(time.Hour)
+	c.Vulns.Enabled, c.Vulns.Days, c.Vulns.Interval = true, 30, Duration(6*time.Hour)
+	c.Vulns.NVDURL, c.Vulns.EPSSURL = "https://services.nvd.nist.gov/rest/json/cves/2.0", "https://api.first.org/data/v1/epss"
+	c.Vulns.KEVURL = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
 	c.Push.MaxSubscriptions, c.Push.QuakeMinMag, c.Push.BreakingSources, c.Push.WasteHour = 50, 2.5, 6, 19
 	c.Threats.Enabled = true
 	c.Threats.Interval = Duration(15 * time.Minute)
@@ -491,6 +532,7 @@ func (c *Config) applyEnv() {
 	set(&c.Keys.AbusechAuthKey, "ABUSECH_AUTH_KEY")
 	set(&c.Keys.NSAPIKey, "NS_API_KEY")
 	set(&c.Waste.HomeAssistant.Token, "NDB_HA_TOKEN")
+	set(&c.Keys.NVDAPIKey, "NVD_API_KEY")
 	set(&c.Push.VAPIDPrivateKey, "NDB_VAPID_PRIVATE_KEY")
 	if v := os.Getenv("NDB_TRUSTED_PROXIES"); v != "" { // e.g. the Docker gateway range
 		c.Server.TrustedProxies = strings.Split(strings.ReplaceAll(v, " ", ""), ",")
@@ -501,6 +543,7 @@ func (c *Config) applyEnv() {
 }
 
 var (
+	accentRe   = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
 	idRe       = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,47}$`)
 	haEntityRe = regexp.MustCompile(`^[a-z_]+\.[a-z0-9_]{1,100}$`)
 )
@@ -515,13 +558,14 @@ var defaultRefresh = map[string]time.Duration{
 	"pollen": 60 * time.Minute, "utilities": 5 * time.Minute, "quakes": 15 * time.Minute,
 	"economy": 60 * time.Minute, "markets": 5 * time.Minute,
 	"nlalert": 2 * time.Minute, "fuel": 60 * time.Minute, "waste": 60 * time.Minute, "trending": 10 * time.Minute,
+	"insects": 60 * time.Minute, "sky": 30 * time.Minute, "sports": 30 * time.Minute, "vulns": 60 * time.Minute,
 	"health": 30 * time.Minute,
 }
 
 func (c *Config) validate() error {
 	for k, v := range c.Refresh {
 		if _, ok := defaultRefresh[k]; !ok {
-			return fmt.Errorf("refresh.%s: unknown panel (known: news, weather, alerts, traffic, alarms, energy, air, trains, politics, today, ransomware, pollen, utilities, quakes, economy, markets, nlalert, fuel, waste, trending, threats, advisories, breaches, outages, ap, health)", k)
+			return fmt.Errorf("refresh.%s: unknown panel (known: news, weather, alerts, traffic, alarms, energy, air, trains, politics, today, ransomware, pollen, utilities, quakes, economy, markets, nlalert, fuel, waste, trending, insects, sky, sports, vulns, threats, advisories, breaches, outages, ap, health)", k)
 		}
 		if v.D() < time.Minute || v.D() > 24*time.Hour {
 			return fmt.Errorf("refresh.%s: %s is outside 1m..24h", k, v.D())
@@ -713,6 +757,40 @@ func (c *Config) validate() error {
 				fail("waste: default address needs a postcode like 2511AB, number 1–99999 and a suffix of at most 6 letters/digits")
 			}
 		}
+	}
+	if c.Insects.Enabled && !httpsURL(c.Insects.URL) {
+		fail("insects.url must be an https URL")
+	}
+	if c.Sky.Enabled && (!httpsURL(c.Sky.KpURL) || !httpsURL(c.Sky.CloudsURL)) {
+		fail("sky: kp_url and clouds_url must be https URLs")
+	}
+	if sp := &c.Sports; sp.Enabled {
+		if sp.Interval.D() < 15*time.Minute || !httpsURL(sp.F1URL) || len(sp.Sports) == 0 || len(sp.Events) > 100 {
+			fail("sports: interval at least 15m, f1_url https, at least one sport, at most 100 events")
+		}
+		for _, s := range sp.Sports {
+			if _, ok := sportNames[s]; !ok {
+				fail("sports.sports: %q is not one of f1, mtb, athletics", s)
+			}
+		}
+		for _, e := range sp.Events {
+			if err := validSportEvent(e); err != nil {
+				fail("%v", err)
+			}
+		}
+	}
+	if v := &c.Vulns; v.Enabled {
+		if v.Interval.D() < time.Hour || v.Days < 1 || v.Days > 120 || len(v.Products) > 20 || !httpsURL(v.NVDURL) || !httpsURL(v.EPSSURL) || !httpsURL(v.KEVURL) {
+			fail("vulns: interval at least 1h, days 1–120, at most 20 products, URLs https")
+		}
+		for _, p := range v.Products {
+			if l := len(strings.TrimSpace(p)); l < 2 || l > 60 {
+				fail("vulns.products: %q must be 2–60 characters", p)
+			}
+		}
+	}
+	if a := c.UI.Accent; a != "" && !accentRe.MatchString(a) {
+		fail("ui.accent must be a colour like \"#00a4dc\"")
 	}
 	if p := &c.Push; p.Enabled {
 		if _, _, err := parseVAPIDKey(p.VAPIDPrivateKey); err != nil {
@@ -912,23 +990,25 @@ type App struct {
 	cfg    *Config
 	cfgMod time.Time
 
-	fetcher  *Fetcher
-	sched    *Scheduler
-	news     *NewsCache
-	wx       *weatherCaches
-	threats  *stateStore // threat panels and advisories
-	geo      *geoCache
-	images   *imageProxy
-	metrics  *httpMetrics
-	vild     atomic.Pointer[vildTable] // NDW location table for road names
-	alarms   *ttlCache[[]Alarm]        // P2000 alerts per city slug
-	air      *ttlCache[[]AirComponent] // pollutant values per Luchtmeetnet station
-	pollen   *ttlCache[PollenData]     // pollen forecast per ~10 km cell
-	p2k      map[string]*p2kCounter    // national alerts per service, last hour
-	trend    trendCache                // trending words, recomputed at most every 5 min
-	waste    *ttlCache[WasteResult]    // pickups per visitor address
-	wasteIdx wasteIndex                // address -> municipal calendar
-	push     *pushHub                  // Web Push subscriptions and watcher state
+	fetcher   *Fetcher
+	sched     *Scheduler
+	news      *NewsCache
+	wx        *weatherCaches
+	threats   *stateStore // threat panels and advisories
+	geo       *geoCache
+	images    *imageProxy
+	metrics   *httpMetrics
+	vild      atomic.Pointer[vildTable] // NDW location table for road names
+	alarms    *ttlCache[[]Alarm]        // P2000 alerts per city slug
+	air       *ttlCache[[]AirComponent] // pollutant values per Luchtmeetnet station
+	pollen    *ttlCache[PollenData]     // pollen forecast per ~10 km cell
+	p2k       map[string]*p2kCounter    // national alerts per service, last hour
+	trend     trendCache                // trending words, recomputed at most every 5 min
+	waste     *ttlCache[WasteResult]    // pickups per visitor address
+	insects   *ttlCache[InsectData]     // tick/mosquito estimate per ~10 km cell
+	skyClouds *ttlCache[[]cloudPoint]   // cloud cover per ~10 km cell
+	wasteIdx  wasteIndex                // address -> municipal calendar
+	push      *pushHub                  // Web Push subscriptions and watcher state
 }
 
 func (a *App) config() *Config {
@@ -1084,7 +1164,7 @@ func run(cfgPath string) error {
 	a := &App{cfgPath: cfgPath, level: level, started: time.Now(), news: newNewsCache(), sched: newScheduler(), wx: newWeatherCaches(),
 		threats: newStateStore(), geo: newGeoCache(10000), metrics: newHTTPMetrics(),
 		alarms: newTTLCache[[]Alarm](500), air: newTTLCache[[]AirComponent](200), pollen: newTTLCache[PollenData](300), p2k: newP2KCounters(),
-		push: newPushHub(), waste: newTTLCache[WasteResult](1000)}
+		push: newPushHub(), waste: newTTLCache[WasteResult](1000), insects: newTTLCache[InsectData](300), skyClouds: newTTLCache[[]cloudPoint](300)}
 	if st, err := os.Stat(cfgPath); err == nil {
 		a.cfgMod = st.ModTime()
 	}
@@ -1299,6 +1379,10 @@ func (a *App) routes(basePath string) http.Handler {
 	handle("GET /api/fuel", a.handleFuel)
 	handle("GET /api/waste", a.handleWaste)
 	handle("GET /api/trending", a.handleTrending)
+	handle("GET /api/insects", a.handleInsects)
+	handle("GET /api/sky", a.handleSky)
+	handle("GET /api/sports", a.handleSports)
+	handle("GET /api/vulns", a.handleVulns)
 	handle("GET /api/push", a.handlePushInfo)
 	handle("POST /api/push/subscribe", a.handlePushSubscribe)
 	handle("POST /api/push/unsubscribe", a.handlePushUnsubscribe)
@@ -1513,6 +1597,11 @@ func (a *App) handleCatalog(w http.ResponseWriter, r *http.Request) {
 		"waste_providers":  wasteProviderList(cfg),
 		"trending":         cfg.Trending.Enabled,
 		"push":             cfg.Push.Enabled,
+		"insects":          cfg.Insects.Enabled,
+		"sky":              cfg.Sky.Enabled,
+		"sports":           map[string]any{"enabled": cfg.Sports.Enabled, "sports": cfg.Sports.Sports},
+		"vulns":            cfg.Vulns.Enabled,
+		"accent":           cfg.UI.Accent,
 		"alarms":           map[string]any{"enabled": cfg.Alarms.Enabled, "city": cfg.Alarms.City},
 		"alerts":           map[string]bool{"nctv": cfg.Alerts.NCTV.Enabled, "knmi": cfg.Alerts.KNMI},
 		"presets":          cfg.Presets,
@@ -1712,6 +1801,16 @@ func (a *App) otherFeeds(cfg *Config) []FeedStatus {
 	}
 	if cfg.Waste.Enabled && hasWasteDefault(cfg) {
 		add("waste:calendar", "Afvalkalender (standaardadres)", "daily")
+	}
+	if cfg.Sky.Enabled {
+		add("noaa:kp", "NOAA SWPC · noorderlichtverwachting", "daily")
+	}
+	if cfg.Sports.Enabled && slices.Contains(cfg.Sports.Sports, "f1") {
+		add("f1:jolpica", "Jolpica · Formule 1", "daily")
+	}
+	if cfg.Vulns.Enabled && len(cfg.Vulns.Products) > 0 {
+		add("nvd:vulns", "NVD en FIRST EPSS · kwetsbaarheden", "daily")
+		add("vulns:kev", "CISA · actief misbruikte kwetsbaarheden", "daily")
 	}
 	if cfg.Outages.Enabled && cfg.Outages.Internet.Enabled {
 		add("ioda:internet", "IODA · internetverstoringen", "outage")

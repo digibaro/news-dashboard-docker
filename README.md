@@ -21,6 +21,10 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Kritieke infrastructuur:** current electricity and gas outages at Liander and Stedin (place, status, expected repair time, customers affected), planned work and outages resolved in the last 24 h.
 - **NL-Alert:** active and recent NL-Alerts (last 31 days), marked when the visitor's weather location lies inside the alert area.
 - **Afvalkalender:** the next waste collection days. Each visitor sets an own address (postcode and house number) under Instellingen, like the places for alarms and air quality; the server finds the provider that knows it among 51 built-in providers (municipal calendars, Ximmio, Amsterdam, HVC, RD4, ROVA and more; 60 with the optional app providers such as Mijn Afvalwijzer). An optional default address can also come from an iCal link or Home Assistant.
+- **Vanavond aan de hemel:** when it gets dark, the moon, the planets you can see tonight (when and in which direction), the chance of northern lights, the clouds and active meteor showers.
+- **Teken en muggen:** an estimate of tick and mosquito activity for 3 days, from the weather.
+- **Sportagenda:** Formula 1 (next race with qualifying, last podium, standings) and the European and World Championships in mountain biking and athletics, with matching headlines during a championship. Visitors choose their sports.
+- **Kwetsbaarheden in mijn software:** new CVEs for your own products (set in `config.yaml`), with severity, the chance of exploitation (EPSS) and whether they are actively exploited (CISA).
 - **Brandstofprijzen:** the national average recommended pump price (GLA) for Euro95, diesel and LPG, with the change since yesterday.
 - **Treinstoringen:** current rail disruptions and engineering works from the NS Disruptions API (needs a free key).
 - **Economie in cijfers:** Dutch inflation (with the euro-area figure and a 12-month trend), unemployment, the ECB deposit rate and the euro in dollars, from Eurostat and the ECB.
@@ -46,7 +50,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Watchlist and mute words:** security advisories that mention your products are pinned to the top.
 - **Freshness:** every panel shows how old its data is.
 - **Thumbnails:** optional, via the built-in image proxy.
-- **Installable and offline-capable** (PWA). On a phone, swipe between the news and the panels.
+- **Installable and offline-capable** (PWA). On a phone, swipe between the overview, the news and the panels, and pull down to refresh. A share button on every article.
 - **Keyboard shortcuts:** press `?` in the app.
 - **Overview and kiosk mode:** "Vandaag in het kort" puts the essentials of today on one screen; kiosk mode is for a wall display (see below).
 
@@ -155,7 +159,7 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 | `cache` | `max_items_per_source`, `max_age`, `snapshot_path` (empty = no disk writes, see below) |
 | `features` | `show_images` (keep feed images), `proxy_images` (serve them through `/api/img`, see below), `geolocation` (ip-api lookups), `allow_custom_feeds` (reserved, see below) |
 | `refresh` | how often an open browser tab asks the server for new data, per panel: `news`, `alerts`, `weather`, `today`, `air`, `pollen`, `traffic`, `trains`, `alarms`, `quakes`, `nlalert`, `energy`, `fuel`, `economy`, `markets`, `waste`, `trending`, `politics`, `threats`, `advisories`, `breaches`, `ransomware`, `utilities`, `outages`, `ap`, `health` (1m–24h, see below) |
-| `keys` | `abusech_auth_key` (optional), `ns_api_key` (Treinstoringen) |
+| `keys` | `abusech_auth_key` (optional), `ns_api_key` (Treinstoringen), `nvd_api_key` (optional, faster Kwetsbaarheden; or `NVD_API_KEY`) |
 | `energy` | Energieprijzen: `enabled`, `url`, `interval` (min. 15m), `vat` (0.21), `electricity_extra` / `gas_extra` (€ added per kWh / m³, e.g. energy tax and markup; default 0) |
 | `air` | Luchtkwaliteit: `enabled`, `base` (Luchtmeetnet API), `stations_url` (RIVM station list, CSV), `interval` (min. 15m) |
 | `trains` | Treinstoringen: `enabled`, `url` (NS Disruptions API v3), `interval` (min. 2m). Needs `keys.ns_api_key` |
@@ -167,6 +171,11 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 | `fuel` | Brandstofprijzen: `enabled`, `url` (UnitedConsumers page), `interval` (default 3h, min. 1h) |
 | `waste` | Afvalkalender: `enabled`, `providers` (provider ids to use, e.g. `[denhaag, hvc]`; a list replaces the default of all built-in providers; https URLs add extra opzet calendars), `app_providers` (default `false`; see *Data sources*), `interval` (default 6h, min. 1h). Visitors set their own address in the browser and can pick a provider or let the server find it. Optional **default address** (for visitors without one, and their push reminders) via `provider`: **auto** (or a provider id) `postcode`, `number`, `suffix` · **ics** `ics_url` · **home_assistant** `home_assistant.url`, `home_assistant.token` (or `NDB_HA_TOKEN`), `home_assistant.entities` (1–10 sensor ids). |
 | `trending` | Trending words above the news: `enabled` (computed from the news cache, no extra requests) |
+| `insects` | Teken en muggen: `enabled`, `url` (Open-Meteo forecast) |
+| `sky` | Vanavond aan de hemel: `enabled`, `kp_url` (NOAA SWPC), `clouds_url` (Open-Meteo) |
+| `sports` | Sportagenda: `enabled`, `sports` (`f1`, `mtb`, `athletics`; visitors choose among these), `f1_url` (Jolpica), `interval` (default 1h, min. 15m), `events` (championships: `sport` mtb/athletics, `name`, `start`, `end`, `place`, `url`, `keywords` for matching headlines) |
+| `vulns` | Kwetsbaarheden in mijn software: `enabled`, `products` (max. 20, e.g. `[Fortinet, WordPress]`), `days` (1–120, default 30), `interval` (default 6h, min. 1h), `nvd_url`, `epss_url`, `kev_url` |
+| `ui` | `accent`: accent colour for all visitors, e.g. `"#00a4dc"` (empty = the default blue); adjusted automatically to a readable shade in light and dark mode |
 | `push` | Push notifications (off by default): `enabled`, `subject` (`mailto:` or https contact), `vapid_private_key` (or `NDB_VAPID_PRIVATE_KEY`), `max_subscriptions` (default 50), `quake_min_mag` (2.5), `breaking_sources` (6; 0 = off), `waste_hour` (19; -1 = off). See [Push notifications](#push-notifications). |
 | `markets` | Beurs: `enabled`, `url` (Yahoo spark), `interval` (default 15m, min. 5m), `indices` (1–20, shown in order) and `stocks` (max. 60, the source of the top 3 risers and fallers), each `{ symbol, name }`. The default stocks are the AEX constituents; Euronext reviews them every quarter. |
 | `today` | Vandaag: `enabled`, `school_url` (Rijksoverheid school holidays) |
@@ -227,6 +236,10 @@ There are two separate rates:
 | Brandstofprijzen | 60m | 3h (the GLA changes once a day) |
 | Afvalkalender | 60m | 6h |
 | Trending | 10m | computed at most every 5 min |
+| Teken en muggen | 60m | on demand, cached 1h per ~10 km |
+| Vanavond aan de hemel | 30m | computed on request; Kp forecast 3h, clouds cached 1h per ~10 km |
+| Sportagenda | 30m | F1 1h; championships from the config |
+| Kwetsbaarheden | 60m | 6h (about 7 s per product without an NVD key) |
 | Politiek vandaag | 15m | 30m |
 | Alarmeringen | 2m | 2m per city |
 | Cyberdreigingen | 15m | 15m (ISC minimum), 30-day summary 1h |
@@ -542,6 +555,10 @@ The server fetches everything; browsers only talk to the dashboard itself.
 | [Open-Meteo](https://open-meteo.com/) (CAMS) | Hooikoorts | Air Quality API, pollen from the Copernicus Atmosphere Monitoring Service (CC BY 4.0). Levels are indicative thresholds per pollen type (grains/m³, daily maximum), not a medical scale. |
 | [Eurostat](https://ec.europa.eu/eurostat) | Economie in cijfers | HICP inflation (`prc_hicp_minr`) and unemployment (`une_rt_m`, seasonally adjusted), JSON-stat API, no key. Reuse allowed with attribution ([Eurostat copyright notice](https://ec.europa.eu/eurostat/about-us/policies/copyright)). Inflation is the European HICP measure, which can differ slightly from CBS's national CPI. |
 | [ECB Data Portal](https://data.ecb.europa.eu/) | Economie in cijfers | Deposit facility rate and the EUR/USD reference rate, SDMX API, no key; reuse allowed with attribution. |
+| [Open-Meteo](https://open-meteo.com/) | Onweer, Teken en muggen, hemel (bewolking) | Lightning potential and CAPE (ICON-D2) for the thunderstorm risk; temperature, humidity and wind for the tick and mosquito **estimate** (no open source with measurements exists: Tekenradar's activity map needs an account); cloud cover tonight. Same terms as the weather. |
+| [NOAA SWPC](https://www.swpc.noaa.gov/) | Hemel: noorderlicht | Planetary Kp index forecast (US government, public domain). Planets, moon and twilight are computed locally (JPL Keplerian elements and Meeus; checked against JPL Horizons). |
+| [Jolpica F1](https://github.com/jolpica/jolpica-f1) | Sportagenda: Formule 1 | The open, community-run successor of the Ergast API; no key, fair use. Championships (MTB, athletics) have no open API (UCI and World Athletics only use internal keys), so they come from `sports.events` in `config.yaml`; the defaults were checked on Wikipedia in September 2026. |
+| [NVD](https://nvd.nist.gov/), [FIRST EPSS](https://www.first.org/epss/), [CISA KEV](https://www.cisa.gov/known-exploited-vulnerabilities-catalog) | Kwetsbaarheden in mijn software | NVD API 2.0 (public domain; 5 requests per 30 s without a key), EPSS (free, attribution), the KEV catalogue (public domain). |
 | [NL-Alert](https://actueel.nl-alert.nl/) | NL-Alert | The public JSON API behind actueel.nl-alert.nl (`api.public-warning.app`), no key. Alerts include their broadcast areas; "in jouw omgeving" is a point-in-polygon check on the server with the visitor's weather location. |
 | [UnitedConsumers](https://www.unitedconsumers.com/tanken/brandstofprijzen) | Brandstofprijzen | The daily *gemiddelde landelijke adviesprijs* (GLA). There is **no open API**: the price table is read from the public page once every 3 hours. UnitedConsumers claims copyright on the data on its site, so this is for **personal use only**; turn it off with `fuel.enabled: false` for public or commercial use. CBS publishes official daily pump prices (table 80416ned), but its OData hosts are not reachable from every network. |
 | Waste collection providers | Afvalkalender | The provider list and request formats follow the Home Assistant integration [afvalwijzer](https://github.com/xirixiz/homeassistant-afvalwijzer) by xirixiz (MIT licence), rewritten in Go and checked with real addresses (September 2026). A visitor's municipality comes from [PDOK](https://www.pdok.nl/) (Locatieserver, open, no key); then that municipality's calendar and all regional providers are asked in parallel once, and the provider that knows the address is remembered. **Public APIs without a key (on):** 16 municipal calendars with the "opzet" API (Den Haag, Alphen aan den Rijn, Purmerend, Haarlem/Spaarnelanden, …), the regional opzet calendars of HVC, GAD, DAR, Cyclus, Afvalstoffendienst, Offalkalinder, PreZero, Saver and ZRD, 14 Ximmio companies (Almere, Twente Milieu, Avalex, ACV, Avri, Blink, Meerlanden, RAD, Waardlanden, Area, Venlo, Woerden, Hellendoorn, Oostzaan), Amsterdam (open data; dates computed from weekdays and frequency), RD4, ROVA, Irado, Reinis, RWM, Kliko (Maassluis, Oude IJsselstreek), Straatbeeld (Drimmelen) and the iCal calendars of Borsele, Goes and Edam-Volendam. **App providers (`waste.app_providers`, off by default):** Mijn Afvalwijzer (a large share of municipalities, e.g. Utrecht, Eindhoven, Breda) with the key of its web app, Burgerportaal (Groningen, Tilburg, Assen, BAR, Nijkerk, RMN) with an anonymous Firebase session, Omrin with the app's guest login, and Circulus with a web session. These are not public APIs; switch them on at your own discretion. Not included: providers that did not answer for any tested address (Westland, Afval3xbeter, Mijn Afvalzaken, De Afval App), Montferland (plain HTTP only), Mijn Afvalhulp and RecycleApp (Belgium). For the default address also: any iCal link, or your own Home Assistant (REST API with a long-lived token). |
@@ -660,6 +677,10 @@ All JSON responses:
 | `GET /api/nlalert?lat=&lon=` | NL-Alert: `alerts` of the last 31 days (text, English text, start, stop, withdrawn, `near` for the given point or the configured weather location) and the number `active` |
 | `GET /api/fuel` | Brandstofprijzen: `date` and `prices` (fuel, name, price per litre, change in cents) |
 | `GET /api/waste?postcode=&number=&suffix=&provider=` | Afvalkalender for the given address (`own`, `pickups`, `provider`, `calendar`, `home`, or `not_found`); `provider` is optional (default: find automatically). Without parameters the server's default address (`needs_address` when there is none). The address is not echoed. The enabled providers are in `/api/catalog` (`waste_providers`) |
+| `GET /api/insects?lat=&lon=` | Teken en muggen: 3 `days` with `ticks` and `mosquito` levels 0–3 (an estimate) |
+| `GET /api/sky?lat=&lon=` | Vanavond aan de hemel: sunset, dark, dawn, `moon` (phase, rise, set), `planets` (from, until, best time, altitude, direction), `kp` and `aurora` (0–3), `clouds`, `meteor` |
+| `GET /api/sports` | Sportagenda: `f1` (next race with sessions, last podium, standings) and `events` (per sport the current or just-finished and the next championship, with `headlines`) |
+| `GET /api/vulns` | Kwetsbaarheden: per product the number of CVEs, critical/high/actively exploited counts and the top 5 (CVSS, EPSS, KEV) |
 | `GET /api/trending` | Trending: up to 8 `terms` with the number of `sources` in the last 3 hours |
 | `GET /api/push` | Push: `enabled`, the VAPID public `key` and the available `topics` |
 | `POST /api/push/subscribe` · `/unsubscribe` · `/test` | Register, remove or test this device's subscription (same-origin JSON only) |
@@ -719,6 +740,15 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.14.0
+- **New panel Vanavond aan de hemel** (after Hooikoorts): when it gets dark, the moon (phase, rise and set), the planets visible tonight with the time and direction, the chance of northern lights from NOAA's Kp forecast, tonight's clouds and active meteor showers. Positions are computed locally and checked against NASA/JPL Horizons.
+- **New panel Sportagenda** (after Beurs): Formula 1 from the open Jolpica API (next race and qualifying, last podium, standings) and the mountain bike and athletics European/World Championships from a calendar in `config.yaml` (`sports.events`), with matching headlines during and just after a championship. Visitors choose their sports under *Instellingen*; the server offers `sports.sports`.
+- **New panel Teken en muggen** (after Hooikoorts): an estimate of tick and mosquito activity for today and the next two days, from temperature, humidity and wind, with links to Tekenradar and the mosquito radar.
+- **New panel Kwetsbaarheden in mijn software** (after Security-adviezen): for the products in `vulns.products`, the CVEs of the last 30 days from NVD with their CVSS score, the EPSS chance of exploitation and CISA's actively exploited list. Optional `keys.nvd_api_key`.
+- **Weather:** the chance of thunderstorms in the next 24 hours (Open-Meteo lightning potential), also in the overview when there is a chance.
+- **Accent colour** for all visitors in `config.yaml` (`ui.accent`), made readable automatically in light and dark mode.
+- **Phones:** a third swipe screen with the overview (Overzicht ← Nieuws → Panelen), pull down to refresh the current screen, and a share button on every article (the share sheet, or the link is copied).
 
 ### 1.13.0
 - **Phones: swipe between news and panels.** On a phone (up to 699 px wide) the page opens on the news; swipe left for all panels from top to bottom, swipe right for the news again. The tabs "Nieuws" and "Panelen" do the same (also with the arrow keys). The top bar (KNMI, Alarmeringen, NL-Alert, Terreurdreiging) and the header are the same in both views and scroll the same way; each view keeps its own scroll position. Swipes from the screen edge (the browser's back gesture) and inside sideways-scrolling parts (the hourly weather) are left alone. Links to a panel (top bar, overview cards, push notifications) open the panels view; searching opens the news view. Tablets and desktops are unchanged.

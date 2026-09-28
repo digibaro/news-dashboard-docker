@@ -24,6 +24,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -200,6 +201,7 @@ type WxForecast struct {
 	Current WxCurrent `json:"current"`
 	Hourly  []WxHour  `json:"hourly"`
 	Daily   []WxDay   `json:"daily"`
+	Thunder WxThunder `json:"thunder"` // next 24 hours
 }
 
 type RainPoint struct {
@@ -365,6 +367,8 @@ type omResp struct {
 		Code   []int      `json:"weather_code"`
 		Wind   []float64  `json:"wind_speed_10m"`
 		IsDay  []int      `json:"is_day"`
+		LPI    []*float64 `json:"lightning_potential"`
+		CAPE   []*float64 `json:"cape"`
 	} `json:"hourly"`
 	Daily struct {
 		Time    []int64    `json:"time"`
@@ -383,7 +387,7 @@ type omResp struct {
 
 const openMeteoURL = "https://api.open-meteo.com/v1/forecast?current=temperature_2m,apparent_temperature,relative_humidity_2m," +
 	"precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,is_day" +
-	"&hourly=temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,is_day" +
+	"&hourly=temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,is_day,lightning_potential,cape" +
 	"&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max," +
 	"wind_speed_10m_max,wind_direction_10m_dominant,sunrise,sunset,uv_index_max" +
 	"&timezone=auto&timeformat=unixtime&forecast_days=7&forecast_hours=24&wind_speed_unit=kmh"
@@ -437,6 +441,7 @@ func convertForecast(om *omResp) (WxForecast, error) {
 		h.Desc, h.Icon = wmoDesc(h.Code, at(hh.IsDay, i) == 1)
 		f.Hourly = append(f.Hourly, h)
 	}
+	f.Thunder = computeThunder(hh.Time, hh.LPI, hh.CAPE, hh.Code)
 	dd := om.Daily
 	for i, t := range dd.Time {
 		d := WxDay{Date: t, Code: at(dd.Code, i), Min: round1(at(dd.Min, i)), Max: round1(at(dd.Max, i)),
@@ -1706,6 +1711,19 @@ func (a *App) threatJobs(cfg *Config) []Job {
 	if w := cfg.Waste; w.Enabled && hasWasteDefault(cfg) {
 		jobs = append(jobs, Job{Key: "waste:calendar", Sig: fmt.Sprint(w.Provider, w.Providers, w.Postcode, w.Number, w.Suffix, w.ICSURL, w.HomeAssistant.URL, w.HomeAssistant.Entities),
 			Interval: w.Interval.D(), Run: a.runWaste})
+	}
+	if cfg.Sky.Enabled {
+		jobs = append(jobs, Job{Key: "noaa:kp", Sig: cfg.Sky.KpURL, Interval: 3 * time.Hour,
+			Run: a.fetchJob("noaa:kp", func() string { return a.config().Sky.KpURL }, "application/json", nil,
+				func(b []byte) (any, error) { return parseKpForecast(b) }, nil)})
+	}
+	if cfg.Sports.Enabled && slices.Contains(cfg.Sports.Sports, "f1") {
+		jobs = append(jobs, Job{Key: "f1:jolpica", Sig: cfg.Sports.F1URL, Interval: cfg.Sports.Interval.D(), Run: a.runF1})
+	}
+	if v := cfg.Vulns; v.Enabled && len(v.Products) > 0 {
+		jobs = append(jobs, Job{Key: "vulns:kev", Sig: v.KEVURL, Interval: 12 * time.Hour,
+			Run: a.fetchJob("vulns:kev", func() string { return a.config().Vulns.KEVURL }, "application/json", nil, parseKEVIDs, nil)},
+			Job{Key: "nvd:vulns", Sig: fmt.Sprint(v.NVDURL, v.EPSSURL, v.Products, v.Days), Interval: v.Interval.D(), Run: a.runVulns})
 	}
 	if cfg.Push.Enabled {
 		jobs = append(jobs, Job{Key: "push:watch", Interval: time.Minute, Run: a.runPushWatch})

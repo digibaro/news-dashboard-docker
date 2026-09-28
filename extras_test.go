@@ -15,6 +15,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"io"
+	"math"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -509,5 +510,143 @@ func TestWasteDiscovery(t *testing.T) {
 	}
 	if asked["other"] != 0 || asked["own"] != 1 {
 		t.Errorf("asked: %v (another municipality's calendar must not be asked)", asked)
+	}
+}
+
+// Reference values: NASA/JPL Horizons, astrometric J2000, 2026-09-28 20:00 UTC,
+// and the moon's rise/set for Den Haag (19:40 and 11:30 local time).
+func TestSkyAgainstHorizons(t *testing.T) {
+	at := time.Date(2026, 9, 28, 20, 0, 0, 0, time.UTC)
+	for _, c := range []struct {
+		k       string
+		ra, dec float64
+	}{{"jupiter", 141.44638, 15.74114}, {"saturn", 11.51069, 2.00016}, {"mars", 122.45225, 21.09359}, {"venus", 213.01399, -20.56331}} {
+		ra, dec := planetRADec(c.k, at)
+		if math.Abs(ra-c.ra) > 0.2 || math.Abs(dec-c.dec) > 0.2 {
+			t.Errorf("%s: %.2f %.2f, JPL %.2f %.2f", c.k, ra, dec, c.ra, c.dec)
+		}
+	}
+	s := computeSky(52.08, 4.30, time.Date(2026, 9, 28, 18, 0, 0, 0, amsterdam))
+	near := func(p *time.Time, hm string) bool {
+		if p == nil {
+			return false
+		}
+		want, _ := time.ParseInLocation("2006-01-02 15:04", hm, amsterdam)
+		return p.Sub(want).Abs() <= 6*time.Minute
+	}
+	if !near(s.Moon.Rise, "2026-09-28 19:40") || !near(s.Moon.Set, "2026-09-29 11:30") {
+		t.Errorf("moon rise/set: %v %v", s.Moon.Rise, s.Moon.Set)
+	}
+	if !near(s.Sunset, "2026-09-28 19:27") || s.Dark == nil || s.Dawn == nil {
+		t.Errorf("sun: %v %v %v", s.Sunset, s.Dark, s.Dawn)
+	}
+	names := []string{}
+	for _, p := range s.Planets {
+		names = append(names, p.Name)
+	}
+	if strings.Join(names, ",") != "Saturnus,Mars,Jupiter" {
+		t.Errorf("planets tonight: %v", names)
+	}
+	if lv := auroraLevel(7.3); lv != 3 || auroraLevel(4.7) != 0 {
+		t.Error("aurora levels")
+	}
+	kp, err := parseKpForecast([]byte(`[{"time_tag":"2026-09-28T18:00:00","kp":2.33,"observed":"predicted"},{"time_tag":"2026-09-28T21:00:00","kp":6.0,"observed":"predicted"},{"time_tag":"2026-09-29T09:00:00","kp":8,"observed":"predicted"}]`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m := maxKp(kp, time.Date(2026, 9, 28, 18, 40, 0, 0, time.UTC), time.Date(2026, 9, 29, 4, 27, 0, 0, time.UTC)); m == nil || *m != 6 {
+		t.Errorf("max Kp tonight: %v", m)
+	}
+}
+
+func TestThunderAndInsects(t *testing.T) {
+	f := func(v float64) *float64 { return &v }
+	th := computeThunder([]int64{1, 2, 3}, []*float64{f(0), f(1.5), nil}, []*float64{f(100), f(800), f(2500)}, []int{3, 80, 3})
+	if th.Level != 2 || th.Peak != 2 {
+		t.Errorf("thunder: %+v", th)
+	}
+	if thunderRisk(0, 0, 96) != 3 || thunderRisk(0, 50, 3) != 0 {
+		t.Error("thunder codes")
+	}
+	body := `{"hourly":{"time":["2026-06-10T12:00","2026-06-10T20:00","2026-06-11T12:00","2026-06-11T20:00","2026-01-10T12:00","2026-01-10T20:00"],
+	 "temperature_2m":[20,19,4,10,6,3],"relative_humidity_2m":[85,80,60,90,90,90],"wind_speed_10m":[5,8,30,30,10,10]}}`
+	d, err := parseInsects([]byte(body), time.Date(2026, 1, 1, 9, 0, 0, 0, amsterdam))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// warm and humid June day: high; cold day: none; mild January day: ticks lowered in winter
+	if len(d.Days) != 3 || d.Days[0].Date != "2026-06-10" || d.Days[0].Ticks != 3 || d.Days[0].Mosquito != 3 ||
+		d.Days[1].Ticks != 0 || d.Days[1].Mosquito != 0 || d.Days[2].Date != "2026-01-10" || d.Days[2].Ticks != 0 {
+		t.Errorf("insects: %+v", d.Days)
+	}
+}
+
+func TestParseF1(t *testing.T) {
+	sched := `{"MRData":{"RaceTable":{"season":"2026","Races":[
+	 {"round":"15","raceName":"Azerbaijan Grand Prix","date":"2026-09-26","time":"11:00:00Z","Circuit":{"circuitName":"Baku City Circuit","Location":{"locality":"Baku","country":"Azerbaijan"}}},
+	 {"round":"16","raceName":"Singapore Grand Prix","date":"2026-10-11","time":"12:00:00Z","Circuit":{"circuitName":"Marina Bay","Location":{"locality":"Marina Bay","country":"Singapore"}},
+	  "Qualifying":{"date":"2026-10-10","time":"13:00:00Z"},"Sprint":{"date":"2026-10-10","time":"09:00:00Z"}}]}}}`
+	next, season, err := parseF1Schedule([]byte(sched), time.Date(2026, 9, 28, 9, 0, 0, 0, time.UTC))
+	if err != nil || season != "2026" || next == nil || next.Round != 16 || next.Place != "Marina Bay, Singapore" || len(next.Sessions) != 2 || next.Sessions[0].Name != "Sprint" {
+		t.Fatalf("schedule: %+v %v", next, err)
+	}
+	last, err := parseF1Last([]byte(`{"MRData":{"RaceTable":{"Races":[{"round":"15","raceName":"Azerbaijan Grand Prix","date":"2026-09-26","time":"11:00:00Z",
+	 "Results":[{"position":"1","Driver":{"givenName":"Kimi","familyName":"Antonelli"},"Constructor":{"name":"Mercedes"}},{"position":"2","Driver":{"givenName":"George","familyName":"Russell"},"Constructor":{"name":"Mercedes"}},
+	 {"position":"4","Driver":{"givenName":"X","familyName":"Y"},"Constructor":{"name":"Z"}}]}]}}}`))
+	if err != nil || len(last.Podium) != 2 || last.Podium[0].Driver != "Kimi Antonelli" {
+		t.Errorf("last: %+v %v", last, err)
+	}
+	st, err := parseF1Standings([]byte(`{"MRData":{"StandingsTable":{"StandingsLists":[{"DriverStandings":[{"position":"1","points":"302","Driver":{"givenName":"Kimi","familyName":"Antonelli"},"Constructors":[{"name":"Mercedes"}]}]}]}}}`))
+	if err != nil || len(st) != 1 || st[0].Points != 302 || st[0].Team != "Mercedes" {
+		t.Errorf("standings: %+v %v", st, err)
+	}
+}
+
+func TestSportEvents(t *testing.T) {
+	a := newTestApp(t, validConfig+`sports:
+  events:
+    - { sport: athletics, name: "EK atletiek", start: "2026-08-10", end: "2026-08-16", keywords: ["EK atletiek"] }
+    - { sport: athletics, name: "EK indoor", start: "2027-03-04", end: "2027-03-07" }
+    - { sport: athletics, name: "WK atletiek", start: "2027-09-10", end: "2027-09-19" }
+    - { sport: mtb, name: "WK mountainbike", start: "2026-09-20", end: "2026-09-27", keywords: ["WK mountainbike"] }
+`)
+	evs := a.sportEvents(a.cfg, time.Date(2026, 9, 28, 12, 0, 0, 0, amsterdam))
+	var got []string
+	for _, e := range evs {
+		got = append(got, e.Sport+":"+e.Name+":"+e.Status)
+	}
+	if strings.Join(got, "|") != "mtb:WK mountainbike:done|athletics:EK indoor:upcoming" { // config order: f1, mtb, athletics
+		t.Errorf("events: %v", got)
+	}
+	for _, bad := range []string{`sports: { events: [ { sport: f1, name: "x", start: "2026-01-01", end: "2026-01-02" } ] }`,
+		`sports: { events: [ { sport: mtb, name: "x", start: "2026-01-05", end: "2026-01-02" } ] }`, `sports: { sports: [darts] }`} {
+		if _, err := parseConfig([]byte(validConfig + bad + "\n")); err == nil {
+			t.Errorf("must fail: %s", bad)
+		}
+	}
+}
+
+func TestVulnParsers(t *testing.T) {
+	nvd := `{"totalResults":3,"vulnerabilities":[
+	 {"cve":{"id":"CVE-2026-1000","published":"2026-09-20T10:00:00.000","vulnStatus":"Analyzed","descriptions":[{"lang":"en","value":"Heap overflow in <b>FortiOS</b>"}],
+	  "metrics":{"cvssMetricV31":[{"cvssData":{"baseScore":9.8,"baseSeverity":"CRITICAL"}}]}}},
+	 {"cve":{"id":"CVE-2026-1001","published":"2026-09-21T10:00:00.000","vulnStatus":"Received","descriptions":[{"lang":"en","value":"XSS"}],"metrics":{}}},
+	 {"cve":{"id":"CVE-2026-1002","published":"2026-09-22T10:00:00.000","vulnStatus":"Rejected","descriptions":[],"metrics":{}}}]}`
+	items, err := parseNVD([]byte(nvd))
+	if err != nil || len(items) != 2 || items[0].Score != 9.8 || items[0].Severity != "CRITICAL" || items[0].Summary != "Heap overflow in FortiOS" || items[1].Score != 0 {
+		t.Fatalf("nvd: %+v %v", items, err)
+	}
+	e, err := parseEPSS([]byte(`{"data":[{"cve":"CVE-2026-1001","epss":"0.834"}]}`))
+	if err != nil || e["CVE-2026-1001"] != 0.834 {
+		t.Errorf("epss: %v %v", e, err)
+	}
+	ids, err := parseKEVIDs([]byte(`{"vulnerabilities":[{"cveID":"CVE-2026-1001"}]}`))
+	if err != nil || !ids.(map[string]bool)["CVE-2026-1001"] {
+		t.Errorf("kev: %v %v", ids, err)
+	}
+	items[1].KEV = true
+	rankVulns(items)
+	if items[0].ID != "CVE-2026-1001" {
+		t.Error("actively exploited first")
 	}
 }

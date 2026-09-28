@@ -215,11 +215,11 @@ svg.i { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor;
 .item.read .sum { color: var(--text-3); }
 .rel { margin: 3px 0 0; font-size: 12px; color: var(--text-3); }
 .rel a { color: var(--text-2); }
-.bm {
+.bm, .sh {
   display: inline-grid; place-items: center; flex: none; width: 28px; height: 24px; margin-left: auto; padding: 0;
   border: 0; border-radius: 4px; background: none; color: var(--text-3);
 }
-.bm:hover { background: var(--surface); color: var(--text); }
+.bm:hover, .sh:hover { background: var(--surface); color: var(--text); }
 .bm svg.i { width: 16px; height: 16px; }
 .bm[aria-pressed="true"] { color: var(--accent); }
 .bm[aria-pressed="true"] svg.i { fill: currentColor; }
@@ -607,7 +607,7 @@ table.tt { width: 100%; border-collapse: collapse; font-size: 12px; }
 [data-mode="kiosk"] body { zoom: 1.15; }
 @media (min-width: 1800px) { [data-mode="kiosk"] body { zoom: 1.3; } }
 [data-mode="kiosk"] #open-settings, [data-mode="kiosk"] .search, [data-mode="kiosk"] #search-open, [data-mode="kiosk"] #theme-seg,
-[data-mode="kiosk"] #lang-seg, [data-mode="kiosk"] .news-bar .icon-btn, [data-mode="kiosk"] .item .bm, [data-mode="kiosk"] #welcome,
+[data-mode="kiosk"] #lang-seg, [data-mode="kiosk"] .news-bar .icon-btn, [data-mode="kiosk"] .item .bm, [data-mode="kiosk"] .item .sh, [data-mode="kiosk"] #welcome,
 [data-mode="kiosk"] .foot, [data-mode="kiosk"] .more, [data-mode="kiosk"] #chips .chip.off, [data-mode="kiosk"] .pextra { display: none !important; }
 @media (min-width: 1100px) {
   [data-mode="kiosk"] body { overflow: hidden; }
@@ -834,6 +834,44 @@ textarea.json {
 .msg { margin: 8px 0 0; font-size: 13px; min-height: 1.4em; color: var(--text-2); }
 .msg.err { color: var(--sev-crit); }
 
+/* ---------- Teken en muggen, hemel, sport, kwetsbaarheden ---------- */
+.itab { width: 100%; border-collapse: collapse; font-size: 13px; }
+.itab th, .itab td { text-align: left; padding: 5px 4px; border-top: 1px solid var(--line); font-weight: 400; }
+.itab thead th { border-top: 0; font-size: 12px; color: var(--text-2); font-weight: 600; }
+.itab tbody th { font-weight: 600; }
+.ilv { display: inline-block; min-width: 4.2em; padding: 1px 7px; border-radius: 10px; font-size: 12px; font-weight: 600; text-align: center; color: var(--text); }
+.ilv.i0 { background: var(--surface); color: var(--text-2); }
+.ilv.i1 { background: color-mix(in srgb, var(--sev-low) 20%, transparent); }
+.ilv.i2 { background: color-mix(in srgb, var(--sev-med) 26%, transparent); }
+.ilv.i3 { background: color-mix(in srgb, var(--sev-crit) 22%, transparent); }
+.plist.sky li { font-size: 13px; }
+.spsec + .spsec { margin-top: 10px; }
+.spsec h3 { margin: 4px 0 2px; font-size: 13px; font-weight: 650; }
+.sprow { margin: 3px 0; font-size: 13px; line-height: 1.45; }
+.sprow .m { color: var(--text-3); font-size: 12px; }
+.tag.live { color: var(--sev-crit); }
+.spev .plist { margin: 2px 0 6px; }
+.vulns { list-style: none; margin: 0; padding: 0; }
+.vulns > li { padding: 6px 0; border-top: 1px solid var(--line); }
+.vulns > li:first-child { border-top: 0; }
+.vhead { margin: 0 0 2px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; font-size: 13px; }
+.vhead .m { color: var(--text-3); font-size: 12px; }
+.vulns .plist .tag { margin-right: 4px; vertical-align: 1px; }
+.vulns .plist .m { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.wxthunder { margin: 6px 0 0; font-size: 13px; color: var(--text-2); }
+.wxthunder.lv2, .wxthunder.lv3 { color: var(--sev-crit); font-weight: 600; }
+.insk { height: 190px; } .skysk { height: 260px; } .spsk { height: 330px; } .vusk { height: 420px; }
+.meta .sh { margin-left: auto; }
+.meta .sh + .bm { margin-left: 0; }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 60; padding: 8px 14px; border-radius: 18px;
+  background: var(--text); color: var(--bg); font-size: 13px; font-weight: 600; box-shadow: 0 2px 10px rgb(0 0 0 / .2); }
+.toast[hidden] { display: none; }
+.ptr { position: fixed; left: 50%; top: calc(var(--hdr) + 6px); z-index: 30; transform: translate(-50%, var(--ptr-y, -60px)); padding: 6px 12px;
+  border-radius: 16px; background: var(--surface); border: 1px solid var(--line); color: var(--text-2); font-size: 12px; font-weight: 600;
+  box-shadow: 0 2px 8px rgb(0 0 0 / .12); pointer-events: none; transition: transform .15s; }
+.ptr[hidden] { display: none; }
+.ptr.ready { color: var(--accent); }
+
 /* ---------- Phones: two views, swipe between them ---------- */
 .mview { display: none; }
 @media (max-width: 699px) {
@@ -843,7 +881,12 @@ textarea.json {
   .mview button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
   .mview .dots { display: none; }
   html:not([data-mode])[data-mview="news"] #side, html:not([data-mode])[data-mview="panels"] #news,
-  html:not([data-mode])[data-mview="panels"] #chips { display: none; }
+  html:not([data-mode])[data-mview="panels"] #chips,
+  html:not([data-mode])[data-mview="overview"] #news, html:not([data-mode])[data-mview="overview"] #side,
+  html:not([data-mode])[data-mview="overview"] #chips { display: none; }
+  html:not([data-mode])[data-mview="overview"] .digest { display: block; }
+  html:not([data-mode]) #digest-exit { display: none; }
+  html:not([data-mode]) { overscroll-behavior-y: contain; } /* our pull-to-refresh instead of the browser's reload */
   html:not([data-mode]) .layout { gap: 12px; }
   html:not([data-mode])[data-mview="panels"] .side > .panel:first-child { border-top: 0; }
   .mv-in-l { animation: mvL .18s ease-out; }
@@ -886,6 +929,7 @@ textarea.json {
   <symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
   <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5M5.5 11.5L12 5l6.5 6.5"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15V3M7.5 7.5 12 3l4.5 4.5M5 12v8h14v-8"/></symbol>
   <symbol id="i-bm" viewBox="0 0 24 24"><path d="M7 4h10v16l-5-3.6L7 20z"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></symbol>
   <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 5v14M5.5 12.5L12 19l6.5-6.5"/></symbol>
@@ -942,6 +986,7 @@ textarea.json {
 
 <main class="layout">
   <div class="mview" id="mview" role="tablist" aria-label="Weergave op de telefoon">
+    <button type="button" role="tab" id="mv-overview" aria-controls="digest" aria-selected="false" tabindex="-1">Overzicht</button>
     <button type="button" role="tab" id="mv-news" aria-controls="news" aria-selected="true">Nieuws</button>
     <button type="button" role="tab" id="mv-panels" aria-controls="side" aria-selected="false" tabindex="-1">Panelen</button>
   </div>
@@ -968,6 +1013,8 @@ textarea.json {
 </main>
 
 <button class="btn kiosk-exit" id="kiosk-exit" type="button">Kiosk verlaten</button>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<div class="ptr" id="ptr" aria-hidden="true" hidden></div>
 <footer class="foot">
   <p>Berichten, koppen en samenvattingen zijn eigendom van de oorspronkelijke uitgevers; elke kop linkt naar het origineel.</p>
   <p>Je voorkeuren staan alleen in deze browser. Deze site gebruikt geen cookies, trackers of externe lettertypen.</p>
@@ -1017,6 +1064,12 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.14.0</h3>
+    <ul>
+      <li>Nieuwe panelen: Vanavond aan de hemel (donker, maan, planeten, noorderlicht, meteoren), Sportagenda (Formule 1, mountainbike en atletiek EK/WK; kies je sporten in Instellingen), Teken en muggen en Kwetsbaarheden in mijn software.</li>
+      <li>Weer: de kans op onweer in de komende 24 uur.</li>
+      <li>Op de telefoon: een derde veegscherm met het overzicht, omlaag trekken om te verversen, en een deelknop bij elk bericht.</li>
+    </ul>
     <h3>Versie 1.13.0</h3>
     <ul>
       <li>Op de telefoon: veeg naar links voor de panelen en naar rechts voor het nieuws, of gebruik de tabs "Nieuws" en "Panelen". De bovenste balk blijft in beide gelijk.</li>
@@ -1119,6 +1172,12 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.14.0</h3>
+    <ul>
+      <li>New panels: Tonight's sky (darkness, moon, planets, northern lights, meteors), Sports calendar (Formula 1, mountain bike and athletics championships; choose your sports in Settings), Ticks and mosquitoes, and Vulnerabilities in my software.</li>
+      <li>Weather: the chance of thunderstorms in the next 24 hours.</li>
+      <li>On a phone: a third swipe screen with the overview, pull down to refresh, and a share button on every article.</li>
+    </ul>
     <h3>Version 1.13.0</h3>
     <ul>
       <li>On a phone: swipe left for the panels and right for the news, or use the tabs "News" and "Panels". The top bar stays the same in both.</li>
@@ -1313,6 +1372,11 @@ textarea.json {
       <p class="hint">Je adres blijft in deze browser. De server gebruikt het alleen om de afvalkalender van je gemeente op te vragen en onthoudt de uitkomst hooguit 6 uur in het geheugen.</p>
       <p class="msg" id="waste-msg" role="status"></p>
     </section>
+    <section aria-labelledby="set-sports-h" id="set-sports" hidden>
+      <h3 id="set-sports-h">Sportagenda</h3>
+      <p class="hint">Kies welke sporten je in de sportagenda ziet.</p>
+      <div id="sports-opts" role="group" aria-labelledby="set-sports-h"></div>
+    </section>
     <section aria-labelledby="set-view-h">
       <h3 id="set-view-h">Weergave</h3>
       <div class="opt"><span id="lbl-mode">Modus<small>Overzicht: het belangrijkste van vandaag op één scherm. Kiosk: voor een wandscherm; groter en schuift vanzelf door. Ook via het adres: ?mode=digest of ?mode=kiosk.</small></span>
@@ -1401,6 +1465,8 @@ const PANELS = {
   waste: 'Afvalkalender',
   air: 'Luchtkwaliteit',
   pollen: 'Hooikoorts',
+  insects: 'Teken en muggen',
+  sky: 'Vanavond aan de hemel',
   traffic: 'Verkeer',
   trains: 'Treinstoringen',
   alarms: 'Alarmeringen',
@@ -1410,9 +1476,11 @@ const PANELS = {
   fuel: 'Brandstofprijzen',
   economy: 'Economie in cijfers',
   markets: 'Beurs',
+  sports: 'Sportagenda',
   politics: 'Politiek vandaag',
   threats: 'Cyberdreigingen',
   advisories: 'Security-adviezen',
+  vulns: 'Kwetsbaarheden in mijn software',
   breaches: 'Datalekken',
   ransomware: 'Ransomware NL',
   utilities: 'Kritieke infrastructuur',
@@ -1425,7 +1493,7 @@ const MIN = 60e3;
 const DEFAULTS = {
   v: 2, theme: 'auto', sources: null, known: [], pageSize: 60, summaries: true,
   density: 'compact', category: 'all', weather: null, threatTab: 'ips', advFilter: 'all',
-  lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, trending: true, pushTopics: null, waste: null, watch: [], mute: [],
+  lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, trending: true, pushTopics: null, waste: null, sports: null, watch: [], mute: [],
   panels: { order: PANEL_IDS.slice(), collapsed: {}, hidden: {} },
 };
 
@@ -2183,6 +2251,113 @@ const EN = {
   " (in jouw omgeving)": " (in your area)",
   // telefoonweergave
   "Weergave op de telefoon": "View on the phone",
+  // 1.14: hemel, sport, teken en muggen, kwetsbaarheden, onweer, delen
+  "Teken en muggen": "Ticks and mosquitoes",
+  "Vanavond aan de hemel": "Tonight's sky",
+  "Sportagenda": "Sports calendar",
+  "Kwetsbaarheden in mijn software": "Vulnerabilities in my software",
+  "Plaats voor teken en muggen wijzigen (nu {name})": "Change the place for ticks and mosquitoes (now {name})",
+  "De verwachting kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.": "The forecast could not be loaded ({err}). Retrying automatically.",
+  "Dit paneel staat uit in config.yaml (insects.enabled).": "This panel is disabled in config.yaml (insects.enabled).",
+  "Open-Meteo is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.": "Open-Meteo is unreachable ({err}); retrying automatically.",
+  "{what}: {level}": "{what}: {level}",
+  "Teken": "Ticks",
+  "Muggen": "Mosquitoes",
+  "Muggen (avond)": "Mosquitoes (evening)",
+  "Tip: lange broek in hoog gras en bos, en controleer jezelf na het wandelen op teken.": "Tip: wear long trousers in tall grass and woods, and check yourself for ticks after a walk.",
+  "Tip: vanavond ramen dicht of een hor ervoor als het licht aan is.": "Tip: tonight keep windows shut or screened while the lights are on.",
+  "Indicatie op basis van temperatuur, vocht en wind (Open-Meteo), geen metingen · Meer: ": "Estimate from temperature, humidity and wind (Open-Meteo), not measurements · More: ",
+  "Muggenradar": "Mosquito radar",
+  "De hemel kon niet worden berekend ({err}). Er wordt automatisch opnieuw geprobeerd.": "The sky could not be computed ({err}). Retrying automatically.",
+  "Dit paneel staat uit in config.yaml (sky.enabled).": "This panel is disabled in config.yaml (sky.enabled).",
+  "Donker vanaf {dark} (zon onder {set}) tot {dawn}": "Dark from {dark} (sunset {set}) until {dawn}",
+  "Vannacht grotendeels helder ({n}% bewolking)": "Mostly clear tonight ({n}% cloud)",
+  "Vannacht wisselend bewolkt ({n}%)": "Partly cloudy tonight ({n}%)",
+  "Vannacht bewolkt ({n}%): weinig te zien": "Cloudy tonight ({n}%): little to see",
+  "Maan: {phase}, {pct}% verlicht": "Moon: {phase}, {pct}% lit",
+  "wassende sikkel": "waxing crescent",
+  "eerste kwartier": "first quarter",
+  "wassend": "waxing gibbous",
+  "afnemend": "waning gibbous",
+  "laatste kwartier": "last quarter",
+  "afnemende sikkel": "waning crescent",
+  "op {t}": "rises {t}",
+  "onder {t}": "sets {t}",
+  "vanaf {from} · hoogst om {best} in het {dir} ({alt}°)": "from {from} · highest at {best} in the {dir} ({alt}°)",
+  "noorden": "north",
+  "noordoosten": "northeast",
+  "oosten": "east",
+  "zuidoosten": "southeast",
+  "zuiden": "south",
+  "zuidwesten": "southwest",
+  "westen": "west",
+  "noordwesten": "northwest",
+  "Mercurius": "Mercury",
+  "Saturnus": "Saturn",
+  "Geen heldere planeten te zien vannacht.": "No bright planets to see tonight.",
+  "geen kans": "no chance",
+  "alleen op een lang belichte foto": "only on a long-exposure photo",
+  "kleine kans: kijk laag naar het noorden, buiten de stad": "small chance: look low to the north, away from the city",
+  "goede kans: kijk naar het noorden, buiten de stad": "good chance: look north, away from the city",
+  "Noorderlicht: {s}": "Northern lights: {s}",
+  "Meteoren: {name}, piek {date} (tot ongeveer {n} per uur bij een donkere hemel)": "Meteors: {name}, peak {date} (up to about {n} per hour under a dark sky)",
+  "Berekend voor {place} · noorderlicht: ": "Computed for {place} · northern lights: ",
+  " · bewolking: ": " · clouds: ",
+  "De sportagenda kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.": "The sports calendar could not be loaded ({err}). Retrying automatically.",
+  "Dit paneel staat uit in config.yaml (sports.enabled).": "This panel is disabled in config.yaml (sports.enabled).",
+  "Je hebt geen sporten gekozen.": "You have not chosen any sports.",
+  "Sporten kiezen": "Choose sports",
+  "sporten kiezen": "choose sports",
+  "Formule 1": "Formula 1",
+  "Mountainbike (EK/WK)": "Mountain bike (European/World Championships)",
+  "Atletiek (EK/WK)": "Athletics (European/World Championships)",
+  "Jolpica is niet bereikbaar ({err}).": "Jolpica is unreachable ({err}).",
+  "Wordt voor het eerst opgehaald.": "Being fetched for the first time.",
+  "Volgende: ": "Next: ",
+  "Laatste: ": "Last: ",
+  "Stand: ": "Standings: ",
+  "Het seizoen {y} is voorbij.": "The {y} season is over.",
+  "Kwalificatie": "Qualifying",
+  "Sprintkwalificatie": "Sprint qualifying",
+  "Geen kampioenschap in de kalender; de beheerder vult data aan in config.yaml (sports.events).": "No championship in the calendar; the administrator adds dates in config.yaml (sports.events).",
+  "nu bezig": "on now",
+  "afgelopen": "finished",
+  "programma": "programme",
+  "uitslagen": "results",
+  " (Formule 1) · kampioenschappen: kalender van de beheerder, koppen uit je nieuwsbronnen · ": " (Formula 1) · championships: the administrator's calendar, headlines from your news sources · ",
+  "Kies welke sporten je in de sportagenda ziet.": "Choose which sports the sports calendar shows.",
+  "Kwetsbaarheden konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.": "Vulnerabilities could not be loaded ({err}). Retrying automatically.",
+  "Dit paneel staat uit in config.yaml (vulns.enabled).": "This panel is disabled in config.yaml (vulns.enabled).",
+  "De beheerder geeft de producten op in config.yaml (vulns.products), bijvoorbeeld Fortinet, WordPress of Synology.": "The administrator lists the products in config.yaml (vulns.products), for example Fortinet, WordPress or Synology.",
+  "NVD is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.": "NVD is unreachable ({err}); retrying automatically.",
+  "Kwetsbaarheden worden voor het eerst opgehaald (dat duurt ongeveer 7 seconden per product).": "Vulnerabilities are being fetched for the first time (about 7 seconds per product).",
+  "niet opgehaald: {err}": "not fetched: {err}",
+  "1 nieuwe CVE": "1 new CVE",
+  "{n} nieuwe CVE's": "{n} new CVEs",
+  "{n} actief misbruikt": "{n} actively exploited",
+  "{n} kritiek": "{n} critical",
+  "{n} hoog": "{n} high",
+  "kans op misbruik (EPSS): {p}%": "chance of exploitation (EPSS): {p}%",
+  "Laatste {n} dagen · bron: ": "Last {n} days · source: ",
+  " · producten in config.yaml": " · products in config.yaml",
+  "Link gekopieerd": "Link copied",
+  "Delen lukt niet in deze browser": "Sharing does not work in this browser",
+  "Delen": "Share",
+  "Delen: {title}": "Share: {title}",
+  "Loslaten om te verversen": "Release to refresh",
+  "Trek omlaag om te verversen": "Pull down to refresh",
+  "Verversen…": "Refreshing…",
+  "Bijgewerkt": "Updated",
+  ", vooral rond {t}": ", mostly around {t}",
+  "Onweer komende 24 uur: {level}": "Thunderstorms in the next 24 hours: {level}",
+  "kleine kans": "small chance",
+  "matige kans": "moderate chance",
+  "grote kans": "high chance",
+  "NOAA SWPC · noorderlichtverwachting": "NOAA SWPC · northern lights forecast",
+  "Jolpica · Formule 1": "Jolpica · Formula 1",
+  "NVD en FIRST EPSS · kwetsbaarheden": "NVD and FIRST EPSS · vulnerabilities",
+  "CISA · actief misbruikte kwetsbaarheden": "CISA · actively exploited vulnerabilities",
+  "Dag": "Day",
 };
 
 // Sentences the server composes from parts (rain summary, directions, source names).
@@ -2331,6 +2506,7 @@ function sanitize(p) {
     const prov = typeof p.waste.provider === 'string' && /^[a-z0-9][a-z0-9:.-]{1,60}$/.test(p.waste.provider) ? p.waste.provider : '';
     if (/^[1-9]\d{3}[A-Z]{2}$/.test(pc) && Number.isInteger(nr) && nr >= 1 && nr <= 99999 && /^[A-Za-z0-9-]*$/.test(sfx)) d.waste = { postcode: pc, number: nr, suffix: sfx, provider: prov };
   }
+  if (Array.isArray(p.sports)) d.sports = p.sports.filter(x => ['f1', 'mtb', 'athletics'].includes(x));
   if (Array.isArray(p.pushTopics)) d.pushTopics = p.pushTopics.filter(x => typeof x === 'string' && /^[a-z]{2,12}$/.test(x)).slice(0, 10);
   const terms = a => Array.isArray(a) ? [...new Set(a.filter(t => typeof t === 'string').map(t => t.trim().slice(0, 60)).filter(Boolean))].slice(0, 50) : [];
   d.watch = terms(p.watch);
@@ -2628,7 +2804,7 @@ function matchesFilter(it) {
   if (prefs.hideRead && isRead(it)) return false;
   return matchesQuery(it);
 }
-function renderAll() { renderWelcome(); buildChips(); renderTrending(); renderStream(); renderNotices(); renderMeta(); renderNewButton(); if (viewMode === 'digest') queueDigest(); }
+function renderAll() { renderWelcome(); buildChips(); renderTrending(); renderStream(); renderNotices(); renderMeta(); renderNewButton(); if (viewMode === 'digest' || mobileView === 'overview') queueDigest(); }
 function renderMeta() {
   // freshness of the server data: the most recent successful fetch among the chosen sources
   const ts = enabledIds().map(id => status[id]?.fetched_at).filter(Boolean).map(t => new Date(t)).sort((a, b) => b - a)[0];
@@ -2734,6 +2910,7 @@ function itemEl(it) {
       h('div', { class: 'meta' },
         h('span', { class: 'src' }, h('span', { class: 'dot', style: `--h:${hue(it.source)}` }), h('span', { text: srcName(it.source) })),
         timeEl(it.date),
+        h('button', { class: 'sh', type: 'button', 'aria-label': t('Delen: {title}', { title: it.title }), title: t('Delen'), onclick: () => shareItem(it) }, icon('share')),
         h('button', { class: 'bm', type: 'button', 'aria-pressed': String(isSaved(it.id)), 'aria-label': t('Bewaren: {title}', { title: it.title }), title: t('Bewaren (s)'),
           onclick: () => toggleSaved(it) }, icon('bm')))),
     img ? h('img', { class: 'thumb', src: img, alt: '', loading: 'lazy', decoding: 'async', width: '112', height: '72',
@@ -2820,7 +2997,7 @@ function togglePanel(id) {
   $(`#p-${id}-body`).hidden = c;
 }
 function renderPanel(id) {
-  if (viewMode === 'digest') queueDigest();
+  if (viewMode === 'digest' || mobileView === 'overview') queueDigest();
   const body = $(`#p-${id}-body`);
   if (!body) return;
   (panelRenderers[id] || (() => {}))(body, $(`#p-${id}-extra`));
@@ -2836,6 +3013,10 @@ const freshOf = {
   ap: () => { const s = panelData.ap?.status; return s && { ts: s.fetched_at, max: 65, stale: !!s.error }; },
   alarms: () => { const d = panelData.alarms?.data; return d?.enabled && { ts: d.fetched_at, max: 6, stale: !!d.stale }; },
   traffic: () => { const d = panelData.traffic?.data; return d?.enabled && { ts: d.fetched_at, max: 15, stale: !!d.error }; },
+  insects: () => { const d = panelData.insects?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 130, stale: !!d.error }; },
+  sky: () => { const d = panelData.sky?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 400, stale: !!d.error }; },
+  sports: () => { const d = panelData.sports?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 130, stale: !!d.f1?.error }; },
+  vulns: () => { const d = panelData.vulns?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 780, stale: !!d.error }; },
   nlalert: () => { const d = panelData.nlalert?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 12, stale: !!d.error }; },
   fuel: () => { const d = panelData.fuel?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 400, stale: !!d.error }; },
   waste: () => { const d = panelData.waste?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 780, stale: !!d.error }; },
@@ -2870,6 +3051,10 @@ const panelRenderers = {
   pollen: renderPollen,
   economy: renderEconomy,
   nlalert: renderNLAlert,
+  insects: renderInsects,
+  sky: renderSky,
+  sports: renderSports,
+  vulns: renderVulns,
   fuel: renderFuel,
   waste: renderWaste,
   markets: renderMarkets,
@@ -2895,7 +3080,7 @@ function svgEl(tag, attrs) {
   return e;
 }
 const deg = t => Math.round(t) + '°';
-const wxLocName = () => tr(prefs.weather?.name || panelData.weather?.data?.location?.name || 'standaardlocatie');
+const wxLocName = () => tr(prefs.weather?.name || panelData.weather?.data?.location?.name || catalog?.weather_location?.name || 'standaardlocatie');
 
 let wxSeq = 0; // only the newest request may update the panel (location can change mid-flight)
 async function loadWeather() {
@@ -2989,6 +3174,7 @@ function renderWeather(body, extra) {
   } else if (d.errors?.rain) {
     out.push(h('div', { class: 'wxsec' }, h('h3', { text: 'Neerslag komende 2 uur' }), h('p', { class: 'pnote', text: d.errors.rain + '; er wordt automatisch opnieuw geprobeerd.' })));
   }
+  if (d.thunder) out.push(thunderLine(d.thunder));
   // Next 24 hours, every 2 hours
   const hours = d.hourly.filter((_, i) => i % 2 === 0);
   out.push(h('div', { class: 'wxsec' }, h('h3', { id: 'wx-h24', text: 'Komende 24 uur' }),
@@ -3053,7 +3239,8 @@ function setWeatherLocation(loc, msg) {
   panelData.weather = null;
   renderPanel('weather');
   loadWeather();
-  if (!prefs.air) { loadAir(); loadPollen(); } // they follow the weather location
+  if (!prefs.air) { loadAir(); loadPollen(); loadInsects(); } // they follow the weather location
+  panelData.sky = null; renderPanel('sky'); loadSky();
   panelData.nlalert = null; renderPanel('nlalert'); loadNLAlert();
   pushSub().then(sub => sub && Notification.permission === 'granted' && pushRegister(sub)).catch(() => {}); // NL-Alert area follows the place
 }
@@ -3745,6 +3932,7 @@ function updateAirHint() {
   el.textContent = prefs.air ? t('Nu: {name}.', { name: tr(prefs.air.name) }) : t('Nu: zelfde als je weerlocatie ({name}).', { name: airLocName() });
 }
 function setAirLocation(loc, msg) {
+  queueMicrotask(() => { panelData.insects = null; renderPanel('insects'); loadInsects(); });
   prefs.air = loc ? sanitize({ air: loc }).air : null;
   savePrefs(); updateAirHint();
   $('#air-results').replaceChildren();
@@ -4605,6 +4793,202 @@ async function pushTest() {
   catch (e) { $('#push-msg').textContent = tr(e.message); }
 }
 
+// ---------------------------------------------------------------- onweer (weather panel)
+const THUNDER_NL = ['geen kans', 'kleine kans', 'matige kans', 'grote kans'];
+function thunderLine(th) {
+  const when = th.level && th.peak ? t(', vooral rond {t}', { t: fmt.time.format(new Date(th.peak * 1000)) }) : '';
+  return h('p', { class: 'wxthunder lv' + th.level }, h('span', { 'aria-hidden': 'true', text: '⚡ ' }),
+    t('Onweer komende 24 uur: {level}', { level: t(THUNDER_NL[th.level]) }) + when);
+}
+
+// ---------------------------------------------------------------- teken en muggen (estimate from the weather)
+const INSECT_LV = ['geen', 'laag', 'matig', 'hoog'];
+async function loadInsects() {
+  const l = airLoc();
+  try { panelData.insects = { data: await api('api/insects' + (l ? `?lat=${l.lat}&lon=${l.lon}` : '')) }; }
+  catch (e) { panelData.insects = { ...(panelData.insects || {}), error: e }; }
+  renderPanel('insects');
+}
+function renderInsects(body, extra) {
+  const st = panelData.insects;
+  extra.replaceChildren(h('span', { text: airLocName() + ' · ' }),
+    h('button', { class: 'linkbtn', type: 'button', onclick: () => openSettings('air'), 'aria-label': t('Plaats voor teken en muggen wijzigen (nu {name})', { name: airLocName() }), text: t('wijzigen') }));
+  if (!st) { body.replaceChildren(h('div', { class: 'tsk insk', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:85%' }))); return; }
+  const r = st.data;
+  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('De verwachting kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
+  if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (insects.enabled).' })); return; }
+  if (!r.data) { body.replaceChildren(h('p', { class: 'pnote', text: t('Open-Meteo is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: r.error || '?' }) })); return; }
+  const days = r.data.days;
+  const lvl = (v, what) => h('span', { class: 'ilv i' + v, text: t(INSECT_LV[v]), 'aria-label': t('{what}: {level}', { what: t(what), level: t(INSECT_LV[v]) }) });
+  const out = [h('table', { class: 'itab' },
+    h('thead', null, h('tr', null, h('th', { scope: 'col' }, h('span', { class: 'sr-only', text: t('Dag') })), h('th', { scope: 'col', text: t('Teken') }), h('th', { scope: 'col', text: t('Muggen (avond)') }))),
+    h('tbody', null, days.map((d, i) => h('tr', null,
+      h('th', { scope: 'row', text: i === 0 ? t('Vandaag') : i === 1 ? t('Morgen') : fmt.wdmUTC.format(dateOnly(d.date)) }),
+      h('td', null, lvl(d.ticks, 'Teken')), h('td', null, lvl(d.mosquito, 'Muggen'))))))];
+  const today = days[0];
+  if (today?.ticks >= 2) out.push(h('p', { class: 'pnote', text: t('Tip: lange broek in hoog gras en bos, en controleer jezelf na het wandelen op teken.') }));
+  else if (today?.mosquito >= 2) out.push(h('p', { class: 'pnote', text: t('Tip: vanavond ramen dicht of een hor ervoor als het licht aan is.') }));
+  out.push(h('p', { class: 'pfoot' }, t('Indicatie op basis van temperatuur, vocht en wind (Open-Meteo), geen metingen · Meer: '),
+    extLink('https://www.tekenradar.nl/', 'Tekenradar'), ', ', extLink('https://www.naturetoday.com/intl/nl/observations/mosquito-radar/', t('Muggenradar'))));
+  body.replaceChildren(...out);
+}
+
+// ---------------------------------------------------------------- vanavond aan de hemel
+const PHASE_NL = { new: 'nieuwe maan', 'waxing-crescent': 'wassende sikkel', 'first-quarter': 'eerste kwartier', 'waxing-gibbous': 'wassend',
+  full: 'volle maan', 'waning-gibbous': 'afnemend', 'last-quarter': 'laatste kwartier', 'waning-crescent': 'afnemende sikkel' };
+const DIR_NL = { N: 'noorden', NO: 'noordoosten', O: 'oosten', ZO: 'zuidoosten', Z: 'zuiden', ZW: 'zuidwesten', W: 'westen', NW: 'noordwesten' };
+async function loadSky() {
+  const l = prefs.weather;
+  try { panelData.sky = { data: await api('api/sky' + (l ? `?lat=${l.lat}&lon=${l.lon}` : '')) }; }
+  catch (e) { panelData.sky = { ...(panelData.sky || {}), error: e }; }
+  renderPanel('sky');
+}
+function renderSky(body, extra) {
+  const st = panelData.sky;
+  extra.replaceChildren(h('span', { text: wxLocName() }));
+  if (!st) { body.replaceChildren(h('div', { class: 'tsk skysk', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:85%' }))); return; }
+  const r = st.data;
+  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('De hemel kon niet worden berekend ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
+  if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (sky.enabled).' })); return; }
+  const d = r.data, tm = s => s ? fmt.time.format(new Date(s)) : '–';
+  const row = (ico, ...kids) => h('p', { class: 'trow' }, h('span', { class: 'ti', 'aria-hidden': 'true', text: ico }), h('span', null, kids));
+  const out = [];
+  out.push(row('🌆', t('Donker vanaf {dark} (zon onder {set}) tot {dawn}', { dark: tm(d.dark), set: tm(d.sunset), dawn: tm(d.dawn) })));
+  if (d.clouds != null) out.push(row(d.clouds < 30 ? '✨' : d.clouds < 70 ? '⛅' : '☁️',
+    d.clouds < 30 ? t('Vannacht grotendeels helder ({n}% bewolking)', { n: d.clouds }) : d.clouds < 70 ? t('Vannacht wisselend bewolkt ({n}%)', { n: d.clouds })
+      : t('Vannacht bewolkt ({n}%): weinig te zien', { n: d.clouds })));
+  const m = d.moon;
+  out.push(row('🌙', t('Maan: {phase}, {pct}% verlicht', { phase: t(PHASE_NL[m.phase] || m.phase), pct: Math.round(m.illumination * 100) }),
+    m.rise || m.set ? ' · ' + [m.rise ? t('op {t}', { t: tm(m.rise) }) : null, m.set ? t('onder {t}', { t: tm(m.set) }) : null].filter(Boolean).join(', ') : ''));
+  for (const p of d.planets) out.push(row('🪐', h('b', { translate: 'no', text: tr(p.name) }), ' ',
+    t('vanaf {from} · hoogst om {best} in het {dir} ({alt}°)', { from: tm(p.from), best: tm(p.best), dir: t(DIR_NL[p.dir] || p.dir), alt: p.alt })));
+  if (!d.planets.length) out.push(row('🪐', t('Geen heldere planeten te zien vannacht.')));
+  const au = [t('geen kans'), t('alleen op een lang belichte foto'), t('kleine kans: kijk laag naar het noorden, buiten de stad'), t('goede kans: kijk naar het noorden, buiten de stad')][d.aurora];
+  out.push(row('🌌', t('Noorderlicht: {s}', { s: au }), d.kp != null ? ` (Kp ${d.kp.toLocaleString(locale(), { maximumFractionDigits: 1 })})` : ''));
+  if (d.meteor) out.push(row('☄️', t('Meteoren: {name}, piek {date} (tot ongeveer {n} per uur bij een donkere hemel)', { name: d.meteor.name, date: fmt.date.format(dateOnly(d.meteor.peak)), n: d.meteor.zhr })));
+  out.push(h('p', { class: 'pfoot' }, t('Berekend voor {place} · noorderlicht: ', { place: wxLocName() }), extLink('https://www.swpc.noaa.gov/', 'NOAA SWPC'),
+    t(' · bewolking: '), extLink('https://open-meteo.com/', 'Open-Meteo')));
+  body.replaceChildren(...out);
+}
+
+// ---------------------------------------------------------------- sportagenda
+const SPORT_NL = { f1: 'Formule 1', mtb: 'Mountainbike (EK/WK)', athletics: 'Atletiek (EK/WK)' };
+async function loadSports() {
+  try { panelData.sports = { data: await api('api/sports') }; }
+  catch (e) { panelData.sports = { ...(panelData.sports || {}), error: e }; }
+  renderPanel('sports');
+}
+const chosenSports = () => (catalog?.sports?.sports || []).filter(s => !Array.isArray(prefs.sports) || prefs.sports.includes(s));
+function renderSports(body) {
+  const st = panelData.sports;
+  if (!st) { body.replaceChildren(h('div', { class: 'tsk spsk', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:85%' }))); return; }
+  const r = st.data;
+  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('De sportagenda kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
+  if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (sports.enabled).' })); return; }
+  const sports = chosenSports();
+  if (!sports.length) { body.replaceChildren(h('p', { class: 'pnote', text: t('Je hebt geen sporten gekozen.') }), h('button', { class: 'btn', type: 'button', onclick: () => openSettings('sports'), text: t('Sporten kiezen') })); return; }
+  const when = s => { const d = new Date(s); return `${fmt.wdm.format(d)} ${fmt.time.format(d)}`; };
+  const out = [];
+  for (const sp of sports) {
+    const sec = [h('h3', { text: t(SPORT_NL[sp] || sp) })];
+    if (sp === 'f1') {
+      const f = r.f1?.data;
+      if (!f) sec.push(h('p', { class: 'pnote', text: r.f1?.error ? t('Jolpica is niet bereikbaar ({err}).', { err: r.f1.error }) : t('Wordt voor het eerst opgehaald.') }));
+      else {
+        if (f.next) sec.push(h('p', { class: 'sprow' }, h('b', { text: t('Volgende: ') }), h('span', { translate: 'no', text: `${f.next.name} (${f.next.place})` }), ', ', when(f.next.time),
+          f.next.sessions?.length ? h('span', { class: 'm', text: ' · ' + f.next.sessions.map(s => `${t(s.name)} ${when(s.time)}`).join(' · ') }) : null));
+        else sec.push(h('p', { class: 'pnote', text: t('Het seizoen {y} is voorbij.', { y: f.season }) }));
+        if (f.last?.podium?.length) sec.push(h('p', { class: 'sprow' }, h('b', { text: t('Laatste: ') }), h('span', { translate: 'no', text: `${f.last.name}: ` + f.last.podium.map(p => `${p.pos}. ${p.driver}`).join(', ') })));
+        if (f.standings?.length) sec.push(h('p', { class: 'sprow' }, h('b', { text: t('Stand: ') }), h('span', { translate: 'no', text: f.standings.slice(0, 3).map(p => `${p.pos}. ${p.driver} ${p.points.toLocaleString(locale())}`).join(' · ') })));
+      }
+    } else {
+      const evs = (r.events || []).filter(e => e.sport === sp);
+      if (!evs.length) sec.push(h('p', { class: 'pnote', text: t('Geen kampioenschap in de kalender; de beheerder vult data aan in config.yaml (sports.events).') }));
+      for (const e of evs) {
+        const n = daysUntil(e.start);
+        const status = e.status === 'live' ? h('span', { class: 'tag live', text: t('nu bezig') }) : e.status === 'done' ? h('span', { class: 'tag plain', text: t('afgelopen') })
+          : h('span', { class: 'tag plain', text: inDays(n) });
+        const dates = e.start === e.end ? fmt.date.format(dateOnly(e.start)) : `${fmt.wdmUTC.format(dateOnly(e.start))} – ${fmt.date.format(dateOnly(e.end))}`;
+        sec.push(h('div', { class: 'spev' }, h('p', { class: 'sprow' }, status, ' ', h('b', { translate: 'no', text: e.name }), ` · ${dates}`, e.place ? h('span', { translate: 'no', text: ` · ${e.place}` }) : null,
+          e.url && safeHref(e.url) ? [' · ', extLink(e.url, e.status === 'upcoming' ? t('programma') : t('uitslagen'))] : null),
+          e.headlines?.length ? h('ul', { class: 'plist' }, e.headlines.map(x => h('li', null, h('span', { translate: 'no' }, extLink(x.url, x.title)),
+            h('div', { class: 'm' }, h('span', { text: x.source }), h('span', { text: when(x.published) }))))) : null));
+      }
+    }
+    out.push(h('div', { class: 'spsec' }, sec));
+  }
+  out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://github.com/jolpica/jolpica-f1', 'Jolpica'), t(' (Formule 1) · kampioenschappen: kalender van de beheerder, koppen uit je nieuwsbronnen · '),
+    h('button', { class: 'linkbtn', type: 'button', onclick: () => openSettings('sports'), text: t('sporten kiezen') })));
+  body.replaceChildren(...out);
+}
+
+// ---------------------------------------------------------------- kwetsbaarheden in mijn software
+async function loadVulns() {
+  try { panelData.vulns = { data: await api('api/vulns') }; }
+  catch (e) { panelData.vulns = { ...(panelData.vulns || {}), error: e }; }
+  renderPanel('vulns');
+}
+const SEV_CLASS = { CRITICAL: 'sev-critical', HIGH: 'sev-high', MEDIUM: 'sev-medium', LOW: 'sev-low' };
+function renderVulns(body) {
+  const st = panelData.vulns;
+  if (!st) { body.replaceChildren(h('div', { class: 'tsk vusk', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:85%' }))); return; }
+  const r = st.data;
+  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('Kwetsbaarheden konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
+  if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (vulns.enabled).' })); return; }
+  if (r.needs_products) { body.replaceChildren(h('p', { class: 'pnote', text: t('De beheerder geeft de producten op in config.yaml (vulns.products), bijvoorbeeld Fortinet, WordPress of Synology.') })); return; }
+  const d = r.data;
+  if (!d) { body.replaceChildren(h('p', { class: 'pnote', text: r.error ? t('NVD is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: r.error }) : t('Kwetsbaarheden worden voor het eerst opgehaald (dat duurt ongeveer 7 seconden per product).') })); return; }
+  const out = [h('ul', { class: 'vulns' }, d.products.map(p => h('li', null,
+    h('p', { class: 'vhead' }, h('b', { translate: 'no', text: p.product }), ' ',
+      p.error ? h('span', { class: 'pnote', text: t('niet opgehaald: {err}', { err: p.error }) })
+        : h('span', { class: 'm', text: t(p.count === 1 ? '1 nieuwe CVE' : '{n} nieuwe CVE\'s', { n: p.count }) }),
+      p.kev ? h('span', { class: 'tag sev-critical', text: t('{n} actief misbruikt', { n: p.kev }) }) : null,
+      p.critical ? h('span', { class: 'tag sev-critical', text: t('{n} kritiek', { n: p.critical }) }) : null,
+      p.high ? h('span', { class: 'tag sev-high', text: t('{n} hoog', { n: p.high }) }) : null),
+    p.items.length ? h('ul', { class: 'plist' }, p.items.slice(0, 3).map(v => h('li', null,
+      v.score ? h('span', { class: 'tag ' + (SEV_CLASS[v.severity] || 'plain'), text: v.score.toLocaleString(locale(), { minimumFractionDigits: 1 }) }) : null,
+      v.kev ? h('span', { class: 'tag sev-critical', text: t('actief misbruikt') }) : null, ' ',
+      extLink(v.url, v.id), h('div', { class: 'm', translate: 'no', text: v.summary }),
+      v.epss >= 0.01 ? h('div', { class: 'm', text: t('kans op misbruik (EPSS): {p}%', { p: (v.epss * 100).toLocaleString(locale(), { maximumFractionDigits: 1 }) }) }) : null))) : null)))];
+  out.push(h('p', { class: 'pfoot' }, t('Laatste {n} dagen · bron: ', { n: d.days }), extLink('https://nvd.nist.gov/', 'NVD'), ', ', extLink('https://www.first.org/epss/', 'FIRST EPSS'), ', ',
+    extLink('https://www.cisa.gov/known-exploited-vulnerabilities-catalog', 'CISA KEV'), t(' · producten in config.yaml')));
+  body.replaceChildren(...out);
+}
+
+// ---------------------------------------------------------------- share an article
+async function shareItem(it) {
+  try {
+    if (navigator.share) { await navigator.share({ title: it.title, url: it.url }); return; }
+    await navigator.clipboard.writeText(it.url);
+    toast(t('Link gekopieerd'));
+  } catch (e) { if (e?.name !== 'AbortError') toast(t('Delen lukt niet in deze browser')); }
+}
+let toastTimer;
+function toast(msg) {
+  const el = $('#toast');
+  el.textContent = msg; el.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 2200);
+}
+
+// ---------------------------------------------------------------- accent colour from config.yaml
+function applyAccent(hex) {
+  if (!/^#[0-9a-f]{6}$/i.test(hex || '')) return;
+  const rgb = x => [1, 3, 5].map(i => parseInt(x.slice(i, i + 2), 16));
+  const lum = c => { const [r, g, b] = c.map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+  const contrast = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+  const mix = (c, to, f) => c.map((v, i) => Math.round(v + (to[i] - v) * f));
+  const hexOf = c => '#' + c.map(v => v.toString(16).padStart(2, '0')).join('');
+  // readable as link text: darken on white, lighten on black, until 4.5:1
+  const fit = (bg, to) => { let c = rgb(hex); for (let f = 0; contrast(c, bg) < 4.5 && f <= 1; f += 0.04) c = mix(rgb(hex), to, f); return c; };
+  const light = fit([255, 255, 255], [0, 0, 0]), dark = fit([0, 0, 0], [255, 255, 255]);
+  const vars = (c, bg, f) => `--accent:${hexOf(c)};--accent-bg:${hexOf(mix(bg, c, f))};`;
+  let s = $('#accent-style');
+  if (!s) { s = document.createElement('style'); s.id = 'accent-style'; document.head.append(s); }
+  s.textContent = `:root{${vars(light, [255, 255, 255], 0.1)}}` +
+    `@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){${vars(dark, [0, 0, 0], 0.18)}}}` +
+    `:root[data-theme="dark"]{${vars(dark, [0, 0, 0], 0.18)}}`;
+}
+
 // ---------------------------------------------------------------- overzicht (digest) & kiosk
 const urlMode = new URLSearchParams(location.search).get('mode');
 let viewMode = 'normal', digestQueued = false, kioskTimer = null, kioskPauseUntil = 0, wakeLock = null;
@@ -4625,33 +5009,37 @@ function dCard(id, title, kids, wide) {
 // own scroll position.
 const isPhone = () => matchMedia('(max-width: 699px)').matches;
 let mobileView = 'news';
-const mvScroll = { news: 0, panels: 0 };
+const MVIEWS = ['overview', 'news', 'panels'];
+const mvScroll = { overview: 0, news: 0, panels: 0 };
 function setMobileView(v, { animate = true, restore = true } = {}) {
   if (v === mobileView) return;
   const phone = isPhone() && viewMode === 'normal';
   if (phone) mvScroll[mobileView] = scrollY;
-  const dir = v === 'panels' ? 'mv-in-l' : 'mv-in-r';
+  const dir = MVIEWS.indexOf(v) > MVIEWS.indexOf(mobileView) ? 'mv-in-l' : 'mv-in-r';
   mobileView = v;
   document.documentElement.dataset.mview = v;
-  for (const [id, view] of [['#mv-news', 'news'], ['#mv-panels', 'panels']]) {
+  for (const [id, view] of [['#mv-overview', 'overview'], ['#mv-news', 'news'], ['#mv-panels', 'panels']]) {
     const b = $(id), on = view === v;
     b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1;
   }
   if (!phone) return;
-  const el = v === 'panels' ? $('#side') : $('#news');
+  if (v === 'overview') renderDigest();
+  const el = v === 'panels' ? $('#side') : v === 'overview' ? $('#digest') : $('#news');
   if (animate) { el.classList.remove('mv-in-l', 'mv-in-r'); void el.offsetWidth; el.classList.add(dir); }
   if (restore) scrollTo({ top: mvScroll[v], behavior: 'instant' });
 }
 function wireMobileViews() {
   document.documentElement.dataset.mview = 'news';
-  const tabs = [$('#mv-news'), $('#mv-panels')];
-  tabs[0].addEventListener('click', () => setMobileView('news'));
-  tabs[1].addEventListener('click', () => setMobileView('panels'));
-  for (const [i, b] of tabs.entries()) b.addEventListener('keydown', e => {
-    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-    const other = tabs[1 - i]; other.click(); other.focus(); e.preventDefault();
+  const tabs = MVIEWS.map(v => $('#mv-' + v));
+  tabs.forEach((b, i) => {
+    b.addEventListener('click', () => setMobileView(MVIEWS[i]));
+    b.addEventListener('keydown', e => {
+      const j = e.key === 'ArrowRight' ? i + 1 : e.key === 'ArrowLeft' ? i - 1 : -1;
+      if (j < 0 || j >= tabs.length) return;
+      tabs[j].click(); tabs[j].focus(); e.preventDefault();
+    });
   });
-  for (const el of [$('#news'), $('#side')]) el.addEventListener('animationend', () => el.classList.remove('mv-in-l', 'mv-in-r'));
+  for (const el of [$('#news'), $('#side'), $('#digest')]) el.addEventListener('animationend', () => el.classList.remove('mv-in-l', 'mv-in-r'));
   // swipe: mostly horizontal, at least 60 px, not from the screen edge (the
   // browser's back gesture) and not inside something that scrolls sideways
   let t0 = null;
@@ -4675,13 +5063,50 @@ function wireMobileViews() {
     const p = e.changedTouches[0], dx = p.clientX - t0.x, dy = p.clientY - t0.y, dt = Date.now() - t0.at;
     t0 = null;
     if (Math.abs(dx) < 60 || Math.abs(dx) < 2 * Math.abs(dy) || dt > 800) return;
-    setMobileView(dx < 0 ? 'panels' : 'news');
+    const i = MVIEWS.indexOf(mobileView) + (dx < 0 ? 1 : -1);
+    if (i >= 0 && i < MVIEWS.length) setMobileView(MVIEWS[i]);
   }, { passive: true });
   main.addEventListener('touchcancel', () => { t0 = null; }, { passive: true });
+  // pull to refresh: at the top of the page, pull down at least 80 px
+  const ptr = $('#ptr');
+  let p0 = null, ready = false;
+  const ptrText = () => ready ? t('Loslaten om te verversen') : t('Trek omlaag om te verversen');
+  document.addEventListener('touchstart', e => {
+    p0 = null;
+    if (!isPhone() || viewMode !== 'normal' || scrollY > 0 || e.touches.length !== 1 || document.querySelector('dialog[open]') || e.target.closest('input, textarea, select')) return;
+    p0 = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }, { passive: true });
+  document.addEventListener('touchmove', e => {
+    if (!p0) return;
+    const dy = e.touches[0].clientY - p0.y, dx = e.touches[0].clientX - p0.x;
+    if (dy < 10 || Math.abs(dx) > dy) { ptr.hidden = true; ready = false; return; }
+    ready = dy >= 80;
+    ptr.hidden = false; ptr.classList.toggle('ready', ready); ptr.textContent = ptrText();
+    ptr.style.setProperty('--ptr-y', Math.min(dy / 2, 50) - 10 + 'px');
+  }, { passive: true });
+  const ptrEnd = () => {
+    if (!p0) return;
+    p0 = null;
+    if (!ready) { ptr.hidden = true; return; }
+    ready = false;
+    ptr.textContent = t('Verversen…');
+    refreshView(mobileView).finally(() => { ptr.hidden = true; toast(t('Bijgewerkt')); });
+  };
+  document.addEventListener('touchend', ptrEnd, { passive: true });
+  document.addEventListener('touchcancel', () => { p0 = null; ready = false; ptr.hidden = true; }, { passive: true });
   // links to a panel (e.g. from a push notification: #panel-waste)
   const fromHash = () => { const m = /^#panel-([a-z]+)$/.exec(location.hash); if (m && PANELS[m[1]]) showPanel(m[1]); };
   addEventListener('hashchange', fromHash);
   return fromHash;
+}
+
+// refreshView: fetch the data of the current phone view again (pull to refresh)
+function refreshView(v) {
+  const panels = () => [loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(), loadBreaches(), loadOutages(), loadHealthPanel(),
+    loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(),
+    loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadInsects(), loadSky(), loadSports(), loadVulns()];
+  const jobs = v === 'news' ? [loadNews({ replace: true }), loadTrending()] : v === 'panels' ? panels() : [loadNews({ replace: true }), ...panels()];
+  return Promise.allSettled(jobs);
 }
 
 function showPanel(id) {
@@ -4708,7 +5133,8 @@ function renderDigest() {
     cards.push(dCard('weather', 'Weer', [h('p', null, h('span', { class: 'big', text: deg(wx.current.temp) }), ' ', tr(wx.current.desc), ' · ', wxLocName()),
       wx.rain?.summary ? h('p', { text: tr(wx.rain.summary) }) : null,
       warn ? h('p', { text: t('Code {lvl}: {type}', { lvl: tr(LEVEL_NL[warn.level]), type: tr(warn.type).toLowerCase() }) }) : null,
-      tm ? h('p', { text: t('Morgen {min} tot {max}, {desc}', { min: deg(tm.min), max: deg(tm.max), desc: tr(tm.desc).toLowerCase() }) }) : null]));
+      tm ? h('p', { text: t('Morgen {min} tot {max}, {desc}', { min: deg(tm.min), max: deg(tm.max), desc: tr(tm.desc).toLowerCase() }) }) : null,
+      wx.thunder?.level ? thunderLine(wx.thunder) : null]));
   }
   const td = panelData.today?.data;
   const nla = panelData.nlalert?.data?.alerts;
@@ -4961,6 +5387,10 @@ function openSettings(target) {
   updateAirHint();
   $('#set-air').hidden = !catalog.air;
   $('#set-waste').hidden = !catalog.waste;
+  $('#set-sports').hidden = !catalog.sports?.enabled;
+  $('#sports-opts').replaceChildren(...(catalog.sports?.sports || []).map(sp => h('label', { class: 'opt' }, h('span', { text: t(SPORT_NL[sp] || sp) }),
+    h('input', { type: 'checkbox', class: 'switch', role: 'switch', 'data-sport': sp, checked: chosenSports().includes(sp),
+      onchange: () => { prefs.sports = [...$('#sports-opts').querySelectorAll('input:checked')].map(c => c.dataset.sport); savePrefs(); renderPanel('sports'); } }))));
   updateWasteHint();
   $('#waste-pc').value = prefs.waste ? `${prefs.waste.postcode.slice(0, 4)} ${prefs.waste.postcode.slice(4)}` : '';
   $('#waste-nr').value = prefs.waste ? String(prefs.waste.number) : '';
@@ -4975,9 +5405,9 @@ function openSettings(target) {
   if (!dlg.open) dlg.showModal();
   loadHealth();
   if (typeof target === 'string') { // called from a button with a section or category to show
-    const el = target === 'watch' ? $('#set-watch') : target === 'presets' ? $('#set-src-h') : target === 'air' ? $('#set-air') : target === 'waste' ? $('#set-waste') : $(`#src-groups [data-cat="${target}"]`);
+    const el = target === 'watch' ? $('#set-watch') : target === 'presets' ? $('#set-src-h') : target === 'air' ? $('#set-air') : target === 'waste' ? $('#set-waste') : target === 'sports' ? $('#set-sports') : $(`#src-groups [data-cat="${target}"]`);
     el?.scrollIntoView({ block: 'start' });
-    (target === 'watch' ? $('#watch-in') : target === 'presets' ? $('#qpresets button:not([disabled])') : target === 'air' ? $('#air-search') : target === 'waste' ? $('#waste-pc') : el?.querySelector('input'))?.focus({ preventScroll: true });
+    (target === 'watch' ? $('#watch-in') : target === 'presets' ? $('#qpresets button:not([disabled])') : target === 'air' ? $('#air-search') : target === 'waste' ? $('#waste-pc') : target === 'sports' ? $('#sports-opts input') : el?.querySelector('input'))?.focus({ preventScroll: true });
   }
 }
 function buildQuickPresets() {
@@ -5390,6 +5820,7 @@ async function init() {
     setTimeout(() => location.reload(), MIN);
     return;
   }
+  applyAccent(catalog.accent);
   for (const s of catalog.sources) srcById.set(s.id, s);
   for (const c of catalog.categories) catById.set(c.id, c);
   if (catalog.version) $('#version').textContent = t('Versie {v}.', { v: catalog.version });
@@ -5398,7 +5829,8 @@ async function init() {
   buildChips();
   if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
   await Promise.allSettled([loadNews({ replace: true }), loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(),
-    loadBreaches(), loadOutages(), loadHealthPanel(), loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(), loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadTrending(), initPush()]);
+    loadBreaches(), loadOutages(), loadHealthPanel(), loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(), loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadTrending(), initPush(),
+    loadInsects(), loadSky(), loadSports(), loadVulns()]);
   kioskFit(); // the header and top bar have their final height now
   panelFromHash(); // e.g. a push notification that opens #panel-waste
   // intervals from config.yaml (refresh:), in seconds; defaults if the server is older
@@ -5427,6 +5859,10 @@ async function init() {
   every(R('fuel', 60), loadFuel);
   every(R('waste', 60), loadWaste);
   every(R('trending', 10), loadTrending);
+  every(R('insects', 60), loadInsects);
+  every(R('sky', 30), loadSky);
+  every(R('sports', 30), loadSports);
+  every(R('vulns', 60), loadVulns);
   every(R('outages', 10), loadOutages);
   every(R('health', 30), loadHealthPanel);
   setInterval(tick, 15e3);
