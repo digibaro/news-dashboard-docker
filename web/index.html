@@ -667,6 +667,24 @@ table.tt { width: 100%; border-collapse: collapse; font-size: 12px; }
 .tchip { font: inherit; font-size: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); border-radius: 999px; padding: 2px 10px; cursor: pointer; min-height: 24px; }
 .tchip:hover { border-color: var(--line-strong); }
 .tchip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.trend { position: relative; }
+.tgrp { display: inline-flex; align-items: stretch; }
+.tgrp .tchip:not(:last-child) { border-radius: 999px 0 0 999px; }
+.tinfo { font: inherit; font-size: 12px; border: 1px solid var(--line); border-left: 0; background: var(--surface); color: var(--text-2); border-radius: 0 999px 999px 0; padding: 0 8px 0 6px; cursor: pointer; min-height: 24px; min-width: 24px; }
+.tinfo:hover, .tinfo[aria-expanded="true"] { color: var(--accent); border-color: var(--line-strong); }
+.wikicard { position: absolute; z-index: 20; width: min(360px, calc(100% - 4px)); background: var(--bg); color: var(--text); border: 1px solid var(--line-strong); border-radius: 10px; box-shadow: 0 8px 24px rgb(0 0 0 / .18); padding: 10px 12px; font-size: 13px; line-height: 1.45; }
+.wikicard[hidden] { display: none; }
+.wikicard .wk-head { display: flex; gap: 10px; align-items: flex-start; }
+.wikicard .wk-title { font-weight: 700; font-size: 14px; margin: 0; }
+.wikicard .wk-desc { color: var(--text-2); font-size: 12px; margin: 1px 0 0; }
+.wikicard img { width: 56px; height: 56px; object-fit: cover; border-radius: 6px; flex: none; margin-left: auto; background: var(--surface-2); }
+.wikicard .wk-ext { margin: 6px 0; }
+.wikicard .wk-foot { margin: 0; font-size: 12px; color: var(--text-3); }
+.pw { flex: none; font-size: 11px; font-weight: 650; line-height: 1; color: var(--text-2); border: 1px solid var(--line-strong); border-radius: 4px; padding: 1px 4px; }
+.satwrap { position: relative; display: block; aspect-ratio: 800 / 587; border-radius: 8px; overflow: hidden; background: #0b0d12; }
+.satwrap img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.satsk { height: 0; padding-bottom: 73%; position: relative; }
+.satsk .sk { position: absolute; inset: 0; height: auto; }
 .rel .covbtn { font: inherit; font-size: inherit; background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; text-decoration: underline; min-height: 24px; }
 .cov { list-style: none; margin: 4px 0 6px; padding: 6px 8px; border-left: 2px solid var(--line-strong); font-size: 12px; display: grid; gap: 3px; }
 .cov li { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
@@ -974,7 +992,7 @@ textarea.json {
     <a class="wx-mini" id="wx-mini" href="#panel-weather" hidden></a>
     <div class="search" role="search">
       <svg class="i" aria-hidden="true"><use href="#i-search"/></svg>
-      <input type="search" id="q" placeholder="Zoek in berichten" aria-label="Zoek in berichten" autocomplete="off" spellcheck="false" enterkeyhint="search">
+      <input type="search" id="q" placeholder="Zoek in berichten" aria-label="Zoek in berichten" title="Ook: bron:nos, &quot;exacte woorden&quot;, -woord" autocomplete="off" spellcheck="false" enterkeyhint="search">
       <kbd aria-hidden="true">/</kbd>
     </div>
     <button class="icon-btn" id="search-close" type="button" aria-label="Zoeken sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
@@ -1076,6 +1094,13 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.16.0</h3>
+    <ul>
+      <li>Nieuw paneel Satellietbeeld: het nieuwste Meteosat-beeld van de Benelux (EUMETSAT), elke 10 minuten; overdag echte kleuren, ’s nachts wolken en stadslichten.</li>
+      <li>Trending: een korte uitleg van Wikipedia bij elk onderwerp (muis erop houden of op ⓘ tikken).</li>
+      <li>Zoeken: <code>bron:nos</code>, <code>"exacte woorden"</code> en <code>-woord</code> om uit te sluiten.</li>
+      <li>Een €-label bij bronnen met (deels) betaalde artikelen.</li>
+    </ul>
     <h3>Versie 1.15.0</h3>
     <ul>
       <li>AMBER Alert en Vermist Kind Alert van Burgernet: een opvallende melding bovenaan zolang een kind wordt gezocht (een Vermist Kind Alert alleen in jouw omgeving), ook als pushmelding.</li>
@@ -1197,6 +1222,13 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.16.0</h3>
+    <ul>
+      <li>New Satellite image panel: the latest Meteosat image of the Benelux (EUMETSAT), every 10 minutes; true colour by day, clouds and city lights at night.</li>
+      <li>Trending: a short Wikipedia explanation for each topic (hover over it or tap ⓘ).</li>
+      <li>Search: <code>source:nos</code> (or <code>bron:</code>), <code>"exact words"</code> and <code>-word</code> to exclude.</li>
+      <li>A € label on sources with (partly) paid articles.</li>
+    </ul>
     <h3>Version 1.15.0</h3>
     <ul>
       <li>AMBER Alert and Missing Child Alert from Burgernet: a prominent notice at the top while a child is being searched for (a Missing Child Alert only in your area), also as a push notification.</li>
@@ -1331,6 +1363,9 @@ textarea.json {
     <dt><kbd class="k">m</kbd></dt><dd>Markeren als gelezen / ongelezen</dd>
     <dt><kbd class="k">1</kbd> … <kbd class="k">9</kbd></dt><dd>Categorie kiezen (1 = Alles)</dd>
     <dt><kbd class="k">/</kbd></dt><dd>Zoeken</dd>
+    <dt><code>bron:nos</code></dt><dd>Zoeken: alleen berichten van deze bron</dd>
+    <dt><code>"exacte woorden"</code></dt><dd>Zoeken: precies deze woorden achter elkaar</dd>
+    <dt><code>-woord</code></dt><dd>Zoeken: berichten met dit woord weglaten</dd>
     <dt><kbd class="k">r</kbd></dt><dd>Nieuws verversen</dd>
     <dt><kbd class="k">v</kbd></dt><dd>Overzicht van vandaag aan / uit</dd>
     <dt><kbd class="k">?</kbd></dt><dd>Dit overzicht</dd>
@@ -1499,6 +1534,7 @@ const TZ = 'Europe/Amsterdam';
 const KEY = 'ndb:prefs', SEEN_KEY = 'ndb:seen', READ_KEY = 'ndb:read', SAVED_KEY = 'ndb:saved';
 const PANELS = {
   weather: 'Weer',
+  satellite: 'Satellietbeeld',
   today: 'Vandaag',
   waste: 'Afvalkalender',
   air: 'Luchtkwaliteit',
@@ -2386,6 +2422,31 @@ const EN = {
   "Meer informatie": "More information",
   "AMBER Alert, en Vermist Kind Alert in jouw omgeving": "AMBER Alert, and Missing Child Alert in your area",
   "Burgernet · AMBER Alert en Vermist Kind Alert": "Burgernet · AMBER Alert and Missing Child Alert",
+  // 1.16: satellietbeeld, Wikipedia bij trending, zoekoperatoren, betaalmuur
+  "Satellietbeeld": "Satellite image",
+  "Benelux": "Benelux",
+  "Het satellietbeeld kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.": "The satellite image could not be loaded ({err}). Retrying automatically.",
+  "Dit paneel staat uit in config.yaml (satellite.enabled).": "This panel is disabled in config.yaml (satellite.enabled).",
+  "EUMETSAT is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.": "EUMETSAT is unreachable ({err}); retrying automatically.",
+  "Het satellietbeeld wordt nog voor het eerst opgehaald.": "The satellite image is being fetched for the first time.",
+  "Satellietbeeld groot openen": "Open the satellite image full size",
+  "Satellietbeeld van de Benelux en omgeving om {t}": "Satellite image of the Benelux and surroundings at {t}",
+  "Opname {t} · overdag echte kleuren, ’s nachts wolken en stadslichten · ": "Taken {t} · true colour by day, clouds and city lights at night · ",
+  "EUMETSAT · satellietbeeld": "EUMETSAT · satellite image",
+  "Mogelijk achter een betaalmuur": "May be behind a paywall",
+  "Tip: bron:nos, \"exacte woorden\" en -woord werken ook.": "Tip: source:nos, \"exact words\" and -word work too.",
+  "Ook: bron:nos, \"exacte woorden\", -woord": "Also: source:nos, \"exact words\", -word",
+  "Zoeken: alleen berichten van deze bron": "Search: only articles from this source (also source:)",
+  "Zoeken: precies deze woorden achter elkaar": "Search: exactly these words in this order",
+  "Zoeken: berichten met dit woord weglaten": "Search: leave out articles with this word",
+  "Uitleg over {term} (Wikipedia)": "About {term} (Wikipedia)",
+  "Uitleg (Wikipedia)": "About (Wikipedia)",
+  "Wikipedia wordt geraadpleegd…": "Looking it up on Wikipedia…",
+  "Lees verder op Wikipedia": "Read more on Wikipedia",
+  "tekst: Wikipedia, CC BY-SA": "text: Wikipedia, CC BY-SA",
+  "Wikipedia is nu niet bereikbaar ({err}).": "Wikipedia is unreachable right now ({err}).",
+  "Geen Wikipedia-artikel gevonden voor “{term}”.": "No Wikipedia article found for “{term}”.",
+  "Zoeken op Wikipedia": "Search Wikipedia",
 };
 
 // Sentences the server composes from parts (rain summary, directions, source names).
@@ -2822,8 +2883,27 @@ function renderNewButton() {
   b.replaceChildren(icon('up'), n === 1 ? t('1 nieuw bericht') : t('{n} nieuwe berichten', { n }));
   b.hidden = false;
 }
-function matchesQuery(it) {
-  return !query || query.split(/\s+/).every(t => hayOf(it).includes(t));
+// Search operators: bron:nos or source:nos (several = either), bron:"de volkskrant", "exact words", -word, -bron:x.
+let queryParts = null;
+function parseQuery(q) {
+  const p = { inc: [], exc: [], src: [], nsrc: [] };
+  for (const m of q.matchAll(/(-?)(?:(bron|source):)?(?:"([^"]*)"?|(\S+))/g)) {
+    const neg = m[1] === '-', v = (m[3] ?? m[4] ?? '').trim();
+    if (!v || v === '-') continue;
+    (m[2] ? (neg ? p.nsrc : p.src) : (neg ? p.exc : p.inc)).push(v);
+  }
+  return p;
+}
+const compact = s => s.replace(/[^a-z0-9]/g, '');
+function srcMatches(id, v) { // a word of the name or id starts with v, or the whole name does ("nu.nl", "de volkskrant")
+  const name = fold(srcName(id) + ' ' + id);
+  return name.split(/[^a-z0-9]+/).some(w => w && w.startsWith(compact(v) || v)) || compact(fold(srcName(id))).startsWith(compact(v));
+}
+function matchesQuery(it, extra = '') {
+  if (!query) return true;
+  const p = queryParts ??= parseQuery(query), hay = extra ? hayOf(it) + ' ' + extra : hayOf(it);
+  return p.inc.every(w => hay.includes(w)) && !p.exc.some(w => hay.includes(w))
+    && (!p.src.length || p.src.some(v => srcMatches(it.source, v))) && !p.nsrc.some(v => srcMatches(it.source, v));
 }
 function matchesFilter(it) {
   if (isMuted(it)) return false;
@@ -2874,6 +2954,7 @@ function renderStream() {
     more.hidden = true;
     const msg = query
       ? h('div', { class: 'empty' }, h('p', { text: t('Geen berichten gevonden voor “{q}”.', { q: $('#q').value.trim() }) }),
+          h('p', { class: 'hint', text: t('Tip: bron:nos, "exacte woorden" en -woord werken ook.') }),
           h('button', { class: 'btn', type: 'button', onclick: clearSearch, text: 'Zoekopdracht wissen' }))
       : h('div', { class: 'empty' }, h('p', { text: 'Geen berichten in deze categorie van je gekozen bronnen.' }),
           h('button', { class: 'btn', type: 'button', onclick: () => $('#chips [data-cat="all"]').click(), text: 'Alles tonen' }));
@@ -2905,7 +2986,7 @@ function renderSaved() {
   const stream = $('#stream');
   $('#more').hidden = true;
   const noteHay = x => fold(`${x.note || ''} ${(x.tags || []).join(' ')}`);
-  const list = saved.filter(x => (!savedTag || x.tags?.includes(savedTag)) && (matchesQuery(x) || (query && query.split(/\s+/).every(q => noteHay(x).includes(q)))));
+  const list = saved.filter(x => (!savedTag || x.tags?.includes(savedTag)) && matchesQuery(x, noteHay(x)));
   const tags = new Map();
   for (const x of saved) for (const tg of x.tags || []) tags.set(tg, (tags.get(tg) || 0) + 1);
   const bar = saved.length ? h('div', { class: 'saved-bar' },
@@ -2937,6 +3018,7 @@ function itemEl(it) {
           text: t('Dekking ({n} bronnen)', { n: related.length + 1 }) })) : null,
       h('div', { class: 'meta' },
         h('span', { class: 'src' }, h('span', { class: 'dot', style: `--h:${hue(it.source)}` }), h('span', { text: srcName(it.source) })),
+        srcById.get(it.source)?.paywall ? h('span', { class: 'pw', role: 'img', title: t('Mogelijk achter een betaalmuur'), 'aria-label': t('Mogelijk achter een betaalmuur'), text: '€' }) : null,
         timeEl(it.date),
         h('button', { class: 'sh', type: 'button', 'aria-label': t('Delen: {title}', { title: it.title }), title: t('Delen'), onclick: () => shareItem(it) }, icon('share')),
         h('button', { class: 'bm', type: 'button', 'aria-pressed': String(isSaved(it.id)), 'aria-label': t('Bewaren: {title}', { title: it.title }), title: t('Bewaren (s)'),
@@ -2989,7 +3071,7 @@ function setQuery(v) {
   const q = fold(v.trim());
   if (q === query) return;
   if (q) setMobileView('news', { restore: false }); // search results are in the news view
-  query = q; shown = prefs.pageSize;
+  query = q; queryParts = null; shown = prefs.pageSize;
   renderStream(); renderNewButton();
 }
 function clearSearch() {
@@ -3042,6 +3124,7 @@ const freshOf = {
   alarms: () => { const d = panelData.alarms?.data; return d?.enabled && { ts: d.fetched_at, max: 6, stale: !!d.stale }; },
   traffic: () => { const d = panelData.traffic?.data; return d?.enabled && { ts: d.fetched_at, max: 15, stale: !!d.error }; },
   insects: () => { const d = panelData.insects?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 130, stale: !!d.error }; },
+  satellite: () => { const d = panelData.satellite?.data; return d?.enabled && d.time && { ts: d.time, max: 75, stale: !!d.error }; },
   sky: () => { const d = panelData.sky?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 400, stale: !!d.error }; },
   sports: () => { const d = panelData.sports?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 130, stale: !!d.f1?.error }; },
   nlalert: () => { const d = panelData.nlalert?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 12, stale: !!d.error }; },
@@ -3079,6 +3162,7 @@ const panelRenderers = {
   economy: renderEconomy,
   nlalert: renderNLAlert,
   insects: renderInsects,
+  satellite: renderSatellite,
   sky: renderSky,
   sports: renderSports,
   fuel: renderFuel,
@@ -4615,13 +4699,81 @@ function renderTrending() {
   const terms = trendData?.enabled ? trendData.terms || [] : [];
   if (!prefs.trending || !terms.length || prefs.category === 'saved') { box.hidden = true; box.replaceChildren(); return; }
   box.hidden = false;
+  const wiki = !!catalog?.trending_wiki;
   box.replaceChildren(h('span', { class: 'tl', text: t('Trending') }), ...terms.map(x => {
     const on = query && query === fold(x.term);
-    return h('button', { type: 'button', class: 'tchip', translate: 'no', 'aria-pressed': String(!!on),
-      title: t('In {n} bronnen in de afgelopen 3 uur. Klik om te zoeken.', { n: x.sources }),
+    const chip = h('button', { type: 'button', class: 'tchip', translate: 'no', 'aria-pressed': String(!!on),
+      title: wiki ? null : t('In {n} bronnen in de afgelopen 3 uur. Klik om te zoeken.', { n: x.sources }),
+      'aria-description': wiki ? t('In {n} bronnen in de afgelopen 3 uur. Klik om te zoeken.', { n: x.sources }) : null,
       onclick: () => { const q = $('#q'); q.value = on ? '' : x.term; setQuery(q.value); renderTrending(); } }, x.term);
-  }));
+    if (!wiki) return chip;
+    const info = h('button', { type: 'button', class: 'tinfo', 'aria-expanded': String(wikiOpen?.term === x.term), 'aria-controls': 'wikicard',
+      'aria-label': t('Uitleg over {term} (Wikipedia)', { term: x.term }), title: t('Uitleg (Wikipedia)'), text: 'ⓘ',
+      onclick: e => { e.stopPropagation(); wikiOpen?.term === x.term ? closeWiki(true) : openWiki(x.term, true); } });
+    return h('span', { class: 'tgrp', 'data-term': x.term, onpointerenter: e => wikiHover(e, x.term, true), onpointerleave: e => wikiHover(e, x.term, false) }, chip, info);
+  }), wikiCard());
+  if (wikiOpen && !terms.some(x => x.term === wikiOpen.term)) closeWiki(); else if (wikiOpen) placeWiki();
 }
+
+// Wikipedia context per trending topic: after hovering 0.5 s with a mouse, or with ⓘ (touch, keyboard).
+const wikiData = new Map(); // term -> response promise, for this visit
+let wikiOpen = null, wikiTimer = 0, wikiEl = null;
+function wikiCard() {
+  wikiEl ??= h('div', { class: 'wikicard', id: 'wikicard', role: 'region', 'aria-live': 'polite', hidden: true,
+    onpointerenter: e => e.pointerType === 'mouse' && clearTimeout(wikiTimer), onpointerleave: e => wikiOpen && !wikiOpen.pinned && wikiHover(e, wikiOpen.term, false) });
+  return wikiEl;
+}
+function wikiHover(e, term, enter) {
+  if (e.pointerType !== 'mouse') return; // touch and pen: only ⓘ
+  clearTimeout(wikiTimer);
+  if (enter) { if (wikiOpen?.term !== term) wikiTimer = setTimeout(() => openWiki(term, false), 500); }
+  else if (wikiOpen && !wikiOpen.pinned) wikiTimer = setTimeout(() => closeWiki(), 250);
+}
+function wikiInfoBtn(term) { return [...document.querySelectorAll('#trending .tgrp')].find(g => g.dataset.term === term)?.querySelector('.tinfo'); }
+async function openWiki(term, pinned) {
+  clearTimeout(wikiTimer);
+  wikiOpen = { term, pinned };
+  for (const b of document.querySelectorAll('#trending .tinfo')) b.setAttribute('aria-expanded', String(b === wikiInfoBtn(term)));
+  const el = wikiCard();
+  el.hidden = false;
+  el.replaceChildren(h('p', { class: 'wk-foot', text: t('Wikipedia wordt geraadpleegd…') }));
+  placeWiki();
+  if (!wikiData.has(term)) wikiData.set(term, api('api/wiki?term=' + encodeURIComponent(term)).catch(e => { wikiData.delete(term); return { error: e.message }; }));
+  const r = await wikiData.get(term);
+  if (wikiOpen?.term !== term) return;
+  const s = r.summary, out = [];
+  if (s?.found) {
+    out.push(h('div', { class: 'wk-head' },
+      h('div', null, h('p', { class: 'wk-title', translate: 'no', text: s.title }), s.description ? h('p', { class: 'wk-desc', translate: 'no', text: s.description }) : null),
+      s.thumb ? h('img', { src: s.thumb, alt: '', width: '56', height: '56', loading: 'lazy', onerror: e => e.target.remove() }) : null),
+      h('p', { class: 'wk-ext', translate: 'no', text: s.extract }),
+      h('p', { class: 'wk-foot' }, s.url ? extLink(s.url, t('Lees verder op Wikipedia')) : null, s.url ? ' · ' : '', t('tekst: Wikipedia, CC BY-SA')));
+  } else if (r.error) {
+    out.push(h('p', { class: 'wk-foot', text: t('Wikipedia is nu niet bereikbaar ({err}).', { err: tr(r.error) }) }));
+  } else {
+    out.push(h('p', { text: t('Geen Wikipedia-artikel gevonden voor “{term}”.', { term }) }),
+      r.search ? h('p', { class: 'wk-foot' }, extLink(r.search, t('Zoeken op Wikipedia'))) : null);
+  }
+  el.replaceChildren(...out);
+  placeWiki();
+}
+function placeWiki() {
+  const g = wikiInfoBtn(wikiOpen?.term)?.parentElement, box = $('#trending');
+  if (!g || !wikiEl || wikiEl.hidden) return;
+  const max = box.clientWidth - wikiEl.offsetWidth;
+  wikiEl.style.left = Math.max(0, Math.min(g.offsetLeft, max)) + 'px';
+  wikiEl.style.top = (g.offsetTop + g.offsetHeight + 4) + 'px';
+}
+function closeWiki(focus) {
+  clearTimeout(wikiTimer);
+  const btn = focus && wikiInfoBtn(wikiOpen?.term);
+  wikiOpen = null;
+  if (wikiEl) { wikiEl.hidden = true; wikiEl.replaceChildren(); }
+  for (const b of document.querySelectorAll('#trending .tinfo')) b.setAttribute('aria-expanded', 'false');
+  btn?.focus();
+}
+document.addEventListener('click', e => { if (wikiOpen && !e.target.closest('#wikicard, #trending .tinfo')) closeWiki(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && wikiOpen) { e.stopImmediatePropagation(); closeWiki(true); } }, true);
 
 // ---------------------------------------------------------------- coverage (same story at other outlets)
 function coverageList(it) {
@@ -4855,6 +5007,34 @@ function renderInsects(body, extra) {
   out.push(h('p', { class: 'pfoot' }, t('Indicatie op basis van temperatuur, vocht en wind (Open-Meteo), geen metingen · Meer: '),
     extLink('https://www.tekenradar.nl/', 'Tekenradar'), ', ', extLink('https://www.naturetoday.com/intl/nl/observations/mosquito-radar/', t('Muggenradar'))));
   body.replaceChildren(...out);
+}
+
+// ---------------------------------------------------------------- satellietbeeld (EUMETSAT, served by this server)
+async function loadSatellite() {
+  try { panelData.satellite = { data: await api('api/satellite') }; }
+  catch (e) { panelData.satellite = { ...(panelData.satellite || {}), error: e }; }
+  renderPanel('satellite');
+}
+function renderSatellite(body, extra) {
+  const st = panelData.satellite;
+  extra.replaceChildren(h('span', { text: t('Benelux') }));
+  if (!st) { body.replaceChildren(h('div', { class: 'tsk satsk', 'aria-hidden': 'true' }, h('span', { class: 'sk' }))); return; }
+  const r = st.data;
+  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('Het satellietbeeld kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
+  if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (satellite.enabled).' })); return; }
+  if (!r.image) { body.replaceChildren(h('p', { class: 'pnote', text: r.error ? t('EUMETSAT is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: r.error }) : t('Het satellietbeeld wordt nog voor het eerst opgehaald.') })); return; }
+  const when = fmt.time.format(new Date(r.time));
+  const old = body.querySelector('.satwrap');
+  if (old?.dataset.src === r.image) { renderSatFoot(body, r, when); return; } // same image: keep it, no flicker
+  const wrap = h('a', { class: 'satwrap', href: r.image, target: '_blank', rel: 'noopener', 'data-src': r.image, title: t('Satellietbeeld groot openen') },
+    h('img', { src: r.image, alt: t('Satellietbeeld van de Benelux en omgeving om {t}', { t: when }), width: '800', height: '587', decoding: 'async' }),
+    r.overlay ? h('img', { src: r.overlay, alt: '', 'aria-hidden': 'true', width: '800', height: '587', decoding: 'async' }) : null);
+  body.replaceChildren(wrap, h('p', { class: 'pfoot' }));
+  renderSatFoot(body, r, when);
+}
+function renderSatFoot(body, r, when) {
+  body.querySelector('.pfoot').replaceChildren(t('Opname {t} · overdag echte kleuren, ’s nachts wolken en stadslichten · ', { t: when }),
+    extLink('https://view.eumetsat.int/', '© EUMETSAT'));
 }
 
 // ---------------------------------------------------------------- vanavond aan de hemel
@@ -5125,7 +5305,7 @@ function wireMobileViews() {
 function refreshView(v) {
   const panels = () => [loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(), loadBreaches(), loadOutages(), loadHealthPanel(),
     loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(),
-    loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadInsects(), loadSky(), loadSports(), loadAmber()];
+    loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite()];
   const jobs = v === 'news' ? [loadNews({ replace: true }), loadTrending()] : v === 'panels' ? panels() : [loadNews({ replace: true }), ...panels()];
   return Promise.allSettled(jobs);
 }
@@ -5851,7 +6031,7 @@ async function init() {
   if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
   await Promise.allSettled([loadNews({ replace: true }), loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(),
     loadBreaches(), loadOutages(), loadHealthPanel(), loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(), loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadTrending(), initPush(),
-    loadInsects(), loadSky(), loadSports(), loadAmber()]);
+    loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite()]);
   kioskFit(); // the header and top bar have their final height now
   panelFromHash(); // e.g. a push notification that opens #panel-waste
   // intervals from config.yaml (refresh:), in seconds; defaults if the server is older
@@ -5883,6 +6063,7 @@ async function init() {
   every(R('insects', 60), loadInsects);
   every(R('amber', 5), loadAmber);
   every(R('sky', 30), loadSky);
+  every(R('satellite', 10), loadSatellite);
   every(R('sports', 30), loadSports);
   every(R('outages', 10), loadOutages);
   every(R('health', 30), loadHealthPanel);

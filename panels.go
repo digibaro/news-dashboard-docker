@@ -88,6 +88,14 @@ func (c *ttlCache[V]) get(key string, ttl time.Duration, fetch func() (V, error)
 	return v, time.Time{}, false, err
 }
 
+// has reports whether key was ever requested (and not evicted since).
+func (c *ttlCache[V]) has(key string) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	_, ok := c.m[key]
+	return ok
+}
+
 func (c *ttlCache[V]) evictOldest() {
 	var oldest string
 	var at time.Time
@@ -1716,6 +1724,9 @@ func (a *App) threatJobs(cfg *Config) []Job {
 		jobs = append(jobs, Job{Key: "burgernet:amber", Sig: cfg.Amber.URL, Interval: cfg.Amber.Interval.D(),
 			Run: a.fetchJob("burgernet:amber", func() string { return a.config().Amber.URL }, "application/json", nil,
 				func(b []byte) (any, error) { return parseAmber(b) }, nil)})
+	}
+	if cfg.Satellite.Enabled {
+		jobs = append(jobs, Job{Key: satKey, Sig: cfg.Satellite.URL + " " + cfg.Satellite.Layer, Interval: cfg.Satellite.Interval.D(), Run: a.satelliteJob})
 	}
 	if cfg.Sky.Enabled {
 		jobs = append(jobs, Job{Key: "noaa:kp", Sig: cfg.Sky.KpURL, Interval: 3 * time.Hour,

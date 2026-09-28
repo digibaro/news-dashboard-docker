@@ -24,6 +24,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **AMBER Alert and Vermist Kind Alert:** while a child is being searched for, a prominent banner at the top with the name, description, photo and "call 112" (a Vermist Kind Alert only for visitors whose weather location lies in its area), plus a push notification. Source: the police's Burgernet open API.
 - **NL-Alert:** active and recent NL-Alerts (last 31 days), marked when the visitor's weather location lies inside the alert area.
 - **Afvalkalender:** the next waste collection days. Each visitor sets an own address (postcode and house number) under Instellingen, like the places for alarms and air quality; the server finds the provider that knows it among 51 built-in providers (municipal calendars, Ximmio, Amsterdam, HVC, RD4, ROVA and more; 60 with the optional app providers such as Mijn Afvalwijzer). An optional default address can also come from an iCal link or Home Assistant.
+- **Satellietbeeld:** the latest Meteosat image of the Benelux from EUMETSAT, every 10 minutes: true colour by day, clouds and city lights at night, with coastlines and borders. The server fetches it and serves it itself.
 - **Vanavond aan de hemel:** when it gets dark, the moon, the planets you can see tonight (when and in which direction), the chance of northern lights, the clouds and active meteor showers.
 - **Teken en muggen:** an estimate of tick and mosquito activity for 3 days, from the weather.
 - **Sportagenda:** Formula 1 (next race with qualifying, last podium, standings) and the European and World Championships in mountain biking and athletics, with matching headlines during a championship. Visitors choose their sports.
@@ -45,7 +46,9 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 **Reading features:**
 - **First visit:** pick topics (presets) instead of 80 switches.
 - **Story grouping:** the same story from several outlets becomes one item, with "Ook bij: …" links and a **coverage view** (which outlets, when, and who reported first).
-- **Trending:** words and names that suddenly appear in many headlines in the last 3 hours; click one to search.
+- **Trending:** words and names that suddenly appear in many headlines in the last 3 hours; click one to search. Hover over one (or tap ⓘ) for a short explanation from Wikipedia.
+- **Search operators:** `bron:nos` or `source:nos` (only that source; `bron:"de volkskrant"` for names with a space), `"exact words"`, and `-word` or `-bron:x` to leave out.
+- **Paywall label:** a € next to articles from sources marked `paywall: true` (some or all articles need a subscription).
 - **Read state:** read/unread plus a "Bewaard" list with **notes, labels** and export to Markdown or JSON.
 - **OPML:** export the chosen sources, or import a list from another reader (only feeds that exist on this server are turned on).
 - **Push notifications** (opt-in, per device): NL-Alert in your area, KNMI code orange/red, NCTV threat level, earthquakes, big news and the evening before waste collection. See [Push notifications](#push-notifications).
@@ -160,7 +163,7 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 | `fetch` | `user_agent` (**put your site and e-mail here**), default refresh `interval`, `timeout`, `max_concurrent` (max 2 per host is fixed) |
 | `cache` | `max_items_per_source`, `max_age`, `snapshot_path` (empty = no disk writes, see below) |
 | `features` | `show_images` (keep feed images), `proxy_images` (serve them through `/api/img`, see below), `geolocation` (ip-api lookups), `allow_custom_feeds` (reserved, see below) |
-| `refresh` | how often an open browser tab asks the server for new data, per panel: `news`, `alerts`, `weather`, `today`, `air`, `pollen`, `traffic`, `trains`, `alarms`, `quakes`, `nlalert`, `energy`, `fuel`, `economy`, `markets`, `waste`, `trending`, `politics`, `threats`, `advisories`, `breaches`, `ransomware`, `utilities`, `outages`, `ap`, `health` (1m–24h, see below) |
+| `refresh` | how often an open browser tab asks the server for new data, per panel: `news`, `alerts`, `weather`, `today`, `air`, `pollen`, `traffic`, `trains`, `alarms`, `quakes`, `nlalert`, `energy`, `fuel`, `economy`, `markets`, `waste`, `trending`, `amber`, `insects`, `sky`, `sports`, `satellite`, `politics`, `threats`, `advisories`, `breaches`, `ransomware`, `utilities`, `outages`, `ap`, `health` (1m–24h, see below) |
 | `keys` | `abusech_auth_key` (optional), `ns_api_key` (Treinstoringen) |
 | `energy` | Energieprijzen: `enabled`, `url`, `interval` (min. 15m), `vat` (0.21), `electricity_extra` / `gas_extra` (€ added per kWh / m³, e.g. energy tax and markup; default 0) |
 | `air` | Luchtkwaliteit: `enabled`, `base` (Luchtmeetnet API), `stations_url` (RIVM station list, CSV), `interval` (min. 15m) |
@@ -172,7 +175,8 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 | `nlalert` | NL-Alert: `enabled`, `url`, `interval` (default 2m, min. 1m) |
 | `fuel` | Brandstofprijzen: `enabled`, `url` (UnitedConsumers page), `interval` (default 3h, min. 1h) |
 | `waste` | Afvalkalender: `enabled`, `providers` (provider ids to use, e.g. `[denhaag, hvc]`; a list replaces the default of all built-in providers; https URLs add extra opzet calendars), `app_providers` (default `false`; see *Data sources*), `interval` (default 6h, min. 1h). Visitors set their own address in the browser and can pick a provider or let the server find it. Optional **default address** (for visitors without one, and their push reminders) via `provider`: **auto** (or a provider id) `postcode`, `number`, `suffix` · **ics** `ics_url` · **home_assistant** `home_assistant.url`, `home_assistant.token` (or `NDB_HA_TOKEN`), `home_assistant.entities` (1–10 sensor ids). |
-| `trending` | Trending words above the news: `enabled` (computed from the news cache, no extra requests) |
+| `trending` | Trending words above the news: `enabled` (computed from the news cache, no extra requests); `wikipedia`: `enabled` (default true), `url` (default `https://nl.wikipedia.org`), a short summary per topic, only for current trending terms, cached 24 h per term |
+| `satellite` | Satellietbeeld: `enabled`, `url` (EUMETSAT GeoServer), `layer` (default `mtg_fd:rgb_geocolour`; e.g. `msg_fes:ir108` for infrared), `interval` (default 10m, min. 5m) |
 | `amber` | AMBER Alert and Vermist Kind Alert: `enabled`, `url` (Burgernet Landactiehost; the test feed `.../api/test/alerts` cycles through test messages), `interval` (default 5m, min. 1m) |
 | `insects` | Teken en muggen: `enabled`, `url` (Open-Meteo forecast) |
 | `sky` | Vanavond aan de hemel: `enabled`, `kp_url` (NOAA SWPC), `clouds_url` (Open-Meteo) |
@@ -239,6 +243,7 @@ There are two separate rates:
 | Afvalkalender | 60m | 6h |
 | Trending | 10m | computed at most every 5 min |
 | AMBER Alert | 5m | 5m (almost always an empty list) |
+| Satellietbeeld | 10m | 10m (EUMETSAT publishes every 10 min, ~25–30 min after the scan; the image is only downloaded when it is new) |
 | Teken en muggen | 60m | on demand, cached 1h per ~10 km |
 | Vanavond aan de hemel | 30m | computed on request; Kp forecast 3h, clouds cached 1h per ~10 km |
 | Sportagenda | 30m | F1 1h; championships from the config |
@@ -275,6 +280,7 @@ Add one line under `sources:`, then reload. No code changes are needed:
   - `lang: nl|en|…`: stories are only grouped within one language
   - `region: "Utrecht"`: province, for the "Mijn regio" preset
   - `enabled: false`: keeps the source in the file but neither fetches it nor shows it
+  - `paywall: true`: a € label on its articles (some or all need a subscription)
 
 **Before relying on a feed, verify it:**
 
@@ -561,6 +567,8 @@ The server fetches everything; browsers only talk to the dashboard itself.
 | [Open-Meteo](https://open-meteo.com/) | Onweer, Teken en muggen, hemel (bewolking) | Lightning potential and CAPE (ICON-D2) for the thunderstorm risk; temperature, humidity and wind for the tick and mosquito **estimate** (no open source with measurements exists: Tekenradar's activity map needs an account); cloud cover tonight. Same terms as the weather. |
 | [NOAA SWPC](https://www.swpc.noaa.gov/) | Hemel: noorderlicht | Planetary Kp index forecast (US government, public domain). Planets, moon and twilight are computed locally (JPL Keplerian elements and Meeus; checked against JPL Horizons). |
 | [Jolpica F1](https://github.com/jolpica/jolpica-f1) | Sportagenda: Formule 1 | The open, community-run successor of the Ergast API; no key, fair use. Championships (MTB, athletics) have no open API (UCI and World Athletics only use internal keys), so they come from `sports.events` in `config.yaml`; the defaults were checked on Wikipedia in September 2026. |
+| [EUMETSAT](https://view.eumetsat.int/) | Satellietbeeld | The EUMETView WMS (GeoServer), no key: the newest time from the layer's GetCapabilities, then one GetMap image of the Benelux; coastlines and borders (Natural Earth) as a separate transparent PNG, refreshed weekly. Credited as "© EUMETSAT"; check the [EUMETSAT data policy](https://www.eumetsat.int/eumetsat-data-licensing) for your kind of use. |
+| [Wikipedia](https://nl.wikipedia.org/) | Trending: uitleg | REST API (`/api/rest_v1/page/summary`, `/w/rest.php/v1/search/page`), no key. Only for current trending terms; disambiguation pages are skipped, and a search hit is used only if its title holds every word of the term plus at most one more. Text CC BY-SA 4.0, credited in the card. |
 | [Burgernet](https://www.burgernet.nl/amberalert) (police) | AMBER Alert, Vermist Kind Alert | The open API "Landactiehost" (`services.burgernet.nl/landactiehost/api/v1/alerts`, JSON, no key), documented in *Technische koppelingen Burgernet/AMBER Alert berichten* v1.1. AlertLevel 10 = AMBER Alert (national), 5 = Vermist Kind Alert (a circle); a Cancel closes the alert. The photo is shown via this server's image proxy. |
 | [NL-Alert](https://actueel.nl-alert.nl/) | NL-Alert | The public JSON API behind actueel.nl-alert.nl (`api.public-warning.app`), no key. Alerts include their broadcast areas; "in jouw omgeving" is a point-in-polygon check on the server with the visitor's weather location. |
 | [UnitedConsumers](https://www.unitedconsumers.com/tanken/brandstofprijzen) | Brandstofprijzen | The daily *gemiddelde landelijke adviesprijs* (GLA). There is **no open API**: the price table is read from the public page once every 3 hours. UnitedConsumers claims copyright on the data on its site, so this is for **personal use only**; turn it off with `fuel.enabled: false` for public or commercial use. CBS publishes official daily pump prices (table 80416ned), but its OData hosts are not reachable from every network. |
@@ -685,6 +693,9 @@ All JSON responses:
 | `GET /api/sky?lat=&lon=` | Vanavond aan de hemel: sunset, dark, dawn, `moon` (phase, rise, set), `planets` (from, until, best time, altitude, direction), `kp` and `aurora` (0–3), `clouds`, `meteor` |
 | `GET /api/sports` | Sportagenda: `f1` (next race with sessions, last podium, standings) and `events` (per sport the current or just-finished and the next championship, with `headlines`) |
 | `GET /api/trending` | Trending: up to 8 `terms` with the number of `sources` in the last 3 hours |
+| `GET /api/wiki?term=` | Wikipedia summary for a current trending term: `summary` (`found`, `title`, `description`, `extract`, `url`, `thumb` via `api/img`) and a `search` link; 404 for other terms |
+| `GET /api/satellite` | Satellietbeeld: `time` of the image, `image` and `overlay` (URLs on this server that change with every new image) |
+| `GET /api/satellite/image` · `/overlay` | The latest satellite image (JPEG) and the coastline overlay (PNG) |
 | `GET /api/push` | Push: `enabled`, the VAPID public `key` and the available `topics` |
 | `POST /api/push/subscribe` · `/unsubscribe` · `/test` | Register, remove or test this device's subscription (same-origin JSON only) |
 | `GET /api/markets` | Beurs: `indices` in config order and `stocks` sorted by daily change (symbol, name, price, change_pct, prev_close, time) |
@@ -743,6 +754,13 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.16.0
+- **Satellietbeeld:** a new panel with the latest Meteosat image of the Benelux from EUMETSAT (new every 10 minutes), true colour by day and clouds with city lights at night, with coastlines and borders. The server fetches it and serves it itself.
+- **Wikipedia for trending topics:** hover over a trending word (or tap ⓘ) for a short summary from Wikipedia. Only current trending terms can be looked up; answers are cached for 24 hours. Turn it off with `trending.wikipedia.enabled: false`.
+- **Search operators:** `bron:nos` / `source:nos`, `"exact words"`, `-word` and `-bron:x`.
+- **Paywall label:** a € next to articles from sources marked `paywall: true`; set for de Volkskrant, NRC, Trouw, AD, Het Parool, De Telegraaf, Telegraaf DFT, Nederlands Dagblad, Follow the Money, De Groene Amsterdammer, The Economist, De Tijd and Knack.
+- New config section `satellite`, `trending.wikipedia`, the source field `paywall` and the refresh key `satellite`.
 
 ### 1.15.0
 - **AMBER Alert and Vermist Kind Alert** from Burgernet (the police's open API): while a child is being searched for, a prominent banner above the news and panels with the name and age, the description, the photo (via this server's image proxy), "Heb je informatie? Bel direct 112." and a link to politie.nl. An AMBER Alert (national) is shown to everyone; a Vermist Kind Alert only when the visitor's weather location lies in its circle. The banner can be hidden for the rest of the session. It is also a push topic (on by default for new subscriptions), and it is listed in Bronstatus.

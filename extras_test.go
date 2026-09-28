@@ -698,3 +698,137 @@ func TestParseAmber(t *testing.T) {
 		t.Errorf("without the image proxy no photo link: %s", b)
 	}
 }
+
+func TestSatellite(t *testing.T) {
+	caps := []byte(`<Layer><Name>rgb_geocolour</Name><Dimension name="time" default="2026-09-28T19:20:00Z" units="ISO8601" nearestValue="1">2024-09-23T00:00:00.000Z/2026-09-28T19:20:00.000Z/PT10M</Dimension></Layer>`)
+	if tm, err := parseSatTime(caps); err != nil || !tm.Equal(time.Date(2026, 9, 28, 19, 20, 0, 0, time.UTC)) {
+		t.Errorf("time: %v %v", tm, err)
+	}
+	if _, err := parseSatTime([]byte(`<ServiceException>no layer</ServiceException>`)); err == nil {
+		t.Error("capabilities without a time must fail")
+	}
+	u := satMapURL("https://view.eumetsat.int/geoserver", "a:b,c:d", "image/png", "")
+	if !strings.Contains(u, "styles=%2C&") || !strings.Contains(u, "transparent=true") || strings.Contains(u, "time=") {
+		t.Errorf("overlay url %s", u)
+	}
+	jpeg, png := []byte("\xff\xd8\xff\xe0jpeg"), []byte("\x89PNG\r\n\x1a\nrest")
+	var calls []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		calls = append(calls, q.Get("request")+" "+q.Get("format"))
+		switch {
+		case q.Get("request") == "GetCapabilities" && r.URL.Path == "/mtg_fd/rgb_geocolour/ows":
+			w.Write(caps)
+		case q.Get("format") == "image/jpeg" && q.Get("time") == "2026-09-28T19:20:00Z":
+			w.Write(jpeg)
+		case q.Get("format") == "image/png":
+			w.Write(png)
+		default:
+			w.Write([]byte(`<ServiceExceptionReport/>`))
+		}
+	}))
+	defer srv.Close()
+	a := newTestApp(t, validConfig)
+	a.cfg.Satellite.URL = srv.URL
+	if err := a.satelliteJob(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.satelliteJob(context.Background()); err != nil || len(calls) != 4 { // 2nd run: same time, only capabilities
+		t.Fatalf("second run: %v, calls %v", err, calls)
+	}
+	h := a.routes("/")
+	b := get(h, "GET", "/api/satellite", nil).Body.String()
+	if !strings.Contains(b, `"image":"api/satellite/image?t=1790623200"`) || !strings.Contains(b, `"overlay":"api/satellite/overlay?t=`) || strings.Contains(b, srv.URL) {
+		t.Errorf("handler: %s", b)
+	}
+	rec := get(h, "GET", "/api/satellite/image?t=1", nil)
+	if rec.Code != 200 || rec.Header().Get("Content-Type") != "image/jpeg" || !bytes.Equal(rec.Body.Bytes(), jpeg) {
+		t.Errorf("image: %d %v", rec.Code, rec.Header())
+	}
+	if rec := get(h, "GET", "/api/satellite/overlay", nil); rec.Code != 200 || rec.Header().Get("Content-Type") != "image/png" {
+		t.Errorf("overlay: %d", rec.Code)
+	}
+	// an XML error instead of a JPEG is an error, the previous image stays
+	a.cfg.Satellite.Layer = "mtg_fd:other"
+	if err := a.satelliteJob(context.Background()); err == nil {
+		t.Error("missing capabilities must fail")
+	}
+	if rec := get(h, "GET", "/api/satellite/image", nil); rec.Code != 200 {
+		t.Error("the last image must stay available")
+	}
+	if b := get(h, "GET", "/api/satellite", nil).Body.String(); !strings.Contains(b, `"error"`) {
+		t.Errorf("error not reported: %s", b)
+	}
+	a2 := newTestApp(t, validConfig+"satellite: { enabled: false }\n")
+	if rec := get(a2.routes("/"), "GET", "/api/satellite/image", nil); rec.Code != 404 {
+		t.Errorf("disabled: %d", rec.Code)
+	}
+	if _, err := parseConfig([]byte(validConfig + "satellite: { layer: \"x&request=evil\" }\n")); err == nil {
+		t.Error("a layer with other characters must be rejected")
+	}
+}
+
+func TestWiki(t *testing.T) {
+	for _, c := range []struct {
+		term, title string
+		want        bool
+	}{{"Trump", "Donald Trump", true}, {"Poetin", "Vladimir Poetin", true}, {"Grand Prix", "Grand Prix Formule 1 van Spanje", false},
+		{"Strafhof Historische", "Internationaal Strafhof", false}, {"Max Verstappen", "Max Verstappen", true}} {
+		if got := wikiTitleFits(c.term, c.title); got != c.want {
+			t.Errorf("fits(%q, %q) = %v", c.term, c.title, got)
+		}
+	}
+	const base = "https://nl.wikipedia.org"
+	std := `{"type":"standard","title":"Donald Trump","description":"president","extract":"Donald John Trump is een <b>Amerikaans</b> politicus.",
+		"thumbnail":{"source":"https://upload.wikimedia.org/x.jpg"},"content_urls":{"desktop":{"page":"https://nl.wikipedia.org/wiki/Donald_Trump"}}}`
+	s, err := parseWikiSummary([]byte(std), base)
+	if err != nil || !s.Found || s.URL != "https://nl.wikipedia.org/wiki/Donald_Trump" || s.Thumb == "" || strings.Contains(s.Extract, "<b>") {
+		t.Errorf("standard: %+v %v", s, err)
+	}
+	if _, err := parseWikiSummary([]byte(`{"type":"disambiguation","title":"Trump","extract":"Trump kan verwijzen naar:"}`), base); err != errWikiNotFound {
+		t.Error("a disambiguation page is not a summary")
+	}
+	evil := strings.NewReplacer("https://nl.wikipedia.org/wiki", "https://evil.example/wiki", "upload.wikimedia.org", "evil.example").Replace(std)
+	if s, _ := parseWikiSummary([]byte(evil), base); s.URL != "" || s.Thumb != "" {
+		t.Errorf("foreign links must be dropped: %+v", s)
+	}
+
+	var hits []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits = append(hits, r.URL.Path)
+		switch r.URL.Path {
+		case "/api/rest_v1/page/summary/Trump":
+			w.Write([]byte(`{"type":"disambiguation","title":"Trump","extract":"Trump kan verwijzen naar:"}`))
+		case "/w/rest.php/v1/search/page":
+			w.Write([]byte(`{"pages":[{"key":"Trump","title":"Trump"},{"key":"Melania_Trump_en_Barron","title":"Melania Trump en Barron"},{"key":"Donald_Trump","title":"Donald Trump"}]}`))
+		case "/api/rest_v1/page/summary/Donald_Trump":
+			w.Write([]byte(strings.ReplaceAll(std, base, "http://"+r.Host)))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+	a := newTestApp(t, validConfig+"features: { show_images: true, proxy_images: true }\n")
+	a.cfg.Trending.Wikipedia.URL = srv.URL
+	a.trend.terms, a.trend.at = []TrendTerm{{Term: "Trump", Sources: 8}, {Term: "Onbekend Woord", Sources: 4}}, time.Now()
+	h := a.routes("/")
+	b := get(h, "GET", "/api/wiki?term=trump", nil).Body.String()
+	if !strings.Contains(b, `"title":"Donald Trump"`) || !strings.Contains(b, `"thumb":"api/img?u=`) || !strings.Contains(b, `"url":"`+srv.URL+`/wiki/Donald_Trump"`) {
+		t.Errorf("lookup: %s", b)
+	}
+	n := len(hits)
+	get(h, "GET", "/api/wiki?term=Trump", nil)
+	if len(hits) != n {
+		t.Error("the summary must be cached")
+	}
+	if b := get(h, "GET", "/api/wiki?term=Onbekend%20Woord", nil).Body.String(); !strings.Contains(b, `"found":false`) {
+		t.Errorf("not found: %s", b)
+	}
+	if rec := get(h, "GET", "/api/wiki?term=Nederland", nil); rec.Code != 404 {
+		t.Errorf("only trending terms may be looked up: %d", rec.Code)
+	}
+	a2 := newTestApp(t, validConfig+"trending: { wikipedia: { enabled: false } }\n")
+	if b := get(a2.routes("/"), "GET", "/api/wiki?term=Trump", nil).Body.String(); !strings.Contains(b, `"enabled":false`) {
+		t.Errorf("disabled: %s", b)
+	}
+}

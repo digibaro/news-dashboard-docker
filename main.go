@@ -112,7 +112,8 @@ type Source struct {
 	Region         string   `yaml:"region" json:"region,omitempty"` // province, for the "Mijn regio" preset
 	Type           string   `yaml:"type" json:"-"`                  // rss|atom|rdf|json; empty = auto-detect
 	DefaultEnabled bool     `yaml:"default_enabled" json:"default_enabled"`
-	Enabled        *bool    `yaml:"enabled" json:"-"` // nil = true
+	Paywall        bool     `yaml:"paywall" json:"paywall,omitempty"` // (some) articles need a subscription: € label
+	Enabled        *bool    `yaml:"enabled" json:"-"`                 // nil = true
 	Interval       Duration `yaml:"interval" json:"-"`
 	MaxAge         Duration `yaml:"max_age" json:"-"` // overrides cache.max_age, e.g. for low-volume sources
 }
@@ -349,6 +350,11 @@ type Config struct {
 	// Trending: words that suddenly appear in many sources' headlines (computed from the news cache).
 	Trending struct {
 		Enabled bool `yaml:"enabled"`
+		// Wikipedia: a short summary per trending topic (hover or ⓘ), Wikipedia REST API.
+		Wikipedia struct {
+			Enabled bool   `yaml:"enabled"`
+			URL     string `yaml:"url"`
+		} `yaml:"wikipedia"`
 	} `yaml:"trending"`
 	// Push: Web Push notifications (needs HTTPS and a VAPID key, see -gen-vapid).
 	Push struct {
@@ -366,6 +372,13 @@ type Config struct {
 		URL      string   `yaml:"url"`
 		Interval Duration `yaml:"interval"`
 	} `yaml:"amber"`
+	// Satellite: Satellietbeeld panel (EUMETSAT view service, WMS; no key).
+	Satellite struct {
+		Enabled  bool     `yaml:"enabled"`
+		URL      string   `yaml:"url"`   // GeoServer base URL
+		Layer    string   `yaml:"layer"` // workspace:layer with a time dimension
+		Interval Duration `yaml:"interval"`
+	} `yaml:"satellite"`
 	// Insects: Teken en muggen panel (an estimate from the Open-Meteo forecast).
 	Insects struct {
 		Enabled bool   `yaml:"enabled"`
@@ -478,6 +491,8 @@ func defaultConfig() *Config {
 	c.Fuel.Enabled, c.Fuel.URL, c.Fuel.Interval = true, "https://www.unitedconsumers.com/tanken/brandstofprijzen", Duration(3*time.Hour)
 	c.Waste.Enabled, c.Waste.Provider, c.Waste.Interval = true, "auto", Duration(6*time.Hour)
 	c.Trending.Enabled = true
+	c.Trending.Wikipedia.Enabled, c.Trending.Wikipedia.URL = true, "https://nl.wikipedia.org"
+	c.Satellite.Enabled, c.Satellite.URL, c.Satellite.Layer, c.Satellite.Interval = true, "https://view.eumetsat.int/geoserver", "mtg_fd:rgb_geocolour", Duration(10*time.Minute)
 	c.Amber.Enabled, c.Amber.URL, c.Amber.Interval = true, "https://services.burgernet.nl/landactiehost/api/v1/alerts", Duration(5*time.Minute)
 	c.Insects.Enabled, c.Insects.URL = true, "https://api.open-meteo.com/v1/forecast"
 	c.Sky.Enabled, c.Sky.KpURL, c.Sky.CloudsURL = true, "https://services.swpc.noaa.gov/products/noaa-planetary-k-index-forecast.json", "https://api.open-meteo.com/v1/forecast"
@@ -557,7 +572,7 @@ var defaultRefresh = map[string]time.Duration{
 	"pollen": 60 * time.Minute, "utilities": 5 * time.Minute, "quakes": 15 * time.Minute,
 	"economy": 60 * time.Minute, "markets": 5 * time.Minute,
 	"nlalert": 2 * time.Minute, "fuel": 60 * time.Minute, "waste": 60 * time.Minute, "trending": 10 * time.Minute,
-	"insects": 60 * time.Minute, "sky": 30 * time.Minute, "sports": 30 * time.Minute, "amber": 5 * time.Minute,
+	"insects": 60 * time.Minute, "sky": 30 * time.Minute, "sports": 30 * time.Minute, "amber": 5 * time.Minute, "satellite": 10 * time.Minute,
 	"health": 30 * time.Minute,
 }
 
@@ -567,7 +582,7 @@ func (c *Config) validate() error {
 			continue // a removed panel: ignored, configWarnings mentions it
 		}
 		if _, ok := defaultRefresh[k]; !ok {
-			return fmt.Errorf("refresh.%s: unknown panel (known: news, weather, alerts, traffic, alarms, energy, air, trains, politics, today, ransomware, pollen, utilities, quakes, economy, markets, nlalert, fuel, waste, trending, insects, sky, sports, amber, threats, advisories, breaches, outages, ap, health)", k)
+			return fmt.Errorf("refresh.%s: unknown panel (known: news, weather, alerts, traffic, alarms, energy, air, trains, politics, today, ransomware, pollen, utilities, quakes, economy, markets, nlalert, fuel, waste, trending, insects, sky, sports, amber, satellite, threats, advisories, breaches, outages, ap, health)", k)
 		}
 		if v.D() < time.Minute || v.D() > 24*time.Hour {
 			return fmt.Errorf("refresh.%s: %s is outside 1m..24h", k, v.D())
@@ -759,6 +774,12 @@ func (c *Config) validate() error {
 				fail("waste: default address needs a postcode like 2511AB, number 1–99999 and a suffix of at most 6 letters/digits")
 			}
 		}
+	}
+	if c.Trending.Wikipedia.Enabled && !httpsURL(c.Trending.Wikipedia.URL) {
+		fail("trending.wikipedia.url must be an https URL")
+	}
+	if c.Satellite.Enabled && (!httpsURL(c.Satellite.URL) || !satLayerRe.MatchString(c.Satellite.Layer) || c.Satellite.Interval.D() < 5*time.Minute) {
+		fail("satellite: url must be an https URL, layer workspace:name, interval at least 5m")
 	}
 	if c.Amber.Enabled && (c.Amber.Interval.D() < time.Minute || !httpsURL(c.Amber.URL)) {
 		fail("amber: interval must be at least 1m and url https")
@@ -1001,6 +1022,7 @@ type App struct {
 	trend     trendCache                // trending words, recomputed at most every 5 min
 	waste     *ttlCache[WasteResult]    // pickups per visitor address
 	insects   *ttlCache[InsectData]     // tick/mosquito estimate per ~10 km cell
+	wikiCache *ttlCache[WikiSummary]    // Wikipedia summary per trending term, 24 h
 	skyClouds *ttlCache[[]cloudPoint]   // cloud cover per ~10 km cell
 	wasteIdx  wasteIndex                // address -> municipal calendar
 	push      *pushHub                  // Web Push subscriptions and watcher state
@@ -1162,7 +1184,7 @@ func run(cfgPath string) error {
 	a := &App{cfgPath: cfgPath, level: level, started: time.Now(), news: newNewsCache(), sched: newScheduler(), wx: newWeatherCaches(),
 		threats: newStateStore(), geo: newGeoCache(10000), metrics: newHTTPMetrics(),
 		alarms: newTTLCache[[]Alarm](500), air: newTTLCache[[]AirComponent](200), pollen: newTTLCache[PollenData](300), p2k: newP2KCounters(),
-		push: newPushHub(), waste: newTTLCache[WasteResult](1000), insects: newTTLCache[InsectData](300), skyClouds: newTTLCache[[]cloudPoint](300)}
+		push: newPushHub(), waste: newTTLCache[WasteResult](1000), insects: newTTLCache[InsectData](300), wikiCache: newTTLCache[WikiSummary](200), skyClouds: newTTLCache[[]cloudPoint](300)}
 	if st, err := os.Stat(cfgPath); err == nil {
 		a.cfgMod = st.ModTime()
 	}
@@ -1379,6 +1401,10 @@ func (a *App) routes(basePath string) http.Handler {
 	handle("GET /api/trending", a.handleTrending)
 	handle("GET /api/insects", a.handleInsects)
 	handle("GET /api/amber", a.handleAmber)
+	handle("GET /api/wiki", a.handleWiki)
+	handle("GET /api/satellite", a.handleSatellite)
+	handle("GET /api/satellite/image", a.handleSatelliteFile(false))
+	handle("GET /api/satellite/overlay", a.handleSatelliteFile(true))
 	handle("GET /api/sky", a.handleSky)
 	handle("GET /api/sports", a.handleSports)
 	handle("GET /api/push", a.handlePushInfo)
@@ -1597,6 +1623,8 @@ func (a *App) handleCatalog(w http.ResponseWriter, r *http.Request) {
 		"push":             cfg.Push.Enabled,
 		"insects":          cfg.Insects.Enabled,
 		"amber":            cfg.Amber.Enabled,
+		"satellite":        cfg.Satellite.Enabled,
+		"trending_wiki":    cfg.Trending.Enabled && cfg.Trending.Wikipedia.Enabled,
 		"sky":              cfg.Sky.Enabled,
 		"sports":           map[string]any{"enabled": cfg.Sports.Enabled, "sports": cfg.Sports.Sports},
 		"accent":           cfg.UI.Accent,
@@ -1805,6 +1833,9 @@ func (a *App) otherFeeds(cfg *Config) []FeedStatus {
 	}
 	if cfg.Amber.Enabled {
 		add("burgernet:amber", "Burgernet · AMBER Alert en Vermist Kind Alert", "alert")
+	}
+	if cfg.Satellite.Enabled {
+		add(satKey, "EUMETSAT · satellietbeeld", "daily")
 	}
 	if cfg.Sky.Enabled {
 		add("noaa:kp", "NOAA SWPC · noorderlichtverwachting", "daily")

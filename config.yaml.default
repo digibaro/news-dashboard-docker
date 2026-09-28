@@ -248,6 +248,11 @@ waste:
 # Trending: words that suddenly appear in many headlines (computed from the news cache, no requests).
 trending:
   enabled: true
+  # A short summary from Wikipedia per trending topic (hover over it, or tap ⓘ). Only current trending
+  # terms can be looked up; the server asks Wikipedia and caches each answer for 24 hours.
+  wikipedia:
+    enabled: true
+    url: "https://nl.wikipedia.org"
 
 # AMBER Alert and Vermist Kind Alert: the police's Burgernet open API (no key). Almost always empty;
 # while a child is being searched for, a banner shows at the top (a Vermist Kind Alert only for visitors
@@ -258,6 +263,16 @@ amber:
   enabled: true
   url: "https://services.burgernet.nl/landactiehost/api/v1/alerts"
   interval: 5m                    # a tiny JSON list; min. 1m
+
+# Satellietbeeld: the latest Meteosat image of the Benelux from the EUMETSAT view service (WMS, no key).
+# The default layer (MTG GeoColour) shows true colour by day and clouds with city lights at night; a new
+# image appears every 10 minutes, ~25-30 minutes after the scan. The server fetches it and serves it
+# itself, so visitors never contact EUMETSAT. Other layers: e.g. msg_fes:ir108 (infrared, day and night).
+satellite:
+  enabled: true
+  url: "https://view.eumetsat.int/geoserver"
+  layer: "mtg_fd:rgb_geocolour"
+  interval: 10m                   # checks a ~6 KB capabilities file; the ~70 KB image only when new; min. 5m
 
 # Teken en muggen: an estimate of tick and mosquito activity from the weather forecast (Open-Meteo);
 # there is no open source with measurements. Follows the visitor's air/pollen place.
@@ -392,6 +407,7 @@ refresh:
   sky: 30m
   sports: 30m
   amber: 5m
+  satellite: 10m
   outages: 10m
   ap: 30m
   health: 30m
@@ -424,7 +440,7 @@ presets:
 # Per source: id, name, category, url, homepage, default_enabled
 # optional: interval (e.g. 30m), max_age (overrides cache.max_age), type (rss|atom|rdf|json, default auto),
 #           lang (stories are only grouped within one language), region (province, for the "Mijn regio" preset),
-#           enabled (default true)
+#           enabled (default true), paywall (true: a € label, some or all articles need a subscription)
 # Adding a source: add a line below, check it with  nieuwsdashboard -check-feeds -only <id>,
 # then reload (systemctl reload nieuwsdashboard, docker compose restart, or wait up to 60 s).
 # A new category also needs an entry under categories:.
@@ -439,16 +455,16 @@ sources:
   - { id: nu-binnenland,  name: "NU.nl Binnenland", category: nl, url: "https://www.nu.nl/rss/Binnenland", homepage: "https://www.nu.nl", lang: nl }
   - { id: nu-economie,    name: "NU.nl Economie", category: nl, url: "https://www.nu.nl/rss/Economie",   homepage: "https://www.nu.nl", lang: nl }
   - { id: rtl-nieuws,     name: "RTL Nieuws",     category: nl, url: "https://www.rtlnieuws.nl/rss.xml", homepage: "https://www.rtlnieuws.nl", lang: nl }
-  - { id: volkskrant,     name: "de Volkskrant",  category: nl, url: "https://www.volkskrant.nl/voorpagina/rss.xml", homepage: "https://www.volkskrant.nl", lang: nl }
-  - { id: nrc,            name: "NRC",            category: nl, url: "https://www.nrc.nl/rss/",          homepage: "https://www.nrc.nl", lang: nl }
-  - { id: trouw,          name: "Trouw",          category: nl, url: "https://www.trouw.nl/voorpagina/rss.xml", homepage: "https://www.trouw.nl", lang: nl }
-  - { id: ad,             name: "AD",             category: nl, url: "https://www.ad.nl/home/rss.xml",   homepage: "https://www.ad.nl", lang: nl }
-  - { id: parool,         name: "Het Parool",     category: nl, url: "https://www.parool.nl/voorpagina/rss.xml", homepage: "https://www.parool.nl", lang: nl }
-  - { id: telegraaf,      name: "De Telegraaf",   category: nl, url: "https://www.telegraaf.nl/rss",     homepage: "https://www.telegraaf.nl", lang: nl }
+  - { id: volkskrant,     name: "de Volkskrant",  category: nl, url: "https://www.volkskrant.nl/voorpagina/rss.xml", homepage: "https://www.volkskrant.nl", lang: nl, paywall: true }
+  - { id: nrc,            name: "NRC",            category: nl, url: "https://www.nrc.nl/rss/",          homepage: "https://www.nrc.nl", lang: nl, paywall: true }
+  - { id: trouw,          name: "Trouw",          category: nl, url: "https://www.trouw.nl/voorpagina/rss.xml", homepage: "https://www.trouw.nl", lang: nl, paywall: true }
+  - { id: ad,             name: "AD",             category: nl, url: "https://www.ad.nl/home/rss.xml",   homepage: "https://www.ad.nl", lang: nl, paywall: true }
+  - { id: parool,         name: "Het Parool",     category: nl, url: "https://www.parool.nl/voorpagina/rss.xml", homepage: "https://www.parool.nl", lang: nl, paywall: true }
+  - { id: telegraaf,      name: "De Telegraaf",   category: nl, url: "https://www.telegraaf.nl/rss",     homepage: "https://www.telegraaf.nl", lang: nl, paywall: true }
   - { id: metro,          name: "Metro",          category: nl, url: "https://www.metronieuws.nl/feed/", homepage: "https://www.metronieuws.nl", lang: nl }
   # RIVM: used by the Gezondheid panel (health alerts only); also selectable as a news source.
   - { id: rivm,           name: "RIVM",           category: nl, url: "https://www.rivm.nl/nieuws/rss.xml", homepage: "https://www.rivm.nl", lang: nl, interval: 30m, max_age: 1440h }
-  - { id: nd,             name: "Nederlands Dagblad", category: nl, url: "https://www.nd.nl/rss",        homepage: "https://www.nd.nl", lang: nl }
+  - { id: nd,             name: "Nederlands Dagblad", category: nl, url: "https://www.nd.nl/rss",        homepage: "https://www.nd.nl", lang: nl, paywall: true }
 
   # --- Regionaal ---
   - { id: omroep-brabant, name: "Omroep Brabant", category: regio, url: "https://www.omroepbrabant.nl/rss", homepage: "https://www.omroepbrabant.nl", lang: nl, region: "Noord-Brabant" }
@@ -509,15 +525,15 @@ sources:
   - { id: cnbc-finance,   name: "CNBC · Finance", category: finance, url: "https://www.cnbc.com/id/10000664/device/rss/rss.html", homepage: "https://www.cnbc.com", lang: en }
   - { id: bbc-business,   name: "BBC · Business", category: finance, url: "https://feeds.bbci.co.uk/news/business/rss.xml", homepage: "https://www.bbc.com/news/business", lang: en }
   - { id: guardian-business, name: "The Guardian · Business", category: finance, url: "https://www.theguardian.com/uk/business/rss", homepage: "https://www.theguardian.com/uk/business", lang: en }
-  - { id: economist-finance, name: "The Economist · Finance", category: finance, url: "https://www.economist.com/finance-and-economics/rss.xml", homepage: "https://www.economist.com", lang: en }
-  - { id: telegraaf-dft,  name: "Telegraaf DFT",  category: finance, url: "https://www.telegraaf.nl/financieel/rss", homepage: "https://www.telegraaf.nl/financieel", lang: nl }
+  - { id: economist-finance, name: "The Economist · Finance", category: finance, url: "https://www.economist.com/finance-and-economics/rss.xml", homepage: "https://www.economist.com", lang: en, paywall: true }
+  - { id: telegraaf-dft,  name: "Telegraaf DFT",  category: finance, url: "https://www.telegraaf.nl/financieel/rss", homepage: "https://www.telegraaf.nl/financieel", lang: nl, paywall: true }
 
   # --- Onderzoeksjournalistiek (investigative journalism; verified 2026-09-26) ---
   # They publish a few stories a week, so max_age keeps 30 days instead of cache.max_age.
   # Note: ftm.nl often stalls new connections (seen 2026-09-26); the fetcher retries with backoff.
-  - { id: ftm,            name: "Follow the Money", category: onderzoek, url: "https://www.ftm.nl/feed/", homepage: "https://www.ftm.nl", lang: nl, interval: 1h, max_age: 720h }
+  - { id: ftm,            name: "Follow the Money", category: onderzoek, url: "https://www.ftm.nl/feed/", homepage: "https://www.ftm.nl", lang: nl, interval: 1h, max_age: 720h, paywall: true }
   - { id: investico,      name: "Investico",      category: onderzoek, url: "https://www.platform-investico.nl/feed/", homepage: "https://www.platform-investico.nl", lang: nl, interval: 30m, max_age: 720h }
-  - { id: groene,         name: "De Groene Amsterdammer", category: onderzoek, url: "https://www.groene.nl/rss", homepage: "https://www.groene.nl", lang: nl, interval: 30m, max_age: 720h }
+  - { id: groene,         name: "De Groene Amsterdammer", category: onderzoek, url: "https://www.groene.nl/rss", homepage: "https://www.groene.nl", lang: nl, interval: 30m, max_age: 720h, paywall: true }
   - { id: lighthouse-reports, name: "Lighthouse Reports", category: onderzoek, url: "https://www.lighthousereports.com/feed/", homepage: "https://www.lighthousereports.com", lang: en, interval: 1h, max_age: 720h }
   - { id: bellingcat,     name: "Bellingcat",     category: onderzoek, url: "https://www.bellingcat.com/feed/", homepage: "https://www.bellingcat.com", lang: en, interval: 1h, max_age: 720h }
   # TODO: De Correspondent and Pointer (KRO-NCRV) publish no RSS feed (checked 2026-09-26).
@@ -550,7 +566,7 @@ sources:
   # --- België ---
   - { id: vrt-nws,        name: "VRT NWS",        category: be, url: "https://www.vrt.be/vrtnws/nl.rss.articles.xml", homepage: "https://www.vrt.be/vrtnws/nl/", lang: nl }
   - { id: hln,            name: "Het Laatste Nieuws", category: be, url: "https://www.hln.be/home/rss.xml", homepage: "https://www.hln.be", lang: nl }
-  - { id: knack,          name: "Knack",          category: be, url: "https://www.knack.be/feed/", homepage: "https://www.knack.be", lang: nl }
-  - { id: tijd,           name: "De Tijd",        category: be, url: "https://www.tijd.be/rss/nieuws.xml", homepage: "https://www.tijd.be", lang: nl }
+  - { id: knack,          name: "Knack",          category: be, url: "https://www.knack.be/feed/", homepage: "https://www.knack.be", lang: nl, paywall: true }
+  - { id: tijd,           name: "De Tijd",        category: be, url: "https://www.tijd.be/rss/nieuws.xml", homepage: "https://www.tijd.be", lang: nl, paywall: true }
   - { id: bruzz,          name: "Bruzz",          category: be, url: "https://www.bruzz.be/rss.xml", homepage: "https://www.bruzz.be", lang: nl }
   - { id: sporza,         name: "Sporza",         category: be, url: "https://sporza.be/nl.rss.xml", homepage: "https://sporza.be", lang: nl }
