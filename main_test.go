@@ -322,7 +322,7 @@ func TestConfigValid(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c.Fetch.DefaultInterval.D() != 10*time.Minute || c.Server.BasePath != "/" || len(c.trusted) != 2 {
+	if c.Fetch.DefaultInterval.D() != 15*time.Minute || c.Server.BasePath != "/" || len(c.trusted) != 2 {
 		t.Errorf("defaults not applied: %+v", c.Fetch)
 	}
 }

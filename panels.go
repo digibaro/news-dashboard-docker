@@ -1720,11 +1720,6 @@ func (a *App) threatJobs(cfg *Config) []Job {
 	if cfg.Sports.Enabled && slices.Contains(cfg.Sports.Sports, "f1") {
 		jobs = append(jobs, Job{Key: "f1:jolpica", Sig: cfg.Sports.F1URL, Interval: cfg.Sports.Interval.D(), Run: a.runF1})
 	}
-	if v := cfg.Vulns; v.Enabled && len(v.Products) > 0 {
-		jobs = append(jobs, Job{Key: "vulns:kev", Sig: v.KEVURL, Interval: 12 * time.Hour,
-			Run: a.fetchJob("vulns:kev", func() string { return a.config().Vulns.KEVURL }, "application/json", nil, parseKEVIDs, nil)},
-			Job{Key: "nvd:vulns", Sig: fmt.Sprint(v.NVDURL, v.EPSSURL, v.Products, v.Days), Interval: v.Interval.D(), Run: a.runVulns})
-	}
 	if cfg.Push.Enabled {
 		jobs = append(jobs, Job{Key: "push:watch", Interval: time.Minute, Run: a.runPushWatch})
 	}

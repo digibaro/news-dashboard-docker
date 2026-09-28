@@ -851,16 +851,9 @@ textarea.json {
 .sprow .m { color: var(--text-3); font-size: 12px; }
 .tag.live { color: var(--sev-crit); }
 .spev .plist { margin: 2px 0 6px; }
-.vulns { list-style: none; margin: 0; padding: 0; }
-.vulns > li { padding: 6px 0; border-top: 1px solid var(--line); }
-.vulns > li:first-child { border-top: 0; }
-.vhead { margin: 0 0 2px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; font-size: 13px; }
-.vhead .m { color: var(--text-3); font-size: 12px; }
-.vulns .plist .tag { margin-right: 4px; vertical-align: 1px; }
-.vulns .plist .m { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .wxthunder { margin: 6px 0 0; font-size: 13px; color: var(--text-2); }
 .wxthunder.lv2, .wxthunder.lv3 { color: var(--sev-crit); font-weight: 600; }
-.insk { height: 190px; } .skysk { height: 260px; } .spsk { height: 330px; } .vusk { height: 420px; }
+.insk { height: 190px; } .skysk { height: 260px; } .spsk { height: 330px; }
 .meta .sh { margin-left: auto; }
 .meta .sh + .bm { margin-left: 0; }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 60; padding: 8px 14px; border-radius: 18px;
@@ -1064,6 +1057,11 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.14.2</h3>
+    <ul>
+      <li>Het paneel Kwetsbaarheden in mijn software is verwijderd.</li>
+      <li>Teken en muggen: de tips over teken en muggen zijn weggehaald.</li>
+    </ul>
     <h3>Versie 1.14.1</h3>
     <ul>
       <li>Afvalkalender: per afvalsoort alleen de eerstvolgende ophaaldag.</li>
@@ -1176,6 +1174,11 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.14.2</h3>
+    <ul>
+      <li>The Vulnerabilities in my software panel has been removed.</li>
+      <li>Ticks and mosquitoes: the tips about ticks and mosquitoes have been removed.</li>
+    </ul>
     <h3>Version 1.14.1</h3>
     <ul>
       <li>Waste calendar: only the next collection per waste type.</li>
@@ -1488,7 +1491,6 @@ const PANELS = {
   politics: 'Politiek vandaag',
   threats: 'Cyberdreigingen',
   advisories: 'Security-adviezen',
-  vulns: 'Kwetsbaarheden in mijn software',
   breaches: 'Datalekken',
   ransomware: 'Ransomware NL',
   utilities: 'Kritieke infrastructuur',
@@ -2263,7 +2265,6 @@ const EN = {
   "Teken en muggen": "Ticks and mosquitoes",
   "Vanavond aan de hemel": "Tonight's sky",
   "Sportagenda": "Sports calendar",
-  "Kwetsbaarheden in mijn software": "Vulnerabilities in my software",
   "Plaats voor teken en muggen wijzigen (nu {name})": "Change the place for ticks and mosquitoes (now {name})",
   "De verwachting kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.": "The forecast could not be loaded ({err}). Retrying automatically.",
   "Dit paneel staat uit in config.yaml (insects.enabled).": "This panel is disabled in config.yaml (insects.enabled).",
@@ -2272,8 +2273,6 @@ const EN = {
   "Teken": "Ticks",
   "Muggen": "Mosquitoes",
   "Muggen (avond)": "Mosquitoes (evening)",
-  "Tip: lange broek in hoog gras en bos, en controleer jezelf na het wandelen op teken.": "Tip: wear long trousers in tall grass and woods, and check yourself for ticks after a walk.",
-  "Tip: vanavond ramen dicht of een hor ervoor als het licht aan is.": "Tip: tonight keep windows shut or screened while the lights are on.",
   "Indicatie op basis van temperatuur, vocht en wind (Open-Meteo), geen metingen · Meer: ": "Estimate from temperature, humidity and wind (Open-Meteo), not measurements · More: ",
   "Muggenradar": "Mosquito radar",
   "De hemel kon niet worden berekend ({err}). Er wordt automatisch opnieuw geprobeerd.": "The sky could not be computed ({err}). Retrying automatically.",
@@ -2334,20 +2333,6 @@ const EN = {
   "uitslagen": "results",
   " (Formule 1) · kampioenschappen: kalender van de beheerder, koppen uit je nieuwsbronnen · ": " (Formula 1) · championships: the administrator's calendar, headlines from your news sources · ",
   "Kies welke sporten je in de sportagenda ziet.": "Choose which sports the sports calendar shows.",
-  "Kwetsbaarheden konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.": "Vulnerabilities could not be loaded ({err}). Retrying automatically.",
-  "Dit paneel staat uit in config.yaml (vulns.enabled).": "This panel is disabled in config.yaml (vulns.enabled).",
-  "De beheerder geeft de producten op in config.yaml (vulns.products), bijvoorbeeld Fortinet, WordPress of Synology.": "The administrator lists the products in config.yaml (vulns.products), for example Fortinet, WordPress or Synology.",
-  "NVD is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.": "NVD is unreachable ({err}); retrying automatically.",
-  "Kwetsbaarheden worden voor het eerst opgehaald (dat duurt ongeveer 7 seconden per product).": "Vulnerabilities are being fetched for the first time (about 7 seconds per product).",
-  "niet opgehaald: {err}": "not fetched: {err}",
-  "1 nieuwe CVE": "1 new CVE",
-  "{n} nieuwe CVE's": "{n} new CVEs",
-  "{n} actief misbruikt": "{n} actively exploited",
-  "{n} kritiek": "{n} critical",
-  "{n} hoog": "{n} high",
-  "kans op misbruik (EPSS): {p}%": "chance of exploitation (EPSS): {p}%",
-  "Laatste {n} dagen · bron: ": "Last {n} days · source: ",
-  " · producten in config.yaml": " · products in config.yaml",
   "Link gekopieerd": "Link copied",
   "Delen lukt niet in deze browser": "Sharing does not work in this browser",
   "Delen": "Share",
@@ -2363,8 +2348,6 @@ const EN = {
   "grote kans": "high chance",
   "NOAA SWPC · noorderlichtverwachting": "NOAA SWPC · northern lights forecast",
   "Jolpica · Formule 1": "Jolpica · Formula 1",
-  "NVD en FIRST EPSS · kwetsbaarheden": "NVD and FIRST EPSS · vulnerabilities",
-  "CISA · actief misbruikte kwetsbaarheden": "CISA · actively exploited vulnerabilities",
   "Dag": "Day",
 };
 
@@ -3024,7 +3007,6 @@ const freshOf = {
   insects: () => { const d = panelData.insects?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 130, stale: !!d.error }; },
   sky: () => { const d = panelData.sky?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 400, stale: !!d.error }; },
   sports: () => { const d = panelData.sports?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 130, stale: !!d.f1?.error }; },
-  vulns: () => { const d = panelData.vulns?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 780, stale: !!d.error }; },
   nlalert: () => { const d = panelData.nlalert?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 12, stale: !!d.error }; },
   fuel: () => { const d = panelData.fuel?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 400, stale: !!d.error }; },
   waste: () => { const d = panelData.waste?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 780, stale: !!d.error }; },
@@ -3062,7 +3044,6 @@ const panelRenderers = {
   insects: renderInsects,
   sky: renderSky,
   sports: renderSports,
-  vulns: renderVulns,
   fuel: renderFuel,
   waste: renderWaste,
   markets: renderMarkets,
@@ -4833,9 +4814,6 @@ function renderInsects(body, extra) {
     h('tbody', null, days.map((d, i) => h('tr', null,
       h('th', { scope: 'row', text: i === 0 ? t('Vandaag') : i === 1 ? t('Morgen') : fmt.wdmUTC.format(dateOnly(d.date)) }),
       h('td', null, lvl(d.ticks, 'Teken')), h('td', null, lvl(d.mosquito, 'Muggen'))))))];
-  const today = days[0];
-  if (today?.ticks >= 2) out.push(h('p', { class: 'pnote', text: t('Tip: lange broek in hoog gras en bos, en controleer jezelf na het wandelen op teken.') }));
-  else if (today?.mosquito >= 2) out.push(h('p', { class: 'pnote', text: t('Tip: vanavond ramen dicht of een hor ervoor als het licht aan is.') }));
   out.push(h('p', { class: 'pfoot' }, t('Indicatie op basis van temperatuur, vocht en wind (Open-Meteo), geen metingen · Meer: '),
     extLink('https://www.tekenradar.nl/', 'Tekenradar'), ', ', extLink('https://www.naturetoday.com/intl/nl/observations/mosquito-radar/', t('Muggenradar'))));
   body.replaceChildren(...out);
@@ -4927,39 +4905,6 @@ function renderSports(body) {
   }
   out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://github.com/jolpica/jolpica-f1', 'Jolpica'), t(' (Formule 1) · kampioenschappen: kalender van de beheerder, koppen uit je nieuwsbronnen · '),
     h('button', { class: 'linkbtn', type: 'button', onclick: () => openSettings('sports'), text: t('sporten kiezen') })));
-  body.replaceChildren(...out);
-}
-
-// ---------------------------------------------------------------- kwetsbaarheden in mijn software
-async function loadVulns() {
-  try { panelData.vulns = { data: await api('api/vulns') }; }
-  catch (e) { panelData.vulns = { ...(panelData.vulns || {}), error: e }; }
-  renderPanel('vulns');
-}
-const SEV_CLASS = { CRITICAL: 'sev-critical', HIGH: 'sev-high', MEDIUM: 'sev-medium', LOW: 'sev-low' };
-function renderVulns(body) {
-  const st = panelData.vulns;
-  if (!st) { body.replaceChildren(h('div', { class: 'tsk vusk', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:85%' }))); return; }
-  const r = st.data;
-  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('Kwetsbaarheden konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
-  if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (vulns.enabled).' })); return; }
-  if (r.needs_products) { body.replaceChildren(h('p', { class: 'pnote', text: t('De beheerder geeft de producten op in config.yaml (vulns.products), bijvoorbeeld Fortinet, WordPress of Synology.') })); return; }
-  const d = r.data;
-  if (!d) { body.replaceChildren(h('p', { class: 'pnote', text: r.error ? t('NVD is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: r.error }) : t('Kwetsbaarheden worden voor het eerst opgehaald (dat duurt ongeveer 7 seconden per product).') })); return; }
-  const out = [h('ul', { class: 'vulns' }, d.products.map(p => h('li', null,
-    h('p', { class: 'vhead' }, h('b', { translate: 'no', text: p.product }), ' ',
-      p.error ? h('span', { class: 'pnote', text: t('niet opgehaald: {err}', { err: p.error }) })
-        : h('span', { class: 'm', text: t(p.count === 1 ? '1 nieuwe CVE' : '{n} nieuwe CVE\'s', { n: p.count }) }),
-      p.kev ? h('span', { class: 'tag sev-critical', text: t('{n} actief misbruikt', { n: p.kev }) }) : null,
-      p.critical ? h('span', { class: 'tag sev-critical', text: t('{n} kritiek', { n: p.critical }) }) : null,
-      p.high ? h('span', { class: 'tag sev-high', text: t('{n} hoog', { n: p.high }) }) : null),
-    p.items.length ? h('ul', { class: 'plist' }, p.items.slice(0, 3).map(v => h('li', null,
-      v.score ? h('span', { class: 'tag ' + (SEV_CLASS[v.severity] || 'plain'), text: v.score.toLocaleString(locale(), { minimumFractionDigits: 1 }) }) : null,
-      v.kev ? h('span', { class: 'tag sev-critical', text: t('actief misbruikt') }) : null, ' ',
-      extLink(v.url, v.id), h('div', { class: 'm', translate: 'no', text: v.summary }),
-      v.epss >= 0.01 ? h('div', { class: 'm', text: t('kans op misbruik (EPSS): {p}%', { p: (v.epss * 100).toLocaleString(locale(), { maximumFractionDigits: 1 }) }) }) : null))) : null)))];
-  out.push(h('p', { class: 'pfoot' }, t('Laatste {n} dagen · bron: ', { n: d.days }), extLink('https://nvd.nist.gov/', 'NVD'), ', ', extLink('https://www.first.org/epss/', 'FIRST EPSS'), ', ',
-    extLink('https://www.cisa.gov/known-exploited-vulnerabilities-catalog', 'CISA KEV'), t(' · producten in config.yaml')));
   body.replaceChildren(...out);
 }
 
@@ -5112,7 +5057,7 @@ function wireMobileViews() {
 function refreshView(v) {
   const panels = () => [loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(), loadBreaches(), loadOutages(), loadHealthPanel(),
     loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(),
-    loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadInsects(), loadSky(), loadSports(), loadVulns()];
+    loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadInsects(), loadSky(), loadSports()];
   const jobs = v === 'news' ? [loadNews({ replace: true }), loadTrending()] : v === 'panels' ? panels() : [loadNews({ replace: true }), ...panels()];
   return Promise.allSettled(jobs);
 }
@@ -5838,7 +5783,7 @@ async function init() {
   if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
   await Promise.allSettled([loadNews({ replace: true }), loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(),
     loadBreaches(), loadOutages(), loadHealthPanel(), loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(), loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadTrending(), initPush(),
-    loadInsects(), loadSky(), loadSports(), loadVulns()]);
+    loadInsects(), loadSky(), loadSports()]);
   kioskFit(); // the header and top bar have their final height now
   panelFromHash(); // e.g. a push notification that opens #panel-waste
   // intervals from config.yaml (refresh:), in seconds; defaults if the server is older
@@ -5870,7 +5815,6 @@ async function init() {
   every(R('insects', 60), loadInsects);
   every(R('sky', 30), loadSky);
   every(R('sports', 30), loadSports);
-  every(R('vulns', 60), loadVulns);
   every(R('outages', 10), loadOutages);
   every(R('health', 30), loadHealthPanel);
   setInterval(tick, 15e3);

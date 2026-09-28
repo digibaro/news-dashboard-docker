@@ -177,7 +177,7 @@ type Config struct {
 	Keys    struct {
 		AbusechAuthKey string `yaml:"abusech_auth_key"`
 		NSAPIKey       string `yaml:"ns_api_key"`  // NS Disruptions API (Treinstoringen)
-		NVDAPIKey      string `yaml:"nvd_api_key"` // optional: faster NVD requests (Kwetsbaarheden)
+		NVDAPIKey      string `yaml:"nvd_api_key"` // no longer used (the Kwetsbaarheden panel was removed)
 	} `yaml:"keys"`
 	Weather struct {
 		Location   Location          `yaml:"location"`
@@ -379,16 +379,9 @@ type Config struct {
 		Interval Duration     `yaml:"interval"`
 		Events   []SportEvent `yaml:"events"`
 	} `yaml:"sports"`
-	// Vulns: Kwetsbaarheden in mijn software (NVD, EPSS, CISA KEV).
-	Vulns struct {
-		Enabled  bool     `yaml:"enabled"`
-		Products []string `yaml:"products"`
-		Days     int      `yaml:"days"`
-		Interval Duration `yaml:"interval"`
-		NVDURL   string   `yaml:"nvd_url"`
-		EPSSURL  string   `yaml:"epss_url"`
-		KEVURL   string   `yaml:"kev_url"`
-	} `yaml:"vulns"`
+	// Vulns: the removed Kwetsbaarheden panel (1.14.0); still accepted so an old
+	// config.yaml keeps loading, but ignored (configWarnings says so).
+	Vulns yaml.Node `yaml:"vulns"`
 	// UI: server-wide look.
 	UI struct {
 		Accent string `yaml:"accent"` // e.g. "#00a4dc"; empty = the default blue
@@ -407,7 +400,7 @@ func defaultConfig() *Config {
 	c.Server.TrustedProxies = []string{"127.0.0.1", "::1"}
 	c.Server.LogLevel = "info"
 	c.Fetch.UserAgent = "Nieuwsdashboard/1.0"
-	c.Fetch.DefaultInterval = Duration(10 * time.Minute)
+	c.Fetch.DefaultInterval = Duration(15 * time.Minute)
 	c.Fetch.Timeout = Duration(10 * time.Second)
 	c.Fetch.MaxConcurrent = 6
 	c.Cache.MaxItemsPerSource = 50
@@ -449,7 +442,7 @@ func defaultConfig() *Config {
 	c.Outages.Enabled = true
 	c.Outages.Interval = Duration(10 * time.Minute)
 	c.Outages.Internet.Enabled, c.Outages.Internet.Base, c.Outages.Internet.Country = true, "https://api.ioda.inetintel.cc.gatech.edu/v2", "NL"
-	c.Outages.Internet.Interval = Duration(15 * time.Minute)
+	c.Outages.Internet.Interval = Duration(30 * time.Minute)
 	for _, n := range []struct {
 		asn  int
 		name string
@@ -482,9 +475,6 @@ func defaultConfig() *Config {
 	c.Insects.Enabled, c.Insects.URL = true, "https://api.open-meteo.com/v1/forecast"
 	c.Sky.Enabled, c.Sky.KpURL, c.Sky.CloudsURL = true, "https://services.swpc.noaa.gov/products/noaa-planetary-k-index-forecast.json", "https://api.open-meteo.com/v1/forecast"
 	c.Sports.Enabled, c.Sports.Sports, c.Sports.F1URL, c.Sports.Interval = true, []string{"f1", "mtb", "athletics"}, "https://api.jolpi.ca/ergast/f1", Duration(time.Hour)
-	c.Vulns.Enabled, c.Vulns.Days, c.Vulns.Interval = true, 30, Duration(6*time.Hour)
-	c.Vulns.NVDURL, c.Vulns.EPSSURL = "https://services.nvd.nist.gov/rest/json/cves/2.0", "https://api.first.org/data/v1/epss"
-	c.Vulns.KEVURL = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
 	c.Push.MaxSubscriptions, c.Push.QuakeMinMag, c.Push.BreakingSources, c.Push.WasteHour = 50, 2.5, 6, 19
 	c.Threats.Enabled = true
 	c.Threats.Interval = Duration(15 * time.Minute)
@@ -532,7 +522,6 @@ func (c *Config) applyEnv() {
 	set(&c.Keys.AbusechAuthKey, "ABUSECH_AUTH_KEY")
 	set(&c.Keys.NSAPIKey, "NS_API_KEY")
 	set(&c.Waste.HomeAssistant.Token, "NDB_HA_TOKEN")
-	set(&c.Keys.NVDAPIKey, "NVD_API_KEY")
 	set(&c.Push.VAPIDPrivateKey, "NDB_VAPID_PRIVATE_KEY")
 	if v := os.Getenv("NDB_TRUSTED_PROXIES"); v != "" { // e.g. the Docker gateway range
 		c.Server.TrustedProxies = strings.Split(strings.ReplaceAll(v, " ", ""), ",")
@@ -549,6 +538,9 @@ var (
 )
 
 // defaultRefresh: browser refresh intervals per panel (config.yaml refresh:).
+// removedRefresh: refresh keys of panels that no longer exist; accepted and ignored.
+var removedRefresh = map[string]bool{"vulns": true}
+
 var defaultRefresh = map[string]time.Duration{
 	"news": 5 * time.Minute, "weather": 15 * time.Minute, "alerts": 3 * time.Minute,
 	"traffic": 5 * time.Minute, "alarms": 2 * time.Minute, "threats": 15 * time.Minute,
@@ -558,14 +550,17 @@ var defaultRefresh = map[string]time.Duration{
 	"pollen": 60 * time.Minute, "utilities": 5 * time.Minute, "quakes": 15 * time.Minute,
 	"economy": 60 * time.Minute, "markets": 5 * time.Minute,
 	"nlalert": 2 * time.Minute, "fuel": 60 * time.Minute, "waste": 60 * time.Minute, "trending": 10 * time.Minute,
-	"insects": 60 * time.Minute, "sky": 30 * time.Minute, "sports": 30 * time.Minute, "vulns": 60 * time.Minute,
+	"insects": 60 * time.Minute, "sky": 30 * time.Minute, "sports": 30 * time.Minute,
 	"health": 30 * time.Minute,
 }
 
 func (c *Config) validate() error {
 	for k, v := range c.Refresh {
+		if removedRefresh[k] {
+			continue // a removed panel: ignored, configWarnings mentions it
+		}
 		if _, ok := defaultRefresh[k]; !ok {
-			return fmt.Errorf("refresh.%s: unknown panel (known: news, weather, alerts, traffic, alarms, energy, air, trains, politics, today, ransomware, pollen, utilities, quakes, economy, markets, nlalert, fuel, waste, trending, insects, sky, sports, vulns, threats, advisories, breaches, outages, ap, health)", k)
+			return fmt.Errorf("refresh.%s: unknown panel (known: news, weather, alerts, traffic, alarms, energy, air, trains, politics, today, ransomware, pollen, utilities, quakes, economy, markets, nlalert, fuel, waste, trending, insects, sky, sports, threats, advisories, breaches, outages, ap, health)", k)
 		}
 		if v.D() < time.Minute || v.D() > 24*time.Hour {
 			return fmt.Errorf("refresh.%s: %s is outside 1m..24h", k, v.D())
@@ -776,16 +771,6 @@ func (c *Config) validate() error {
 		for _, e := range sp.Events {
 			if err := validSportEvent(e); err != nil {
 				fail("%v", err)
-			}
-		}
-	}
-	if v := &c.Vulns; v.Enabled {
-		if v.Interval.D() < time.Hour || v.Days < 1 || v.Days > 120 || len(v.Products) > 20 || !httpsURL(v.NVDURL) || !httpsURL(v.EPSSURL) || !httpsURL(v.KEVURL) {
-			fail("vulns: interval at least 1h, days 1–120, at most 20 products, URLs https")
-		}
-		for _, p := range v.Products {
-			if l := len(strings.TrimSpace(p)); l < 2 || l > 60 {
-				fail("vulns.products: %q must be 2–60 characters", p)
 			}
 		}
 	}
@@ -1067,6 +1052,9 @@ func configWarnings(c *Config) (warn, info []string) {
 	}
 	if ua := strings.ToLower(c.Fetch.UserAgent); strings.Contains(ua, "example.nl") || strings.Contains(ua, "example.com") {
 		warn = append(warn, "fetch.user_agent still contains the example contact; SANS ISC asks for your own site and e-mail (fetch.user_agent or NDB_USER_AGENT)")
+	}
+	if c.Vulns.Kind != 0 || c.Keys.NVDAPIKey != "" || c.Refresh["vulns"] != 0 {
+		warn = append(warn, "the Kwetsbaarheden panel was removed in 1.14.2: vulns, keys.nvd_api_key and refresh.vulns are ignored and can be deleted from config.yaml")
 	}
 	if c.Threats.Enabled && c.Keys.AbusechAuthKey == "" {
 		info = append(info, "abuse.ch: no Auth-Key set (optional; keys.abusech_auth_key or ABUSECH_AUTH_KEY)")
@@ -1382,7 +1370,6 @@ func (a *App) routes(basePath string) http.Handler {
 	handle("GET /api/insects", a.handleInsects)
 	handle("GET /api/sky", a.handleSky)
 	handle("GET /api/sports", a.handleSports)
-	handle("GET /api/vulns", a.handleVulns)
 	handle("GET /api/push", a.handlePushInfo)
 	handle("POST /api/push/subscribe", a.handlePushSubscribe)
 	handle("POST /api/push/unsubscribe", a.handlePushUnsubscribe)
@@ -1600,7 +1587,6 @@ func (a *App) handleCatalog(w http.ResponseWriter, r *http.Request) {
 		"insects":          cfg.Insects.Enabled,
 		"sky":              cfg.Sky.Enabled,
 		"sports":           map[string]any{"enabled": cfg.Sports.Enabled, "sports": cfg.Sports.Sports},
-		"vulns":            cfg.Vulns.Enabled,
 		"accent":           cfg.UI.Accent,
 		"alarms":           map[string]any{"enabled": cfg.Alarms.Enabled, "city": cfg.Alarms.City},
 		"alerts":           map[string]bool{"nctv": cfg.Alerts.NCTV.Enabled, "knmi": cfg.Alerts.KNMI},
@@ -1616,6 +1602,9 @@ func refreshSeconds(m map[string]Duration) map[string]int {
 		out[k] = int(d.Seconds())
 	}
 	for k, d := range m {
+		if removedRefresh[k] {
+			continue
+		}
 		out[k] = int(d.D().Seconds())
 	}
 	return out
@@ -1807,10 +1796,6 @@ func (a *App) otherFeeds(cfg *Config) []FeedStatus {
 	}
 	if cfg.Sports.Enabled && slices.Contains(cfg.Sports.Sports, "f1") {
 		add("f1:jolpica", "Jolpica · Formule 1", "daily")
-	}
-	if cfg.Vulns.Enabled && len(cfg.Vulns.Products) > 0 {
-		add("nvd:vulns", "NVD en FIRST EPSS · kwetsbaarheden", "daily")
-		add("vulns:kev", "CISA · actief misbruikte kwetsbaarheden", "daily")
 	}
 	if cfg.Outages.Enabled && cfg.Outages.Internet.Enabled {
 		add("ioda:internet", "IODA · internetverstoringen", "outage")

@@ -632,27 +632,21 @@ func TestSportEvents(t *testing.T) {
 	}
 }
 
-func TestVulnParsers(t *testing.T) {
-	nvd := `{"totalResults":3,"vulnerabilities":[
-	 {"cve":{"id":"CVE-2026-1000","published":"2026-09-20T10:00:00.000","vulnStatus":"Analyzed","descriptions":[{"lang":"en","value":"Heap overflow in <b>FortiOS</b>"}],
-	  "metrics":{"cvssMetricV31":[{"cvssData":{"baseScore":9.8,"baseSeverity":"CRITICAL"}}]}}},
-	 {"cve":{"id":"CVE-2026-1001","published":"2026-09-21T10:00:00.000","vulnStatus":"Received","descriptions":[{"lang":"en","value":"XSS"}],"metrics":{}}},
-	 {"cve":{"id":"CVE-2026-1002","published":"2026-09-22T10:00:00.000","vulnStatus":"Rejected","descriptions":[],"metrics":{}}}]}`
-	items, err := parseNVD([]byte(nvd))
-	if err != nil || len(items) != 2 || items[0].Score != 9.8 || items[0].Severity != "CRITICAL" || items[0].Summary != "Heap overflow in FortiOS" || items[1].Score != 0 {
-		t.Fatalf("nvd: %+v %v", items, err)
+// A config.yaml from 1.14.0/1.14.1 with the removed Kwetsbaarheden panel still loads, with a warning.
+func TestRemovedVulnsConfig(t *testing.T) {
+	c, err := parseConfig([]byte(validConfig + "vulns:\n  enabled: true\n  products: [Fortinet]\n  days: 30\nkeys: { nvd_api_key: \"x\" }\nrefresh: { vulns: 60m, news: 5m }\n"))
+	if err != nil {
+		t.Fatalf("an old config must still load: %v", err)
 	}
-	e, err := parseEPSS([]byte(`{"data":[{"cve":"CVE-2026-1001","epss":"0.834"}]}`))
-	if err != nil || e["CVE-2026-1001"] != 0.834 {
-		t.Errorf("epss: %v %v", e, err)
+	warn, _ := configWarnings(c)
+	if !slices.ContainsFunc(warn, func(w string) bool { return strings.Contains(w, "Kwetsbaarheden panel was removed") }) {
+		t.Errorf("warnings: %v", warn)
 	}
-	ids, err := parseKEVIDs([]byte(`{"vulnerabilities":[{"cveID":"CVE-2026-1001"}]}`))
-	if err != nil || !ids.(map[string]bool)["CVE-2026-1001"] {
-		t.Errorf("kev: %v %v", ids, err)
+	if _, ok := refreshSeconds(c.Refresh)["vulns"]; ok {
+		t.Error("refresh.vulns must not reach the browser")
 	}
-	items[1].KEV = true
-	rankVulns(items)
-	if items[0].ID != "CVE-2026-1001" {
-		t.Error("actively exploited first")
+	a := newTestApp(t, validConfig)
+	if rec := get(a.routes("/"), "GET", "/api/vulns", nil); rec.Code != 404 {
+		t.Errorf("/api/vulns: %d", rec.Code)
 	}
 }
