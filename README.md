@@ -21,6 +21,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Hooikoorts:** the pollen forecast (grass, birch, alder, mugwort, ragweed) for 3 days at the visitor's air-quality place, with indicative levels.
 - **Aardbevingen:** earthquakes in and around the Netherlands from KNMI in the last 31 days, with magnitude, depth and induced (gas extraction) events marked.
 - **Kritieke infrastructuur:** current electricity and gas outages at Liander and Stedin (place, status, expected repair time, customers affected), planned work and outages resolved in the last 24 h.
+- **AMBER Alert and Vermist Kind Alert:** while a child is being searched for, a prominent banner at the top with the name, description, photo and "call 112" (a Vermist Kind Alert only for visitors whose weather location lies in its area), plus a push notification. Source: the police's Burgernet open API.
 - **NL-Alert:** active and recent NL-Alerts (last 31 days), marked when the visitor's weather location lies inside the alert area.
 - **Afvalkalender:** the next waste collection days. Each visitor sets an own address (postcode and house number) under Instellingen, like the places for alarms and air quality; the server finds the provider that knows it among 51 built-in providers (municipal calendars, Ximmio, Amsterdam, HVC, RD4, ROVA and more; 60 with the optional app providers such as Mijn Afvalwijzer). An optional default address can also come from an iCal link or Home Assistant.
 - **Vanavond aan de hemel:** when it gets dark, the moon, the planets you can see tonight (when and in which direction), the chance of northern lights, the clouds and active meteor showers.
@@ -172,6 +173,7 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 | `fuel` | Brandstofprijzen: `enabled`, `url` (UnitedConsumers page), `interval` (default 3h, min. 1h) |
 | `waste` | Afvalkalender: `enabled`, `providers` (provider ids to use, e.g. `[denhaag, hvc]`; a list replaces the default of all built-in providers; https URLs add extra opzet calendars), `app_providers` (default `false`; see *Data sources*), `interval` (default 6h, min. 1h). Visitors set their own address in the browser and can pick a provider or let the server find it. Optional **default address** (for visitors without one, and their push reminders) via `provider`: **auto** (or a provider id) `postcode`, `number`, `suffix` · **ics** `ics_url` · **home_assistant** `home_assistant.url`, `home_assistant.token` (or `NDB_HA_TOKEN`), `home_assistant.entities` (1–10 sensor ids). |
 | `trending` | Trending words above the news: `enabled` (computed from the news cache, no extra requests) |
+| `amber` | AMBER Alert and Vermist Kind Alert: `enabled`, `url` (Burgernet Landactiehost; the test feed `.../api/test/alerts` cycles through test messages), `interval` (default 5m, min. 1m) |
 | `insects` | Teken en muggen: `enabled`, `url` (Open-Meteo forecast) |
 | `sky` | Vanavond aan de hemel: `enabled`, `kp_url` (NOAA SWPC), `clouds_url` (Open-Meteo) |
 | `sports` | Sportagenda: `enabled`, `sports` (`f1`, `mtb`, `athletics`; visitors choose among these), `f1_url` (Jolpica), `interval` (default 1h, min. 15m), `events` (championships: `sport` mtb/athletics, `name`, `start`, `end`, `place`, `url`, `keywords` for matching headlines) |
@@ -236,6 +238,7 @@ There are two separate rates:
 | Brandstofprijzen | 60m | 3h (the GLA changes once a day) |
 | Afvalkalender | 60m | 6h |
 | Trending | 10m | computed at most every 5 min |
+| AMBER Alert | 5m | 5m (almost always an empty list) |
 | Teken en muggen | 60m | on demand, cached 1h per ~10 km |
 | Vanavond aan de hemel | 30m | computed on request; Kp forecast 3h, clouds cached 1h per ~10 km |
 | Sportagenda | 30m | F1 1h; championships from the config |
@@ -502,6 +505,7 @@ A restart starts with an empty cache, which fills within about 30 seconds. If yo
 ## Push notifications
 
 Visitors can get notifications on their phone or computer, also when the dashboard is closed. They choose the topics under *Instellingen → Meldingen*:
+- AMBER Alert, and a Vermist Kind Alert in their area
 - NL-Alert in their area (their weather location)
 - KNMI code orange or red
 - a change of the NCTV threat level
@@ -557,6 +561,7 @@ The server fetches everything; browsers only talk to the dashboard itself.
 | [Open-Meteo](https://open-meteo.com/) | Onweer, Teken en muggen, hemel (bewolking) | Lightning potential and CAPE (ICON-D2) for the thunderstorm risk; temperature, humidity and wind for the tick and mosquito **estimate** (no open source with measurements exists: Tekenradar's activity map needs an account); cloud cover tonight. Same terms as the weather. |
 | [NOAA SWPC](https://www.swpc.noaa.gov/) | Hemel: noorderlicht | Planetary Kp index forecast (US government, public domain). Planets, moon and twilight are computed locally (JPL Keplerian elements and Meeus; checked against JPL Horizons). |
 | [Jolpica F1](https://github.com/jolpica/jolpica-f1) | Sportagenda: Formule 1 | The open, community-run successor of the Ergast API; no key, fair use. Championships (MTB, athletics) have no open API (UCI and World Athletics only use internal keys), so they come from `sports.events` in `config.yaml`; the defaults were checked on Wikipedia in September 2026. |
+| [Burgernet](https://www.burgernet.nl/amberalert) (police) | AMBER Alert, Vermist Kind Alert | The open API "Landactiehost" (`services.burgernet.nl/landactiehost/api/v1/alerts`, JSON, no key), documented in *Technische koppelingen Burgernet/AMBER Alert berichten* v1.1. AlertLevel 10 = AMBER Alert (national), 5 = Vermist Kind Alert (a circle); a Cancel closes the alert. The photo is shown via this server's image proxy. |
 | [NL-Alert](https://actueel.nl-alert.nl/) | NL-Alert | The public JSON API behind actueel.nl-alert.nl (`api.public-warning.app`), no key. Alerts include their broadcast areas; "in jouw omgeving" is a point-in-polygon check on the server with the visitor's weather location. |
 | [UnitedConsumers](https://www.unitedconsumers.com/tanken/brandstofprijzen) | Brandstofprijzen | The daily *gemiddelde landelijke adviesprijs* (GLA). There is **no open API**: the price table is read from the public page once every 3 hours. UnitedConsumers claims copyright on the data on its site, so this is for **personal use only**; turn it off with `fuel.enabled: false` for public or commercial use. CBS publishes official daily pump prices (table 80416ned), but its OData hosts are not reachable from every network. |
 | Waste collection providers | Afvalkalender | The provider list and request formats follow the Home Assistant integration [afvalwijzer](https://github.com/xirixiz/homeassistant-afvalwijzer) by xirixiz (MIT licence), rewritten in Go and checked with real addresses (September 2026). A visitor's municipality comes from [PDOK](https://www.pdok.nl/) (Locatieserver, open, no key); then that municipality's calendar and all regional providers are asked in parallel once, and the provider that knows the address is remembered. **Public APIs without a key (on):** 16 municipal calendars with the "opzet" API (Den Haag, Alphen aan den Rijn, Purmerend, Haarlem/Spaarnelanden, …), the regional opzet calendars of HVC, GAD, DAR, Cyclus, Afvalstoffendienst, Offalkalinder, PreZero, Saver and ZRD, 14 Ximmio companies (Almere, Twente Milieu, Avalex, ACV, Avri, Blink, Meerlanden, RAD, Waardlanden, Area, Venlo, Woerden, Hellendoorn, Oostzaan), Amsterdam (open data; dates computed from weekdays and frequency), RD4, ROVA, Irado, Reinis, RWM, Kliko (Maassluis, Oude IJsselstreek), Straatbeeld (Drimmelen) and the iCal calendars of Borsele, Goes and Edam-Volendam. **App providers (`waste.app_providers`, off by default):** Mijn Afvalwijzer (a large share of municipalities, e.g. Utrecht, Eindhoven, Breda) with the key of its web app, Burgerportaal (Groningen, Tilburg, Assen, BAR, Nijkerk, RMN) with an anonymous Firebase session, Omrin with the app's guest login, and Circulus with a web session. These are not public APIs; switch them on at your own discretion. Not included: providers that did not answer for any tested address (Westland, Afval3xbeter, Mijn Afvalzaken, De Afval App), Montferland (plain HTTP only), Mijn Afvalhulp and RecycleApp (Belgium). For the default address also: any iCal link, or your own Home Assistant (REST API with a long-lived token). |
@@ -675,6 +680,7 @@ All JSON responses:
 | `GET /api/nlalert?lat=&lon=` | NL-Alert: `alerts` of the last 31 days (text, English text, start, stop, withdrawn, `near` for the given point or the configured weather location) and the number `active` |
 | `GET /api/fuel` | Brandstofprijzen: `date` and `prices` (fuel, name, price per litre, change in cents) |
 | `GET /api/waste?postcode=&number=&suffix=&provider=` | Afvalkalender for the given address (`own`, `pickups`, `provider`, `calendar`, `home`, or `not_found`); `provider` is optional (default: find automatically). Without parameters the server's default address (`needs_address` when there is none). The address is not echoed. The enabled providers are in `/api/catalog` (`waste_providers`) |
+| `GET /api/amber?lat=&lon=` | AMBER Alert and Vermist Kind Alert: the active `alerts` (title, text, kind, url, photo via `api/img`, area) with `near` for the given point or the weather location |
 | `GET /api/insects?lat=&lon=` | Teken en muggen: 3 `days` with `ticks` and `mosquito` levels 0–3 (an estimate) |
 | `GET /api/sky?lat=&lon=` | Vanavond aan de hemel: sunset, dark, dawn, `moon` (phase, rise, set), `planets` (from, until, best time, altitude, direction), `kp` and `aurora` (0–3), `clouds`, `meteor` |
 | `GET /api/sports` | Sportagenda: `f1` (next race with sessions, last podium, standings) and `events` (per sport the current or just-finished and the next championship, with `headlines`) |
@@ -737,6 +743,10 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.15.0
+- **AMBER Alert and Vermist Kind Alert** from Burgernet (the police's open API): while a child is being searched for, a prominent banner above the news and panels with the name and age, the description, the photo (via this server's image proxy), "Heb je informatie? Bel direct 112." and a link to politie.nl. An AMBER Alert (national) is shown to everyone; a Vermist Kind Alert only when the visitor's weather location lies in its circle. The banner can be hidden for the rest of the session. It is also a push topic (on by default for new subscriptions), and it is listed in Bronstatus.
+- New config section `amber` and refresh key `amber`.
 
 ### 1.14.2
 - **Gentler on the sources:** news feeds are fetched every 15 minutes by default instead of 10 (`fetch.default_interval`; about a third fewer requests), and IODA (Storingen: internet) every 30 minutes instead of 15 (`outages.internet.interval`). Your own `config.yaml` keeps its values; change them there if you want the same.

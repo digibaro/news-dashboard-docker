@@ -834,6 +834,24 @@ textarea.json {
 .msg { margin: 8px 0 0; font-size: 13px; min-height: 1.4em; color: var(--text-2); }
 .msg.err { color: var(--sev-crit); }
 
+/* ---------- AMBER Alert / Vermist Kind Alert ---------- */
+:root { --amber: #c2410c; --amber-bg: #fff4ed; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --amber: #fb923c; --amber-bg: #2a1407; } }
+:root[data-theme="dark"] { --amber: #fb923c; --amber-bg: #2a1407; }
+.amber { max-width: 1440px; margin: 12px auto 0; padding: 0 16px; }
+.amber[hidden] { display: none; }
+.amb { display: flex; gap: 14px; align-items: flex-start; padding: 12px 14px; border: 2px solid var(--amber); border-left-width: 8px; border-radius: 8px;
+  background: var(--amber-bg); color: var(--text); }
+.amb + .amb { margin-top: 8px; }
+.amb-photo { flex: none; width: 96px; height: 120px; object-fit: cover; border-radius: 4px; background: var(--surface-2); }
+.amb-kind { margin: 0; font-size: 13px; color: var(--amber); font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+.amb-title { margin: 2px 0 4px; font-size: 20px; font-weight: 700; }
+.amb-text { margin: 0 0 6px; font-size: 14px; line-height: 1.45; }
+.amb-act { margin: 0; font-size: 14px; }
+@media (max-width: 699px) { .amb-photo { width: 72px; height: 90px; } .amb-title { font-size: 17px; } }
+#amber .amb-title { font-weight: 700; } #amber .amb-act b { font-weight: 700; }
+#amber a, #amber .linkbtn { color: var(--text); text-decoration: underline; text-underline-offset: 2px; } /* readable on the orange background with any accent colour */
+
 /* ---------- Teken en muggen, hemel, sport, kwetsbaarheden ---------- */
 .itab { width: 100%; border-collapse: collapse; font-size: 13px; }
 .itab th, .itab td { text-align: left; padding: 5px 4px; border-top: 1px solid var(--line); font-weight: 400; }
@@ -977,6 +995,7 @@ textarea.json {
   <p class="offline" id="offline" role="status" hidden>Je bent offline. Je ziet de laatst opgehaalde gegevens; zodra er weer verbinding is, wordt alles ververst.</p>
 </header>
 
+<section class="amber" id="amber" role="alert" aria-label="AMBER Alert" hidden></section>
 <main class="layout">
   <div class="mview" id="mview" role="tablist" aria-label="Weergave op de telefoon">
     <button type="button" role="tab" id="mv-overview" aria-controls="digest" aria-selected="false" tabindex="-1">Overzicht</button>
@@ -1057,6 +1076,10 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.15.0</h3>
+    <ul>
+      <li>AMBER Alert en Vermist Kind Alert van Burgernet: een opvallende melding bovenaan zolang een kind wordt gezocht (een Vermist Kind Alert alleen in jouw omgeving), ook als pushmelding.</li>
+    </ul>
     <h3>Versie 1.14.2</h3>
     <ul>
       <li>Het paneel Kwetsbaarheden in mijn software is verwijderd.</li>
@@ -1174,6 +1197,10 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.15.0</h3>
+    <ul>
+      <li>AMBER Alert and Missing Child Alert from Burgernet: a prominent notice at the top while a child is being searched for (a Missing Child Alert only in your area), also as a push notification.</li>
+    </ul>
     <h3>Version 1.14.2</h3>
     <ul>
       <li>The Vulnerabilities in my software panel has been removed.</li>
@@ -2349,6 +2376,16 @@ const EN = {
   "NOAA SWPC · noorderlichtverwachting": "NOAA SWPC · northern lights forecast",
   "Jolpica · Formule 1": "Jolpica · Formula 1",
   "Dag": "Day",
+  // AMBER Alert
+  "Foto van {name}": "Photo of {name}",
+  "Vermist Kind Alert": "Missing Child Alert",
+  "Vermist": "Missing",
+  "Ontvoerd": "Abducted",
+  "omgeving {area}": "area {area}",
+  "Heb je informatie? Bel direct 112.": "Any information? Call 112 immediately.",
+  "Meer informatie": "More information",
+  "AMBER Alert, en Vermist Kind Alert in jouw omgeving": "AMBER Alert, and Missing Child Alert in your area",
+  "Burgernet · AMBER Alert en Vermist Kind Alert": "Burgernet · AMBER Alert and Missing Child Alert",
 };
 
 // Sentences the server composes from parts (rain summary, directions, source names).
@@ -3229,7 +3266,7 @@ function setWeatherLocation(loc, msg) {
   renderPanel('weather');
   loadWeather();
   if (!prefs.air) { loadAir(); loadPollen(); loadInsects(); } // they follow the weather location
-  panelData.sky = null; renderPanel('sky'); loadSky();
+  panelData.sky = null; renderPanel('sky'); loadSky(); loadAmber();
   panelData.nlalert = null; renderPanel('nlalert'); loadNLAlert();
   pushSub().then(sub => sub && Notification.permission === 'granted' && pushRegister(sub)).catch(() => {}); // NL-Alert area follows the place
 }
@@ -4695,6 +4732,7 @@ let pushInfo = null;
 const PUSH_LABELS = {
   nctv: () => t('Dreigingsniveau NCTV verandert'),
   knmi: () => t('KNMI code oranje of rood'),
+  amber: () => t('AMBER Alert, en Vermist Kind Alert in jouw omgeving'),
   nlalert: () => t('NL-Alert in jouw omgeving (je weerlocatie)'),
   quakes: () => t('Aardbeving vanaf M{m}', { m: (pushInfo?.quake_min_mag ?? 2.5).toLocaleString(locale()) }),
   breaking: () => t('Groot nieuws: {n} of meer bronnen binnen een uur', { n: pushInfo?.breaking_sources ?? 6 }),
@@ -4908,6 +4946,36 @@ function renderSports(body) {
   body.replaceChildren(...out);
 }
 
+// ---------------------------------------------------------------- AMBER Alert / Vermist Kind Alert (Burgernet)
+// A banner above everything while an alert is active: an AMBER Alert (national) for
+// everyone, a Vermist Kind Alert only when the weather location lies in its area.
+let amberData = null;
+const AMBER_HIDDEN = 'ndb:amber-hidden';
+const amberHidden = () => { try { return JSON.parse(sessionStorage.getItem(AMBER_HIDDEN) || '[]'); } catch { return []; } };
+async function loadAmber() {
+  if (!catalog?.amber) return;
+  const l = prefs.weather;
+  try { amberData = await api('api/amber' + (l ? `?lat=${l.lat}&lon=${l.lon}` : '')); } catch { /* keep the last answer */ }
+  renderAmber();
+}
+function renderAmber() {
+  const box = $('#amber'), hiddenIds = amberHidden();
+  const list = (amberData?.alerts || []).filter(a => a.near && !hiddenIds.includes(a.id));
+  if (!list.length) { box.hidden = true; box.replaceChildren(); return; }
+  const hide = id => { try { sessionStorage.setItem(AMBER_HIDDEN, JSON.stringify([...amberHidden(), id])); } catch { /* private mode */ } renderAmber(); };
+  box.hidden = false;
+  box.replaceChildren(...list.map(a => h('article', { class: 'amb', 'aria-labelledby': 'amb-' + a.id },
+    a.image ? h('img', { class: 'amb-photo', src: a.image, alt: t('Foto van {name}', { name: a.title }), width: '96', height: '120', decoding: 'async' }) : null,
+    h('div', null,
+      h('p', { class: 'amb-kind' }, a.national ? 'AMBER Alert' : t('Vermist Kind Alert'), a.kind ? ' · ' + t(a.kind) : '',
+        !a.national && a.area ? ' · ' + t('omgeving {area}', { area: a.area }) : ''),
+      h('h2', { class: 'amb-title', id: 'amb-' + a.id, translate: 'no', text: a.title }),
+      a.text ? h('p', { class: 'amb-text', translate: 'no', text: a.text }) : null,
+      h('p', { class: 'amb-act' }, h('b', { text: t('Heb je informatie? Bel direct 112.') }),
+        a.url ? [' ', extLink(a.url, t('Meer informatie'))] : null, ' · ',
+        h('button', { class: 'linkbtn', type: 'button', onclick: () => hide(a.id), text: t('Verbergen') }))))));
+}
+
 // ---------------------------------------------------------------- share an article
 async function shareItem(it) {
   try {
@@ -5057,7 +5125,7 @@ function wireMobileViews() {
 function refreshView(v) {
   const panels = () => [loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(), loadBreaches(), loadOutages(), loadHealthPanel(),
     loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(),
-    loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadInsects(), loadSky(), loadSports()];
+    loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadInsects(), loadSky(), loadSports(), loadAmber()];
   const jobs = v === 'news' ? [loadNews({ replace: true }), loadTrending()] : v === 'panels' ? panels() : [loadNews({ replace: true }), ...panels()];
   return Promise.allSettled(jobs);
 }
@@ -5783,7 +5851,7 @@ async function init() {
   if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
   await Promise.allSettled([loadNews({ replace: true }), loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(),
     loadBreaches(), loadOutages(), loadHealthPanel(), loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(), loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadTrending(), initPush(),
-    loadInsects(), loadSky(), loadSports()]);
+    loadInsects(), loadSky(), loadSports(), loadAmber()]);
   kioskFit(); // the header and top bar have their final height now
   panelFromHash(); // e.g. a push notification that opens #panel-waste
   // intervals from config.yaml (refresh:), in seconds; defaults if the server is older
@@ -5813,6 +5881,7 @@ async function init() {
   every(R('waste', 60), loadWaste);
   every(R('trending', 10), loadTrending);
   every(R('insects', 60), loadInsects);
+  every(R('amber', 5), loadAmber);
   every(R('sky', 30), loadSky);
   every(R('sports', 30), loadSports);
   every(R('outages', 10), loadOutages);

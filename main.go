@@ -360,6 +360,12 @@ type Config struct {
 		BreakingSources  int     `yaml:"breaking_sources"` // 0 = no breaking-news messages
 		WasteHour        int     `yaml:"waste_hour"`       // local hour of the evening reminder; -1 = off
 	} `yaml:"push"`
+	// Amber: AMBER Alert and Vermist Kind Alert (Burgernet open API, no key).
+	Amber struct {
+		Enabled  bool     `yaml:"enabled"`
+		URL      string   `yaml:"url"`
+		Interval Duration `yaml:"interval"`
+	} `yaml:"amber"`
 	// Insects: Teken en muggen panel (an estimate from the Open-Meteo forecast).
 	Insects struct {
 		Enabled bool   `yaml:"enabled"`
@@ -472,6 +478,7 @@ func defaultConfig() *Config {
 	c.Fuel.Enabled, c.Fuel.URL, c.Fuel.Interval = true, "https://www.unitedconsumers.com/tanken/brandstofprijzen", Duration(3*time.Hour)
 	c.Waste.Enabled, c.Waste.Provider, c.Waste.Interval = true, "auto", Duration(6*time.Hour)
 	c.Trending.Enabled = true
+	c.Amber.Enabled, c.Amber.URL, c.Amber.Interval = true, "https://services.burgernet.nl/landactiehost/api/v1/alerts", Duration(5*time.Minute)
 	c.Insects.Enabled, c.Insects.URL = true, "https://api.open-meteo.com/v1/forecast"
 	c.Sky.Enabled, c.Sky.KpURL, c.Sky.CloudsURL = true, "https://services.swpc.noaa.gov/products/noaa-planetary-k-index-forecast.json", "https://api.open-meteo.com/v1/forecast"
 	c.Sports.Enabled, c.Sports.Sports, c.Sports.F1URL, c.Sports.Interval = true, []string{"f1", "mtb", "athletics"}, "https://api.jolpi.ca/ergast/f1", Duration(time.Hour)
@@ -550,7 +557,7 @@ var defaultRefresh = map[string]time.Duration{
 	"pollen": 60 * time.Minute, "utilities": 5 * time.Minute, "quakes": 15 * time.Minute,
 	"economy": 60 * time.Minute, "markets": 5 * time.Minute,
 	"nlalert": 2 * time.Minute, "fuel": 60 * time.Minute, "waste": 60 * time.Minute, "trending": 10 * time.Minute,
-	"insects": 60 * time.Minute, "sky": 30 * time.Minute, "sports": 30 * time.Minute,
+	"insects": 60 * time.Minute, "sky": 30 * time.Minute, "sports": 30 * time.Minute, "amber": 5 * time.Minute,
 	"health": 30 * time.Minute,
 }
 
@@ -560,7 +567,7 @@ func (c *Config) validate() error {
 			continue // a removed panel: ignored, configWarnings mentions it
 		}
 		if _, ok := defaultRefresh[k]; !ok {
-			return fmt.Errorf("refresh.%s: unknown panel (known: news, weather, alerts, traffic, alarms, energy, air, trains, politics, today, ransomware, pollen, utilities, quakes, economy, markets, nlalert, fuel, waste, trending, insects, sky, sports, threats, advisories, breaches, outages, ap, health)", k)
+			return fmt.Errorf("refresh.%s: unknown panel (known: news, weather, alerts, traffic, alarms, energy, air, trains, politics, today, ransomware, pollen, utilities, quakes, economy, markets, nlalert, fuel, waste, trending, insects, sky, sports, amber, threats, advisories, breaches, outages, ap, health)", k)
 		}
 		if v.D() < time.Minute || v.D() > 24*time.Hour {
 			return fmt.Errorf("refresh.%s: %s is outside 1m..24h", k, v.D())
@@ -752,6 +759,9 @@ func (c *Config) validate() error {
 				fail("waste: default address needs a postcode like 2511AB, number 1–99999 and a suffix of at most 6 letters/digits")
 			}
 		}
+	}
+	if c.Amber.Enabled && (c.Amber.Interval.D() < time.Minute || !httpsURL(c.Amber.URL)) {
+		fail("amber: interval must be at least 1m and url https")
 	}
 	if c.Insects.Enabled && !httpsURL(c.Insects.URL) {
 		fail("insects.url must be an https URL")
@@ -1368,6 +1378,7 @@ func (a *App) routes(basePath string) http.Handler {
 	handle("GET /api/waste", a.handleWaste)
 	handle("GET /api/trending", a.handleTrending)
 	handle("GET /api/insects", a.handleInsects)
+	handle("GET /api/amber", a.handleAmber)
 	handle("GET /api/sky", a.handleSky)
 	handle("GET /api/sports", a.handleSports)
 	handle("GET /api/push", a.handlePushInfo)
@@ -1585,6 +1596,7 @@ func (a *App) handleCatalog(w http.ResponseWriter, r *http.Request) {
 		"trending":         cfg.Trending.Enabled,
 		"push":             cfg.Push.Enabled,
 		"insects":          cfg.Insects.Enabled,
+		"amber":            cfg.Amber.Enabled,
 		"sky":              cfg.Sky.Enabled,
 		"sports":           map[string]any{"enabled": cfg.Sports.Enabled, "sports": cfg.Sports.Sports},
 		"accent":           cfg.UI.Accent,
@@ -1790,6 +1802,9 @@ func (a *App) otherFeeds(cfg *Config) []FeedStatus {
 	}
 	if cfg.Waste.Enabled && hasWasteDefault(cfg) {
 		add("waste:calendar", "Afvalkalender (standaardadres)", "daily")
+	}
+	if cfg.Amber.Enabled {
+		add("burgernet:amber", "Burgernet · AMBER Alert en Vermist Kind Alert", "alert")
 	}
 	if cfg.Sky.Enabled {
 		add("noaa:kp", "NOAA SWPC · noorderlichtverwachting", "daily")

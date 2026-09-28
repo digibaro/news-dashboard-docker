@@ -249,6 +249,16 @@ waste:
 trending:
   enabled: true
 
+# AMBER Alert and Vermist Kind Alert: the police's Burgernet open API (no key). Almost always empty;
+# while a child is being searched for, a banner shows at the top (a Vermist Kind Alert only for visitors
+# whose weather location lies in its area) and a push notification goes out. The photo is shown via
+# this server's image proxy (features.proxy_images). For testing, the url
+# https://services.burgernet.nl/landactiehost/api/test/alerts cycles through test messages.
+amber:
+  enabled: true
+  url: "https://services.burgernet.nl/landactiehost/api/v1/alerts"
+  interval: 5m                    # a tiny JSON list; min. 1m
+
 # Teken en muggen: an estimate of tick and mosquito activity from the weather forecast (Open-Meteo);
 # there is no open source with measurements. Follows the visitor's air/pollen place.
 insects:
@@ -381,6 +391,7 @@ refresh:
   insects: 60m
   sky: 30m
   sports: 30m
+  amber: 5m
   outages: 10m
   ap: 30m
   health: 30m

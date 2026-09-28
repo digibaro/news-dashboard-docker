@@ -37,7 +37,7 @@ import (
 // visit, so after a restart without snapshot notifications resume once a device
 // opens the dashboard again.
 
-var pushTopics = []string{"nctv", "knmi", "nlalert", "quakes", "breaking", "waste"}
+var pushTopics = []string{"amber", "nctv", "knmi", "nlalert", "quakes", "breaking", "waste"}
 
 // pushHosts are the push services of the major browsers; subscriptions to any
 // other host are refused, so the server never posts to arbitrary URLs.
@@ -364,6 +364,31 @@ func (a *App) runPushWatch(ctx context.Context) error {
 			Title: [2]string{"NL-Alert", "NL-Alert"}, Body: [2]string{al.Text, firstNonEmpty(al.TextEN, al.Text)},
 			For: func(s *pushSub) bool { return s.Lat == nil || s.Lon == nil || al.inArea(*s.Lat, *s.Lon) }})
 	}
+	for _, al := range asSlice[AmberAlert](a.threats.get("burgernet:amber").Data) {
+		key := "amber:" + al.ID
+		if _, seen := st.Alerts[key]; seen {
+			continue
+		}
+		st.Alerts[key] = now
+		if first {
+			continue
+		}
+		al := al
+		name := [2]string{"Vermist Kind Alert", "Missing Child Alert"}
+		if al.National {
+			name = [2]string{"AMBER Alert", "AMBER Alert"}
+		}
+		url := al.URL
+		if url == "" {
+			url = "#amber"
+		}
+		msgs = append(msgs, pushMsg{Topic: "amber", Tag: "amber-" + al.ID, Urgent: true, TTL: 6 * 3600, URL: url,
+			Title: [2]string{name[0] + ": " + al.Title, name[1] + ": " + al.Title},
+			Body:  [2]string{al.Text + " Heb je informatie? Bel 112.", al.Text + " Any information? Call 112."},
+			For: func(s *pushSub) bool {
+				return al.National || (s.Lat != nil && s.Lon != nil && al.covers(*s.Lat, *s.Lon))
+			}})
+	}
 	for _, q := range asSlice[Quake](a.threats.get("knmi:quakes").Data) {
 		if _, seen := st.Quakes[q.ID]; seen {
 			continue
@@ -641,7 +666,7 @@ func (a *App) loadPushState() {
 func (a *App) pushTopicsAvailable(cfg *Config) []string {
 	var out []string
 	for _, t := range pushTopics {
-		ok := map[string]bool{"nctv": cfg.Alerts.NCTV.Enabled, "knmi": cfg.Alerts.KNMI, "nlalert": cfg.NLAlert.Enabled,
+		ok := map[string]bool{"amber": cfg.Amber.Enabled, "nctv": cfg.Alerts.NCTV.Enabled, "knmi": cfg.Alerts.KNMI, "nlalert": cfg.NLAlert.Enabled,
 			"quakes": cfg.Quakes.Enabled, "breaking": cfg.Push.BreakingSources >= 2, "waste": cfg.Waste.Enabled}[t]
 		if ok {
 			out = append(out, t)

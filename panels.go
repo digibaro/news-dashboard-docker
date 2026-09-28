@@ -1712,6 +1712,11 @@ func (a *App) threatJobs(cfg *Config) []Job {
 		jobs = append(jobs, Job{Key: "waste:calendar", Sig: fmt.Sprint(w.Provider, w.Providers, w.Postcode, w.Number, w.Suffix, w.ICSURL, w.HomeAssistant.URL, w.HomeAssistant.Entities),
 			Interval: w.Interval.D(), Run: a.runWaste})
 	}
+	if cfg.Amber.Enabled {
+		jobs = append(jobs, Job{Key: "burgernet:amber", Sig: cfg.Amber.URL, Interval: cfg.Amber.Interval.D(),
+			Run: a.fetchJob("burgernet:amber", func() string { return a.config().Amber.URL }, "application/json", nil,
+				func(b []byte) (any, error) { return parseAmber(b) }, nil)})
+	}
 	if cfg.Sky.Enabled {
 		jobs = append(jobs, Job{Key: "noaa:kp", Sig: cfg.Sky.KpURL, Interval: 3 * time.Hour,
 			Run: a.fetchJob("noaa:kp", func() string { return a.config().Sky.KpURL }, "application/json", nil,

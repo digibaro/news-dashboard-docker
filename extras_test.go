@@ -19,6 +19,7 @@ import (
 	"math/big"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"slices"
 	"strings"
 	"sync"
@@ -648,5 +649,52 @@ func TestRemovedVulnsConfig(t *testing.T) {
 	a := newTestApp(t, validConfig)
 	if rec := get(a.routes("/"), "GET", "/api/vulns", nil); rec.Code != 404 {
 		t.Errorf("/api/vulns: %d", rec.Code)
+	}
+}
+
+// testdata/burgernet-test-alerts.json: the four messages of Burgernet's test feed
+// (AMBER Alert start and close, Vermist Kind Alert start and close).
+func TestParseAmber(t *testing.T) {
+	body, err := os.ReadFile("testdata/burgernet-test-alerts.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	list, err := parseAmber(body)
+	if err != nil || len(list) != 2 {
+		t.Fatalf("closing messages must be left out: %d alerts, %v", len(list), err)
+	}
+	amber, vka := list[0], list[1]
+	if !amber.National || amber.Title != "Voornaam (leeftijd)" || amber.Kind != "Vermist" || amber.URL != "https://www.politie.nl/amberalert" ||
+		amber.Image != "https://services.burgernet.nl/fototest/9999.jpg" || !strings.HasPrefix(amber.Text, "Laatst gezien") || amber.Sent.IsZero() {
+		t.Errorf("amber: %+v", amber)
+	}
+	if vka.National || vka.Area != "Amsterdam" || vka.radiusKm != 5 {
+		t.Errorf("vermist kind alert: %+v", vka)
+	}
+	// Amsterdam Centraal is within the 5 km circle, Den Haag is not; an AMBER Alert covers everyone
+	if !vka.covers(52.3791, 4.9003) || vka.covers(52.0705, 4.3007) || !amber.covers(51.44, 5.47) {
+		t.Error("covers")
+	}
+	if l, err := parseAmber([]byte(`[]`)); err != nil || len(l) != 0 {
+		t.Errorf("empty feed: %v %v", l, err)
+	}
+	if _, err := parseAmber([]byte(`<html>`)); err == nil {
+		t.Error("an HTML page must fail")
+	}
+	// the handler: the photo only via this server's image proxy, "near" per visitor
+	a := newTestApp(t, validConfig+"features: { show_images: true, proxy_images: true }\n")
+	a.threats.ok("burgernet:amber", list, "", "")
+	h := a.routes("/")
+	b := get(h, "GET", "/api/amber?lat=52.0705&lon=4.3007", nil).Body.String()
+	if strings.Contains(b, "services.burgernet.nl") || !strings.Contains(b, `"image":"api/img?u=`) || strings.Count(b, `"near":true`) != 1 {
+		t.Errorf("handler (Den Haag): %s", b)
+	}
+	if b := get(h, "GET", "/api/amber?lat=52.3791&lon=4.9003", nil).Body.String(); strings.Count(b, `"near":true`) != 2 {
+		t.Errorf("handler (Amsterdam): %s", b)
+	}
+	a2 := newTestApp(t, validConfig+"features: { proxy_images: false }\n")
+	a2.threats.ok("burgernet:amber", list, "", "")
+	if b := get(a2.routes("/"), "GET", "/api/amber", nil).Body.String(); strings.Contains(b, `"image"`) {
+		t.Errorf("without the image proxy no photo link: %s", b)
 	}
 }
