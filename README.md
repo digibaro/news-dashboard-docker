@@ -766,6 +766,9 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 
 ## Changelog
 
+### 1.19.1
+- **Sportagenda:** an icon in front of each sport (🏎️ Formule 1, 🚴 Wielrennen, 🚵 Mountainbike, 🏃 Atletiek, ⚽ Voetbal), and "Voetbal (EK/WK)" is now simply "Voetbal".
+
 ### 1.19.0
 - **Trending from your own sources:** the trending words are now computed from the sources you chose, so every chip leads to articles you can see (before, a word from sources you had not switched on could give "no articles found").
 - **Sportagenda:** new sports **Wielrennen** (road cycling: the monuments, Amstel Gold Race, the grand tours for men and women, EK and WK) and **Voetbal** (EK and WK only, men and women); mountain biking and athletics get more events (NK atletiek, the Amsterdam and Rotterdam marathons). Per sport the panel shows what is on now and the next three events, with an extra line (e.g. the race days of a WK) and "datum voorlopig" for dates the organiser has not confirmed. Visitors who chose their own sports get the two new ones switched on once.

@@ -23,7 +23,7 @@ import (
 // During and just after a championship the panel shows the latest matching
 // headlines from the news the dashboard already collects.
 
-var sportNames = map[string]string{"f1": "Formule 1", "road": "Wielrennen", "mtb": "Mountainbike", "athletics": "Atletiek", "football": "Voetbal (EK/WK)"}
+var sportNames = map[string]string{"f1": "Formule 1", "road": "Wielrennen", "mtb": "Mountainbike", "athletics": "Atletiek", "football": "Voetbal"}
 
 // sportUpcoming: how many coming events the panel shows per sport.
 const sportUpcoming = 3

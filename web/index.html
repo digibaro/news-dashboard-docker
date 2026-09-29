@@ -888,6 +888,7 @@ textarea.json {
 .sprow { margin: 3px 0; font-size: 13px; line-height: 1.45; }
 .sprow .m { color: var(--text-3); font-size: 12px; }
 .sprow .spnote { display: block; }
+.spsec h3 .spico { margin-right: 6px; }
 .tag.live { color: var(--sev-crit); }
 .spev .plist { margin: 2px 0 6px; }
 .wxthunder, .wxuv { margin: 6px 0 0; font-size: 13px; color: var(--text-2); }
@@ -1106,6 +1107,10 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.19.1</h3>
+    <ul>
+      <li>Sportagenda: een pictogram voor elke sport, en “Voetbal (EK/WK)” heet nu “Voetbal”.</li>
+    </ul>
     <h3>Versie 1.19.0</h3>
     <ul>
       <li>Trending: de woorden komen nu uit je eigen gekozen bronnen, dus elke knop geeft berichten die jij ziet.</li>
@@ -1254,6 +1259,10 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.19.1</h3>
+    <ul>
+      <li>Sports calendar: an icon for each sport, and “Football (Euros/World Cup)” is now simply “Football”.</li>
+    </ul>
     <h3>Version 1.19.0</h3>
     <ul>
       <li>Trending: the words now come from the sources you chose, so every chip gives articles you can see.</li>
@@ -2450,7 +2459,7 @@ const EN = {
   "Wielrennen": "Road cycling",
   "Mountainbike": "Mountain biking",
   "Atletiek": "Athletics",
-  "Voetbal (EK/WK)": "Football (Euros/World Cup)",
+  "Voetbal": "Football",
   "(datum voorlopig)": "(provisional date)",
   "De organisatie heeft deze data nog niet bevestigd.": "The organisers have not confirmed these dates yet.",
   "Jolpica is niet bereikbaar ({err}).": "Jolpica is unreachable ({err}).",
@@ -5284,7 +5293,8 @@ function renderSky(body, extra) {
 }
 
 // ---------------------------------------------------------------- sportagenda
-const SPORT_NL = { f1: 'Formule 1', road: 'Wielrennen', mtb: 'Mountainbike', athletics: 'Atletiek', football: 'Voetbal (EK/WK)' };
+const SPORT_NL = { f1: 'Formule 1', road: 'Wielrennen', mtb: 'Mountainbike', athletics: 'Atletiek', football: 'Voetbal' };
+const SPORT_ICON = { f1: '🏎️', road: '🚴', mtb: '🚵', athletics: '🏃', football: '⚽' };
 // Sports added after a visitor chose their own (1.19: road and football) are switched on once.
 function adoptNewSports() {
   const all = catalog?.sports?.sports || [];
@@ -5310,7 +5320,7 @@ function renderSports(body) {
   const when = s => { const d = new Date(s); return `${fmt.wdm.format(d)} ${fmt.time.format(d)}`; };
   const out = [];
   for (const sp of sports) {
-    const sec = [h('h3', { text: t(SPORT_NL[sp] || sp) })];
+    const sec = [h('h3', null, SPORT_ICON[sp] ? h('span', { class: 'spico', 'aria-hidden': 'true', text: SPORT_ICON[sp] }) : null, t(SPORT_NL[sp] || sp))];
     if (sp === 'f1') {
       const f = r.f1?.data;
       if (!f) sec.push(h('p', { class: 'pnote', text: r.f1?.error ? t('Jolpica is niet bereikbaar ({err}).', { err: r.f1.error }) : t('Wordt voor het eerst opgehaald.') }));
