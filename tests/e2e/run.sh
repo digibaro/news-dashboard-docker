@@ -79,7 +79,7 @@ for s in "${SUITES[@]}"; do
   for attempt in 1 2; do
     if (cd "$HERE/suites" && BASE=$(base_for "$s") timeout 900 node "$s.mjs") > "$log" 2>&1; then ok=1; else ok=0; fi
     [ $ok = 1 ] && break
-    [ $attempt = 1 ] && echo "  $s failed, retrying once…"
+    [ $attempt = 1 ] && { echo "  $s failed, retrying once…"; cp "$log" "$WORK/logs/suite-$s.try1.log"; }
   done
   p=$(grep -c '^PASS' "$log" || true); f=$(grep -c '^FAIL' "$log" || true)
   total_pass=$((total_pass + p))

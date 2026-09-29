@@ -67,7 +67,9 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   await p.fill('#air-search', 'Den Haag'); await p.press('#air-search', 'Enter');
   await p.waitForFunction(() => /Den Haag/.test(document.querySelector('#air-msg').textContent));
   await p.click('#settings-close');
-  await p.waitForFunction(() => /Den Haag/.test(document.querySelector('#p-pollen-extra').textContent) && document.querySelector('#panel-pollen .eline'));
+  // the new place, with its forecast (or a clear note when Open-Meteo rate-limits the test machine)
+  await p.waitForFunction(() => /Den Haag/.test(document.querySelector('#p-pollen-extra').textContent)
+    && document.querySelector('#panel-pollen .eline, #panel-pollen .pnote'), null, { timeout: 60000 });
   ok(true, 'pollen reloads for Den Haag');
   await ctx.close();
 }

@@ -27,7 +27,9 @@ const state = p => p.evaluate(() => ({
   ok(s.groups.map(g => g.h.replace(/^\W+/, '').split('·')[0].trim()).join(',') === 'Brandweer,Ambulance,Politie,Lifeliner', `four services: ${s.groups.map(g => g.h).join(' | ')}`);
   ok(s.groups.every(g => g.n <= 2), `at most 2 per service (${s.groups.map(g => g.n).join('/')})`);
   ok(s.groups.flatMap(g => g.links).every(u => u.startsWith('https://zwaailicht.nl/')), 'every alert links to its Zwaailicht.nl page');
-  ok(/^Utrecht · wijzigen$/.test(s.extra) && !s.note && !/112/.test(await p.textContent('#panel-alarms')) && /bijgewerkt/.test(s.fresh), 'default city and freshness shown, no 112 notice in the panel');
+  // no "call 112" notice (the alerts themselves may contain 112, e.g. a house or unit number)
+  const notice = /bel 112|112 bellen|noodgeval/i.test(await p.textContent('#panel-alarms'));
+  ok(/^Utrecht · wijzigen$/.test(s.extra) && !s.note && !notice && /bijgewerkt/.test(s.fresh), `default city and freshness shown, no 112 notice in the panel (${s.extra} | note ${!!s.note} | notice ${notice} | ${s.fresh})`);
   // top bar: national counts per service for the last hour
   await p.waitForFunction(() => !/…/.test(document.querySelector('#ab-p2k').textContent));
   const pc = await p.$$eval('#ab-p2k .pc', els => els.map(e => ({ t: e.title, v: e.querySelector('b').textContent, icon: e.querySelector('[aria-hidden]').textContent.trim() })));
