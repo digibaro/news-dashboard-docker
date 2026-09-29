@@ -313,16 +313,49 @@ sky:
 # Instellingen. During and just after a championship, matching headlines from your news sources are shown.
 sports:
   enabled: true
-  sports: [f1, mtb, athletics]    # f1, mtb (mountainbike EK/WK), athletics (atletiek EK/WK)
+  sports: [f1, road, mtb, athletics, football]  # f1, road (wielrennen), mtb (mountainbike), athletics (atletiek), football (voetbal EK/WK)
   f1_url: "https://api.jolpi.ca/ergast/f1"
   interval: 1h                    # F1: 3 requests per interval; min. 15m
-  events:                         # dates checked on Wikipedia, September 2026
-    - { sport: mtb, name: "WK mountainbike 2026", start: "2026-08-26", end: "2026-08-30", place: "Val di Sole (Italië)", url: "https://www.uci.org/discipline/mountain-bike/", keywords: ["WK mountainbike", "mountainbike", "MTB"] }
-    # TODO: add the EK mountainbike 2027 and WK mountainbike 2027 once the dates are published.
-    - { sport: athletics, name: "EK atletiek 2026", start: "2026-08-10", end: "2026-08-16", place: "Birmingham (Verenigd Koninkrijk)", url: "https://www.european-athletics.com", keywords: ["EK atletiek", "atletiek"] }
+  # The important races per sport (NK, classics, grand tours, EK, WK); the UCI, World Athletics, UEFA and
+  # FIFA have no open calendar API. The panel shows per sport what is on now (or ended in the last 10 days)
+  # and the next three. keywords pick matching headlines from the news while an event is on.
+  # note: an extra line (e.g. race days); tentative: true marks dates the organiser has not confirmed.
+  # Dates checked 29 September 2026 (UCI, UEC, KNWU, Atletiekunie, organisers, FIFA/UEFA).
+  events:
+    # --- Wielrennen (weg) ---
+    - { sport: road, name: "EK wielrennen 2026", start: "2026-10-02", end: "2026-10-07", place: "Ljubljana (Slovenië)", url: "https://www.uec.ch/en/road", note: "tijdritten, wegwedstrijden en gemengde ploegenestafette", keywords: ["EK wielrennen", "EK op de weg", "Europees kampioen"] }
+    - { sport: road, name: "Ronde van Lombardije 2026", start: "2026-10-10", end: "2026-10-10", place: "Como – Bergamo (Italië)", url: "https://www.ilombardia.it/en/", keywords: ["Lombardije", "Il Lombardia"] }
+    - { sport: road, name: "Milaan-Sanremo 2027", start: "2027-03-20", end: "2027-03-20", place: "Italië", url: "https://www.milanosanremo.it/en/", keywords: ["Milaan-Sanremo", "Sanremo"] }
+    - { sport: road, name: "Ronde van Vlaanderen 2027", start: "2027-04-04", end: "2027-04-04", place: "België", url: "https://www.rondevanvlaanderen.be/", note: "mannen en vrouwen", keywords: ["Ronde van Vlaanderen"] }
+    - { sport: road, name: "Parijs-Roubaix 2027", start: "2027-04-11", end: "2027-04-11", place: "Frankrijk", url: "https://www.paris-roubaix.fr/en", note: "mannen en vrouwen", keywords: ["Parijs-Roubaix", "Roubaix"] }
+    - { sport: road, name: "Amstel Gold Race 2027", start: "2027-04-18", end: "2027-04-18", place: "Zuid-Limburg", url: "https://www.amstelgoldrace.nl/", note: "mannen en vrouwen", keywords: ["Amstel Gold Race", "Amstel"] }
+    - { sport: road, name: "Luik-Bastenaken-Luik 2027", start: "2027-04-25", end: "2027-04-25", place: "België", url: "https://www.liege-bastogne-liege.be/en", note: "mannen en vrouwen", keywords: ["Luik-Bastenaken-Luik", "Luik"] }
+    - { sport: road, name: "Giro d'Italia 2027", start: "2027-05-08", end: "2027-05-30", place: "Italië", url: "https://www.giroditalia.it/en/", keywords: ["Giro"] }
+    - { sport: road, name: "Giro d'Italia Women 2027", start: "2027-05-29", end: "2027-06-06", place: "Italië", url: "https://www.giroditaliawomen.it/en/", keywords: ["Giro Women", "Giro d'Italia Women"] }
+    # TODO: add the NK wielrennen 2027 (elite) once the KNWU publishes date and place (the NK tijdrijden 2027 is in Medemblik).
+    - { sport: road, name: "Tour de France 2027", start: "2027-07-02", end: "2027-07-25", place: "Frankrijk", url: "https://www.letour.fr/en/", keywords: ["Tour de France", "Tour"] }
+    - { sport: road, name: "Tour de France Femmes 2027", start: "2027-07-30", end: "2027-08-07", place: "Frankrijk", url: "https://www.letour.fr/en/", keywords: ["Tour de France Femmes", "Tour Femmes"] }
+    - { sport: road, name: "WK wielrennen 2027", start: "2027-08-29", end: "2027-09-05", place: "Haute-Savoie (Frankrijk)", url: "https://www.uci.org/event-hub/2027-uci-cycling-world-championships/3eK8O5bGa5sfvNlGaTPCb3", note: "wegrit mannen 29 aug, tijdritten 1 sep, wegrit vrouwen 5 sep", keywords: ["WK wielrennen", "wereldkampioen"] }
+    - { sport: road, name: "Vuelta a España 2027", start: "2027-09-04", end: "2027-09-26", place: "Spanje", url: "https://www.lavuelta.es/en", keywords: ["Vuelta"] }
+    - { sport: road, name: "Ronde van Lombardije 2027", start: "2027-10-09", end: "2027-10-09", place: "Italië", url: "https://www.ilombardia.it/en/", keywords: ["Lombardije", "Il Lombardia"] }
+    # TODO: add the EK wielrennen 2027 and the Vuelta Femenina 2027 once dates are confirmed.
+    # --- Mountainbike ---
+    # TODO: add the UCI MTB World Series (World Cup) 2027 rounds once the UCI confirms them (only a draft was leaked).
+    - { sport: mtb, name: "EK mountainbike 2027", start: "2027-08-03", end: "2027-08-08", place: "Göteborg (Zweden)", url: "https://www.uec.ch/en/MTB", note: "cross-country, short track en team relay", tentative: true, keywords: ["EK mountainbike", "mountainbike"] }
+    - { sport: mtb, name: "WK mountainbike 2027", start: "2027-08-27", end: "2027-09-04", place: "Les Gets (Frankrijk)", url: "https://www.uci.org/event-hub/2027-uci-cycling-world-championships/3eK8O5bGa5sfvNlGaTPCb3", note: "downhill 27–28 aug, cross-country 2–4 sep", keywords: ["WK mountainbike", "mountainbike", "MTB"] }
+    # --- Atletiek ---
+    - { sport: athletics, name: "TCS Amsterdam Marathon 2026", start: "2026-10-18", end: "2026-10-18", place: "Amsterdam", url: "https://www.tcsamsterdammarathon.nl/", keywords: ["Amsterdam Marathon", "marathon van Amsterdam"] }
+    # TODO: add the NK indoor atletiek 2027 (Omnisport Apeldoorn) once the Atletiekunie publishes the date.
     - { sport: athletics, name: "EK indoor atletiek 2027", start: "2027-03-04", end: "2027-03-07", place: "Valencia (Spanje)", url: "https://www.european-athletics.com", keywords: ["EK indoor", "atletiek"] }
+    - { sport: athletics, name: "NN Marathon Rotterdam 2027", start: "2027-04-11", end: "2027-04-11", place: "Rotterdam", url: "https://nnmarathonrotterdam.nl/", keywords: ["Marathon Rotterdam", "marathon van Rotterdam"] }
+    - { sport: athletics, name: "NK atletiek 2027", start: "2027-07-31", end: "2027-08-01", place: "Hilversum", url: "https://www.atletiek.nl/wedstrijdsport/wedstrijden/nederlandse-kampioenschappen/", keywords: ["NK atletiek"] }
     - { sport: athletics, name: "WK atletiek 2027", start: "2027-09-10", end: "2027-09-19", place: "Peking (China)", url: "https://worldathletics.org", keywords: ["WK atletiek", "atletiek"] }
     - { sport: athletics, name: "EK atletiek 2028", start: "2028-06-03", end: "2028-06-08", place: "Chorzów (Polen)", url: "https://www.european-athletics.com", keywords: ["EK atletiek", "atletiek"] }
+    # --- Voetbal: alleen EK en WK ---
+    - { sport: football, name: "WK voetbal vrouwen 2027", start: "2027-06-24", end: "2027-07-25", place: "Brazilië", url: "https://www.fifa.com/en/tournaments/womens/womensworldcup/brazil-2027", keywords: ["WK vrouwen", "Oranjeleeuwinnen", "Leeuwinnen"] }
+    - { sport: football, name: "EK voetbal 2028", start: "2028-06-09", end: "2028-07-09", place: "Engeland, Schotland, Wales en Ierland", url: "https://www.uefa.com/euro2028/", keywords: ["EK 2028", "Oranje", "EK voetbal"] }
+    # TODO: add the EK voetbal vrouwen 2029 (Duitsland, zomer 2029) once UEFA publishes the dates.
+    - { sport: football, name: "WK voetbal 2030", start: "2030-06-08", end: "2030-07-21", place: "Marokko, Portugal en Spanje", url: "https://www.fifa.com/en/tournaments/mens/worldcup/2030", keywords: ["WK 2030", "Oranje", "WK voetbal"] }
 
 # Look of the page for all visitors.
 ui:

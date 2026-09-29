@@ -887,6 +887,7 @@ textarea.json {
 .spsec h3 { margin: 4px 0 2px; font-size: 13px; font-weight: 650; }
 .sprow { margin: 3px 0; font-size: 13px; line-height: 1.45; }
 .sprow .m { color: var(--text-3); font-size: 12px; }
+.sprow .spnote { display: block; }
 .tag.live { color: var(--sev-crit); }
 .spev .plist { margin: 2px 0 6px; }
 .wxthunder, .wxuv { margin: 6px 0 0; font-size: 13px; color: var(--text-2); }
@@ -1105,6 +1106,11 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.19.0</h3>
+    <ul>
+      <li>Trending: de woorden komen nu uit je eigen gekozen bronnen, dus elke knop geeft berichten die jij ziet.</li>
+      <li>Sportagenda: nieuw zijn Wielrennen (klassiekers, grote rondes, EK en WK) en Voetbal (alleen EK en WK). Mountainbike en atletiek krijgen meer wedstrijden, zoals het NK atletiek en de marathons van Amsterdam en Rotterdam. Per sport zie je wat nu bezig is en de volgende drie.</li>
+    </ul>
     <h3>Versie 1.18.0</h3>
     <ul>
       <li>Weer: de UV-index van vandaag (of morgen) met het tijdstip en een advies vanaf UV 3.</li>
@@ -1248,6 +1254,11 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.19.0</h3>
+    <ul>
+      <li>Trending: the words now come from the sources you chose, so every chip gives articles you can see.</li>
+      <li>Sports calendar: new are Road cycling (classics, grand tours, European and World Championships) and Football (European and World Championships only). Mountain biking and athletics get more events, such as the Dutch athletics championships and the Amsterdam and Rotterdam marathons. Per sport you see what is on now and the next three.</li>
+    </ul>
     <h3>Version 1.18.0</h3>
     <ul>
       <li>Weather: today's (or tomorrow's) UV index with its time and advice from UV 3.</li>
@@ -1618,11 +1629,12 @@ const PANELS = {
   health: 'Gezondheid',
 };
 const PANEL_IDS = Object.keys(PANELS);
+const SPORT_IDS = ['f1', 'road', 'mtb', 'athletics', 'football']; // before sanitize() runs on the stored prefs
 const MIN = 60e3;
 const DEFAULTS = {
   v: 2, theme: 'auto', sources: null, known: [], pageSize: 60, summaries: true,
   density: 'compact', category: 'all', weather: null, threatTab: 'ips', advFilter: 'all',
-  lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, trending: true, pushTopics: null, waste: null, sports: null, solar: null, watch: [], mute: [],
+  lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, trending: true, pushTopics: null, waste: null, sports: null, sportsSeen: null, solar: null, watch: [], mute: [],
   panels: { order: PANEL_IDS.slice(), collapsed: {}, hidden: {} },
 };
 
@@ -2435,8 +2447,12 @@ const EN = {
   "Sporten kiezen": "Choose sports",
   "sporten kiezen": "choose sports",
   "Formule 1": "Formula 1",
-  "Mountainbike (EK/WK)": "Mountain bike (European/World Championships)",
-  "Atletiek (EK/WK)": "Athletics (European/World Championships)",
+  "Wielrennen": "Road cycling",
+  "Mountainbike": "Mountain biking",
+  "Atletiek": "Athletics",
+  "Voetbal (EK/WK)": "Football (Euros/World Cup)",
+  "(datum voorlopig)": "(provisional date)",
+  "De organisatie heeft deze data nog niet bevestigd.": "The organisers have not confirmed these dates yet.",
   "Jolpica is niet bereikbaar ({err}).": "Jolpica is unreachable ({err}).",
   "Wordt voor het eerst opgehaald.": "Being fetched for the first time.",
   "Volgende: ": "Next: ",
@@ -2445,12 +2461,12 @@ const EN = {
   "Het seizoen {y} is voorbij.": "The {y} season is over.",
   "Kwalificatie": "Qualifying",
   "Sprintkwalificatie": "Sprint qualifying",
-  "Geen kampioenschap in de kalender; de beheerder vult data aan in config.yaml (sports.events).": "No championship in the calendar; the administrator adds dates in config.yaml (sports.events).",
+  "Geen wedstrijden in de kalender; de beheerder vult data aan in config.yaml (sports.events).": "No events in the calendar; the administrator adds dates in config.yaml (sports.events).",
   "nu bezig": "on now",
   "afgelopen": "finished",
   "programma": "programme",
   "uitslagen": "results",
-  " (Formule 1) · kampioenschappen: kalender van de beheerder, koppen uit je nieuwsbronnen · ": " (Formula 1) · championships: the administrator's calendar, headlines from your news sources · ",
+  " (Formule 1) · wedstrijden en toernooien: kalender van de beheerder, koppen uit je nieuwsbronnen · ": " (Formula 1) · races and tournaments: the administrator's calendar, headlines from your news sources · ",
   "Kies welke sporten je in de sportagenda ziet.": "Choose which sports the sports calendar shows.",
   "Link gekopieerd": "Link copied",
   "Delen lukt niet in deze browser": "Sharing does not work in this browser",
@@ -2683,7 +2699,8 @@ function sanitize(p) {
     const prov = typeof p.waste.provider === 'string' && /^[a-z0-9][a-z0-9:.-]{1,60}$/.test(p.waste.provider) ? p.waste.provider : '';
     if (/^[1-9]\d{3}[A-Z]{2}$/.test(pc) && Number.isInteger(nr) && nr >= 1 && nr <= 99999 && /^[A-Za-z0-9-]*$/.test(sfx)) d.waste = { postcode: pc, number: nr, suffix: sfx, provider: prov };
   }
-  if (Array.isArray(p.sports)) d.sports = p.sports.filter(x => ['f1', 'mtb', 'athletics'].includes(x));
+  if (Array.isArray(p.sports)) d.sports = p.sports.filter(x => SPORT_IDS.includes(x));
+  if (Array.isArray(p.sportsSeen)) d.sportsSeen = p.sportsSeen.filter(x => SPORT_IDS.includes(x));
   if (p.solar && typeof p.solar === 'object') {
     const kwp = Number(p.solar.kwp), tilt = Number(p.solar.tilt), az = Number(p.solar.az);
     if (kwp > 0 && kwp <= 1000 && Number.isInteger(tilt) && tilt >= 0 && tilt <= 90 && [0, -45, 45, -90, 90, -135, 135, 180].includes(az)) d.solar = { kwp: Math.round(kwp * 10) / 10, tilt, az };
@@ -2886,7 +2903,7 @@ function renderWelcome() {
     prefs.onboarded = true;
     savePrefs();
     renderWelcome(); buildChips(); renderSkeleton();
-    loadNews({ replace: true });
+    loadNews({ replace: true }); loadTrending();
     $('#news').focus({ preventScroll: true });
   });
   box.replaceChildren(h('section', { class: 'welcome', 'aria-labelledby': 'welcome-h' },
@@ -4872,7 +4889,8 @@ function wireWasteSettings() {
 let trendData = null;
 async function loadTrending() {
   if (!catalog?.trending) return;
-  try { trendData = await api('api/trending'); } catch { /* keep the last list */ }
+  // from the visitor's own sources, so every chip leads to articles they can see
+  try { trendData = await api('api/trending?sources=' + encodeURIComponent(enabledIds().join(','))); } catch { /* keep the last list */ }
   renderTrending();
 }
 function renderTrending() {
@@ -5266,7 +5284,15 @@ function renderSky(body, extra) {
 }
 
 // ---------------------------------------------------------------- sportagenda
-const SPORT_NL = { f1: 'Formule 1', mtb: 'Mountainbike (EK/WK)', athletics: 'Atletiek (EK/WK)' };
+const SPORT_NL = { f1: 'Formule 1', road: 'Wielrennen', mtb: 'Mountainbike', athletics: 'Atletiek', football: 'Voetbal (EK/WK)' };
+// Sports added after a visitor chose their own (1.19: road and football) are switched on once.
+function adoptNewSports() {
+  const all = catalog?.sports?.sports || [];
+  if (!Array.isArray(prefs.sports)) { prefs.sportsSeen = all.slice(); return; }
+  const seen = Array.isArray(prefs.sportsSeen) ? prefs.sportsSeen : ['f1', 'mtb', 'athletics'];
+  const fresh = all.filter(x => !seen.includes(x) && !prefs.sports.includes(x));
+  if (fresh.length || !Array.isArray(prefs.sportsSeen)) { prefs.sports = [...prefs.sports, ...fresh]; prefs.sportsSeen = all.slice(); savePrefs(); }
+}
 async function loadSports() {
   try { panelData.sports = { data: await api('api/sports') }; }
   catch (e) { panelData.sports = { ...(panelData.sports || {}), error: e }; }
@@ -5297,21 +5323,24 @@ function renderSports(body) {
       }
     } else {
       const evs = (r.events || []).filter(e => e.sport === sp);
-      if (!evs.length) sec.push(h('p', { class: 'pnote', text: t('Geen kampioenschap in de kalender; de beheerder vult data aan in config.yaml (sports.events).') }));
+      if (!evs.length) sec.push(h('p', { class: 'pnote', text: t('Geen wedstrijden in de kalender; de beheerder vult data aan in config.yaml (sports.events).') }));
       for (const e of evs) {
         const n = daysUntil(e.start);
         const status = e.status === 'live' ? h('span', { class: 'tag live', text: t('nu bezig') }) : e.status === 'done' ? h('span', { class: 'tag plain', text: t('afgelopen') })
           : h('span', { class: 'tag plain', text: inDays(n) });
         const dates = e.start === e.end ? fmt.date.format(dateOnly(e.start)) : `${fmt.wdmUTC.format(dateOnly(e.start))} – ${fmt.date.format(dateOnly(e.end))}`;
-        sec.push(h('div', { class: 'spev' }, h('p', { class: 'sprow' }, status, ' ', h('b', { translate: 'no', text: e.name }), ` · ${dates}`, e.place ? h('span', { translate: 'no', text: ` · ${e.place}` }) : null,
-          e.url && safeHref(e.url) ? [' · ', extLink(e.url, e.status === 'upcoming' ? t('programma') : t('uitslagen'))] : null),
+        sec.push(h('div', { class: 'spev' }, h('p', { class: 'sprow' }, status, ' ', h('b', { translate: 'no', text: e.name }), ` · ${dates}`,
+          e.tentative ? h('span', { class: 'm', title: t('De organisatie heeft deze data nog niet bevestigd.'), text: ' ' + t('(datum voorlopig)') }) : null,
+          e.place ? h('span', { translate: 'no', text: ` · ${e.place}` }) : null,
+          e.url && safeHref(e.url) ? [' · ', extLink(e.url, e.status === 'upcoming' ? t('programma') : t('uitslagen'))] : null,
+          e.note ? h('span', { class: 'm spnote', translate: 'no', text: e.note }) : null),
           e.headlines?.length ? h('ul', { class: 'plist' }, e.headlines.map(x => h('li', null, h('span', { translate: 'no' }, extLink(x.url, x.title)),
             h('div', { class: 'm' }, h('span', { text: x.source }), h('span', { text: when(x.published) }))))) : null));
       }
     }
     out.push(h('div', { class: 'spsec' }, sec));
   }
-  out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://github.com/jolpica/jolpica-f1', 'Jolpica'), t(' (Formule 1) · kampioenschappen: kalender van de beheerder, koppen uit je nieuwsbronnen · '),
+  out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://github.com/jolpica/jolpica-f1', 'Jolpica'), t(' (Formule 1) · wedstrijden en toernooien: kalender van de beheerder, koppen uit je nieuwsbronnen · '),
     h('button', { class: 'linkbtn', type: 'button', onclick: () => openSettings('sports'), text: t('sporten kiezen') })));
   body.replaceChildren(...out);
 }
@@ -6116,7 +6145,7 @@ function wire() {
   $('#settings-close').addEventListener('click', () => dlg.close());
   dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); }); // backdrop click
   dlg.addEventListener('close', () => {
-    if (sourcesDirty) { sourcesDirty = false; shown = prefs.pageSize; buildChips(); renderSkeleton(); loadNews({ replace: true }); }
+    if (sourcesDirty) { sourcesDirty = false; shown = prefs.pageSize; buildChips(); renderSkeleton(); loadNews({ replace: true }); loadTrending(); }
   });
   $('#src-filter').addEventListener('input', filterSources);
   $('#wx-search').addEventListener('input', onGeoSearch);
@@ -6215,6 +6244,7 @@ async function init() {
     return;
   }
   applyAccent(catalog.accent);
+  adoptNewSports();
   for (const s of catalog.sources) srcById.set(s.id, s);
   for (const c of catalog.categories) catById.set(c.id, c);
   if (catalog.version) $('#version').textContent = t('Versie {v}.', { v: catalog.version });

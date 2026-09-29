@@ -29,7 +29,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Satellietbeeld:** the latest Meteosat image of the Benelux from EUMETSAT, every 10 minutes: true colour by day, clouds and city lights at night, with coastlines and borders. The server fetches it and serves it itself.
 - **Vanavond aan de hemel:** when it gets dark, the moon, the planets you can see tonight (when and in which direction), the chance of northern lights, the clouds and active meteor showers.
 - **Teken en muggen:** an estimate of tick and mosquito activity for 3 days, from the weather.
-- **Sportagenda:** Formula 1 (next race with qualifying, last podium, standings) and the European and World Championships in mountain biking and athletics, with matching headlines during a championship. Visitors choose their sports.
+- **Sportagenda:** Formula 1 (next race with qualifying, last podium, standings) and the important races and tournaments of road cycling (classics, grand tours, EK, WK), mountain biking (EK, WK), athletics (NK, EK, WK, big marathons) and football (EK and WK only): per sport what is on now and the next three, with matching headlines while an event is on. Visitors choose their sports.
 - **Brandstofprijzen:** the national average recommended pump price (GLA) for Euro95, diesel and LPG, with the change since yesterday.
 - **Treinstoringen:** current rail disruptions and engineering works from the NS Disruptions API (needs a free key).
 - **Economie in cijfers:** Dutch inflation (with the euro-area figure and a 12-month trend), unemployment, the ECB deposit rate and the euro in dollars, from Eurostat and the ECB.
@@ -184,7 +184,7 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 | `amber` | AMBER Alert and Vermist Kind Alert: `enabled`, `url` (Burgernet Landactiehost; the test feed `.../api/test/alerts` cycles through test messages), `interval` (default 5m, min. 1m) |
 | `insects` | Teken en muggen: `enabled`, `url` (Open-Meteo forecast) |
 | `sky` | Vanavond aan de hemel: `enabled`, `kp_url` (NOAA SWPC), `clouds_url` (Open-Meteo) |
-| `sports` | Sportagenda: `enabled`, `sports` (`f1`, `mtb`, `athletics`; visitors choose among these), `f1_url` (Jolpica), `interval` (default 1h, min. 15m), `events` (championships: `sport` mtb/athletics, `name`, `start`, `end`, `place`, `url`, `keywords` for matching headlines) |
+| `sports` | Sportagenda: `enabled`, `sports` (`f1`, `road`, `mtb`, `athletics`, `football`; visitors choose among these), `f1_url` (Jolpica), `interval` (default 1h, min. 15m), `events` (races and tournaments: `sport` road/mtb/athletics/football, `name`, `start`, `end`, `place`, `url`, `note` (an extra line), `tentative` (dates not yet confirmed), `keywords` for matching headlines) |
 | `ui` | `accent`: accent colour for all visitors, e.g. `"#00a4dc"` (empty = the default blue); adjusted automatically to a readable shade in light and dark mode |
 | `push` | Push notifications (off by default): `enabled`, `subject` (`mailto:` or https contact), `vapid_private_key` (or `NDB_VAPID_PRIVATE_KEY`), `max_subscriptions` (default 50), `quake_min_mag` (2.5), `breaking_sources` (6; 0 = off), `waste_hour` (19; -1 = off). See [Push notifications](#push-notifications). |
 | `markets` | Beurs: `enabled`, `url` (Yahoo spark), `interval` (default 15m, min. 5m), `indices` (1–20, shown in order) and `stocks` (max. 60, the source of the top 3 risers and fallers), each `{ symbol, name }`. The default stocks are the AEX constituents; Euronext reviews them every quarter. |
@@ -252,7 +252,7 @@ There are two separate rates:
 | Satellietbeeld | 10m | 10m (EUMETSAT publishes every 10 min, ~25–30 min after the scan; the image is only downloaded when it is new) |
 | Teken en muggen | 60m | on demand, cached 1h per ~10 km |
 | Vanavond aan de hemel | 30m | computed on request; Kp forecast 3h, clouds cached 1h per ~10 km |
-| Sportagenda | 30m | F1 1h; championships from the config |
+| Sportagenda | 30m | F1 1h; races and tournaments from the config |
 | Politiek vandaag | 15m | 30m |
 | Alarmeringen | 2m | 2m per city |
 | Cyberdreigingen | 15m | 15m (ISC minimum), 30-day summary 1h |
@@ -573,7 +573,7 @@ The server fetches everything; browsers only talk to the dashboard itself.
 | [ECB Data Portal](https://data.ecb.europa.eu/) | Economie in cijfers | Deposit facility rate and the EUR/USD reference rate, SDMX API, no key; reuse allowed with attribution. |
 | [Open-Meteo](https://open-meteo.com/) | Onweer, Teken en muggen, hemel (bewolking) | Lightning potential and CAPE (ICON-D2) for the thunderstorm risk; temperature, humidity and wind for the tick and mosquito **estimate** (no open source with measurements exists: Tekenradar's activity map needs an account); cloud cover tonight. Same terms as the weather. |
 | [NOAA SWPC](https://www.swpc.noaa.gov/) | Hemel: noorderlicht | Planetary Kp index forecast (US government, public domain). Planets, moon and twilight are computed locally (JPL Keplerian elements and Meeus; checked against JPL Horizons). |
-| [Jolpica F1](https://github.com/jolpica/jolpica-f1) | Sportagenda: Formule 1 | The open, community-run successor of the Ergast API; no key, fair use. Championships (MTB, athletics) have no open API (UCI and World Athletics only use internal keys), so they come from `sports.events` in `config.yaml`; the defaults were checked on Wikipedia in September 2026. |
+| [Jolpica F1](https://github.com/jolpica/jolpica-f1) | Sportagenda: Formule 1 | The open, community-run successor of the Ergast API; no key, fair use. Road cycling, mountain biking, athletics and football have no open calendar API (the UCI, World Athletics, UEFA and FIFA only use internal keys), so they come from `sports.events` in `config.yaml`; the defaults were checked with the organisers (UCI, UEC, KNWU, Atletiekunie, race organisers, FIFA, UEFA) on 29 September 2026. Dates not yet published are listed as `# TODO` in the file. |
 | [EUMETSAT](https://view.eumetsat.int/) | Satellietbeeld | The EUMETView WMS (GeoServer), no key: the newest time from the layer's GetCapabilities, then one GetMap image of the Benelux; coastlines and borders (Natural Earth) as a separate transparent PNG, refreshed weekly. Credited as "© EUMETSAT"; check the [EUMETSAT data policy](https://www.eumetsat.int/eumetsat-data-licensing) for your kind of use. |
 | [RIVM Nationaal Meetnet Radioactiviteit](https://www.rivm.nl/nationaal-meetnet-radioactiviteit) via [EURDEP](https://remon.jrc.ec.europa.eu/) | Straling | The gamma dose rate (µSv/h, hourly averages) of ~150 Dutch stations, from the open WFS of the German Bundesamt für Strahlenschutz (`imis.bfs.de/ogc/opendata`, layer `eurdep_latestValue`; no key, no fees). Indicative only; official warnings come through NL-Alert and the government. |
 | [Open-Meteo](https://open-meteo.com/) | UV, Zonnestroom | `uv_index` (hourly) in the weather request; `global_tilted_irradiance` for the solar estimate (kWh = irradiation × kWp × 0.8 performance ratio; no shade, no snow). |
@@ -700,7 +700,7 @@ All JSON responses:
 | `GET /api/amber?lat=&lon=` | AMBER Alert and Vermist Kind Alert: the active `alerts` (title, text, kind, url, photo via `api/img`, area) with `near` for the given point or the weather location |
 | `GET /api/insects?lat=&lon=` | Teken en muggen: 3 `days` with `ticks` and `mosquito` levels 0–3 (an estimate) |
 | `GET /api/sky?lat=&lon=` | Vanavond aan de hemel: sunset, dark, dawn, `moon` (phase, rise, set), `planets` (from, until, best time, altitude, direction), `kp` and `aurora` (0–3), `clouds`, `meteor` |
-| `GET /api/sports` | Sportagenda: `f1` (next race with sessions, last podium, standings) and `events` (per sport the current or just-finished and the next championship, with `headlines`) |
+| `GET /api/sports` | Sportagenda: `f1` (next race with sessions, last podium, standings) and `events` (per sport the current or just-finished events and the next three, with `note`, `tentative` and `headlines`) |
 | `GET /api/trending` | Trending: up to 8 `terms` with the number of `sources` in the last 3 hours |
 | `GET /api/wiki?term=` | Wikipedia summary for a current trending term: `summary` (`found`, `title`, `description`, `extract`, `url`, `thumb` via `api/img`) and a `search` link; 404 for other terms |
 | `GET /api/radiation?lat=&lon=` | Straling: `nearest` station (name, value µSv/h, time), `km`, national `min`/`median`/`max`, `raised`, `above`, `level` |
@@ -765,6 +765,11 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.19.0
+- **Trending from your own sources:** the trending words are now computed from the sources you chose, so every chip leads to articles you can see (before, a word from sources you had not switched on could give "no articles found").
+- **Sportagenda:** new sports **Wielrennen** (road cycling: the monuments, Amstel Gold Race, the grand tours for men and women, EK and WK) and **Voetbal** (EK and WK only, men and women); mountain biking and athletics get more events (NK atletiek, the Amsterdam and Rotterdam marathons). Per sport the panel shows what is on now and the next three events, with an extra line (e.g. the race days of a WK) and "datum voorlopig" for dates the organiser has not confirmed. Visitors who chose their own sports get the two new ones switched on once.
+- Config: new sports `road` and `football`, event fields `note` and `tentative`, and a new default calendar in `sports.events` (checked 29 September 2026; unpublished dates are `# TODO`).
 
 ### 1.18.0
 - **UV index** in the Weer panel: the highest UV of the next 24 hours with its time, the WHO category and sun-protection advice from UV 3. It replaces the bare UV number in the sunrise line.

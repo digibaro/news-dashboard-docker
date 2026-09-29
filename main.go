@@ -409,7 +409,7 @@ type Config struct {
 	// Sports: Sportagenda panel (F1 via Jolpica; championships from events).
 	Sports struct {
 		Enabled  bool         `yaml:"enabled"`
-		Sports   []string     `yaml:"sports"` // f1, mtb, athletics; visitors choose among these
+		Sports   []string     `yaml:"sports"` // f1, road, mtb, athletics, football; visitors choose among these
 		F1URL    string       `yaml:"f1_url"`
 		Interval Duration     `yaml:"interval"`
 		Events   []SportEvent `yaml:"events"`
@@ -515,7 +515,7 @@ func defaultConfig() *Config {
 	c.Radiation.AlertUSv, c.Radiation.AlertStations = 0.3, 3
 	c.Solar.Enabled, c.Solar.URL, c.Solar.Tilt = true, "https://api.open-meteo.com/v1/forecast", 35
 	c.Sky.Enabled, c.Sky.KpURL, c.Sky.CloudsURL = true, "https://services.swpc.noaa.gov/products/noaa-planetary-k-index-forecast.json", "https://api.open-meteo.com/v1/forecast"
-	c.Sports.Enabled, c.Sports.Sports, c.Sports.F1URL, c.Sports.Interval = true, []string{"f1", "mtb", "athletics"}, "https://api.jolpi.ca/ergast/f1", Duration(time.Hour)
+	c.Sports.Enabled, c.Sports.Sports, c.Sports.F1URL, c.Sports.Interval = true, []string{"f1", "road", "mtb", "athletics", "football"}, "https://api.jolpi.ca/ergast/f1", Duration(time.Hour)
 	c.Push.MaxSubscriptions, c.Push.QuakeMinMag, c.Push.BreakingSources, c.Push.WasteHour = 50, 2.5, 6, 19
 	c.Threats.Enabled = true
 	c.Threats.Interval = Duration(15 * time.Minute)
@@ -823,7 +823,7 @@ func (c *Config) validate() error {
 		}
 		for _, s := range sp.Sports {
 			if _, ok := sportNames[s]; !ok {
-				fail("sports.sports: %q is not one of f1, mtb, athletics", s)
+				fail("sports.sports: %q is not one of f1, road, mtb, athletics, football", s)
 			}
 		}
 		for _, e := range sp.Events {
@@ -1682,12 +1682,12 @@ func refreshSeconds(m map[string]Duration) map[string]int {
 	return out
 }
 
-func (a *App) handleNews(w http.ResponseWriter, r *http.Request) {
-	cfg := a.config()
-	q := r.URL.Query()
+// requestedSources: the known source ids from a comma-separated list (max 300);
+// an empty list means the sources that are on by default.
+func requestedSources(cfg *Config, list string) []string {
 	var ids []string
 	seen := map[string]bool{}
-	for _, id := range strings.Split(q.Get("sources"), ",") {
+	for _, id := range strings.Split(list, ",") {
 		id = strings.TrimSpace(id)
 		if id == "" || seen[id] || len(ids) >= 300 {
 			continue
@@ -1697,13 +1697,20 @@ func (a *App) handleNews(w http.ResponseWriter, r *http.Request) {
 			ids = append(ids, id)
 		}
 	}
-	if q.Get("sources") == "" {
+	if list == "" {
 		for _, s := range cfg.Sources {
 			if s.IsEnabled() && s.DefaultEnabled {
 				ids = append(ids, s.ID)
 			}
 		}
 	}
+	return ids
+}
+
+func (a *App) handleNews(w http.ResponseWriter, r *http.Request) {
+	cfg := a.config()
+	q := r.URL.Query()
+	ids := requestedSources(cfg, q.Get("sources"))
 	limit := 60
 	if v, err := strconv.Atoi(q.Get("limit")); err == nil {
 		limit = min(max(v, 1), 500)

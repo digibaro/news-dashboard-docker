@@ -16,21 +16,28 @@ import (
 
 // ---------------------------------------------------------------------------
 // Sportagenda: Formula 1 from the Jolpica API (the open successor of the Ergast
-// API; no key) and championships (MTB and athletics EK/WK, ...) from a short
-// calendar in config.yaml, because the UCI and World Athletics have no open API.
+// API; no key) and the important races and tournaments of road cycling, mountain
+// biking, athletics and football (NK, classics, grand tours, EK, WK) from a
+// calendar in config.yaml, because the UCI, World Athletics, UEFA and FIFA have no
+// open calendar API.
 // During and just after a championship the panel shows the latest matching
 // headlines from the news the dashboard already collects.
 
-var sportNames = map[string]string{"f1": "Formule 1", "mtb": "Mountainbike", "athletics": "Atletiek"}
+var sportNames = map[string]string{"f1": "Formule 1", "road": "Wielrennen", "mtb": "Mountainbike", "athletics": "Atletiek", "football": "Voetbal (EK/WK)"}
+
+// sportUpcoming: how many coming events the panel shows per sport.
+const sportUpcoming = 3
 
 type SportEvent struct {
-	Sport    string   `yaml:"sport" json:"sport"`
-	Name     string   `yaml:"name" json:"name"`
-	Start    string   `yaml:"start" json:"start"` // YYYY-MM-DD
-	End      string   `yaml:"end" json:"end"`
-	Place    string   `yaml:"place" json:"place,omitempty"`
-	URL      string   `yaml:"url" json:"url,omitempty"`
-	Keywords []string `yaml:"keywords" json:"-"`
+	Sport     string   `yaml:"sport" json:"sport"`
+	Name      string   `yaml:"name" json:"name"`
+	Start     string   `yaml:"start" json:"start"` // YYYY-MM-DD
+	End       string   `yaml:"end" json:"end"`
+	Place     string   `yaml:"place" json:"place,omitempty"`
+	URL       string   `yaml:"url" json:"url,omitempty"`
+	Note      string   `yaml:"note" json:"note,omitempty"`           // e.g. the race days of a championship
+	Tentative bool     `yaml:"tentative" json:"tentative,omitempty"` // dates not yet confirmed by the organiser
+	Keywords  []string `yaml:"keywords" json:"-"`
 }
 
 type F1Session struct {
@@ -267,7 +274,7 @@ type SportEventOut struct {
 	Headlines []SportHeadline `json:"headlines,omitempty"`
 }
 
-// sportEvents: per sport the event that is on now or just ended (10 days), and the next one.
+// sportEvents: per sport the events that are on now or just ended (10 days), and the next three.
 func (a *App) sportEvents(cfg *Config, now time.Time) []SportEventOut {
 	today := now.In(amsterdam).Format("2006-01-02")
 	var out []SportEventOut
@@ -279,23 +286,20 @@ func (a *App) sportEvents(cfg *Config, now time.Time) []SportEventOut {
 			}
 		}
 		sort.Slice(evs, func(i, j int) bool { return evs[i].Start < evs[j].Start })
-		var cur, next *SportEvent
+		var show []*SportEvent
+		upcoming := 0
 		for i := range evs {
 			e := &evs[i]
 			endT, _ := time.Parse("2006-01-02", e.End)
 			switch {
-			case e.Start <= today && e.End >= today:
-				cur = e
-			case e.End < today && endT.AddDate(0, 0, 10).Format("2006-01-02") >= today:
-				cur = e
-			case e.Start > today && next == nil:
-				next = e
+			case e.Start <= today && endT.AddDate(0, 0, 10).Format("2006-01-02") >= today: // on now, or ended in the last 10 days
+				show = append(show, e)
+			case e.Start > today && upcoming < sportUpcoming:
+				show = append(show, e)
+				upcoming++
 			}
 		}
-		for _, e := range []*SportEvent{cur, next} {
-			if e == nil {
-				continue
-			}
+		for _, e := range show {
 			o := SportEventOut{SportEvent: *e, Status: "upcoming"}
 			if e.Start <= today {
 				o.Status = "live"
@@ -372,7 +376,10 @@ func (a *App) handleSports(w http.ResponseWriter, r *http.Request) {
 
 func validSportEvent(e SportEvent) error {
 	if _, ok := sportNames[e.Sport]; !ok || e.Sport == "f1" {
-		return fmt.Errorf("sports.events: sport %q must be mtb or athletics", e.Sport)
+		return fmt.Errorf("sports.events: sport %q must be road, mtb, athletics or football", e.Sport)
+	}
+	if len(e.Note) > 200 {
+		return fmt.Errorf("sports.events: %q: note at most 200 characters", e.Name)
 	}
 	s, err1 := time.Parse("2006-01-02", e.Start)
 	en, err2 := time.Parse("2006-01-02", e.End)

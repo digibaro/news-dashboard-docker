@@ -15,8 +15,8 @@ import (
 
 // ---------------------------------------------------------------------------
 // Wikipedia context for trending topics: a short summary from the Dutch
-// Wikipedia (REST API, open, no key). Only terms that are trending right now can
-// be looked up, so the endpoint is no general Wikipedia proxy; results
+// Wikipedia (REST API, open, no key). Only terms that were trending chips in the
+// last hour can be looked up, so the endpoint is no general Wikipedia proxy; results
 // (including "nothing found") are cached for 24 hours per term.
 //
 // Lookup: the page summary for the term itself; for a disambiguation page or no
@@ -136,20 +136,11 @@ func (a *App) handleWiki(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, r, http.StatusOK, 300, map[string]any{"enabled": false})
 		return
 	}
-	term := strings.TrimSpace(r.URL.Query().Get("term"))
-	var match string
-	for _, t := range a.trending(time.Now()) {
-		if strings.EqualFold(t.Term, term) {
-			match = t.Term
-		}
-	}
+	match, ok := a.trendedRecently(r.URL.Query().Get("term"), time.Now())
 	key := strings.ToLower(match)
-	if match == "" {
-		if term == "" || !a.wikiCache.has(strings.ToLower(term)) { // a chip from a slightly older trending list
-			writeError(w, r, http.StatusNotFound, "geen trending onderwerp")
-			return
-		}
-		match, key = term, strings.ToLower(term)
+	if match == "" || (!ok && !a.wikiCache.has(key)) { // only terms that were trending chips in the last hour
+		writeError(w, r, http.StatusNotFound, "geen trending onderwerp")
+		return
 	}
 	ip := a.clientIP(r)
 	ctx := context.WithoutCancel(r.Context())

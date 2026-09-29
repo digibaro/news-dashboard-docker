@@ -623,8 +623,25 @@ func TestSportEvents(t *testing.T) {
 	for _, e := range evs {
 		got = append(got, e.Sport+":"+e.Name+":"+e.Status)
 	}
-	if strings.Join(got, "|") != "mtb:WK mountainbike:done|athletics:EK indoor:upcoming" { // config order: f1, mtb, athletics
+	// config order: f1, road, mtb, athletics, football; per sport the recent one and up to three coming ones
+	if strings.Join(got, "|") != "mtb:WK mountainbike:done|athletics:EK indoor:upcoming|athletics:WK atletiek:upcoming" {
 		t.Errorf("events: %v", got)
+	}
+	b := validConfig + "sports:\n  events:\n"
+	for i := 1; i <= 5; i++ {
+		b += fmt.Sprintf("    - { sport: road, name: \"Koers %d\", start: \"2027-0%d-01\", end: \"2027-0%d-01\" }\n", i, i, i)
+	}
+	b += "    - { sport: football, name: \"WK vrouwen 2027\", start: \"2027-06-24\", end: \"2027-07-25\", note: \"Brazilië\", tentative: true }\n"
+	a2 := newTestApp(t, b)
+	got = nil
+	for _, e := range a2.sportEvents(a2.cfg, time.Date(2026, 12, 1, 12, 0, 0, 0, amsterdam)) {
+		got = append(got, e.Name)
+	}
+	if strings.Join(got, "|") != "Koers 1|Koers 2|Koers 3|WK vrouwen 2027" {
+		t.Errorf("at most three coming events per sport: %v", got)
+	}
+	if body := get(a2.routes("/"), "GET", "/api/sports", nil).Body.String(); !strings.Contains(body, `"note":"Brazilië"`) || !strings.Contains(body, `"tentative":true`) {
+		t.Errorf("note and tentative: %s", body)
 	}
 	for _, bad := range []string{`sports: { events: [ { sport: f1, name: "x", start: "2026-01-01", end: "2026-01-02" } ] }`,
 		`sports: { events: [ { sport: mtb, name: "x", start: "2026-01-05", end: "2026-01-02" } ] }`, `sports: { sports: [darts] }`} {
@@ -811,7 +828,7 @@ func TestWiki(t *testing.T) {
 	defer srv.Close()
 	a := newTestApp(t, validConfig+"features: { show_images: true, proxy_images: true }\n")
 	a.cfg.Trending.Wikipedia.URL = srv.URL
-	a.trend.terms, a.trend.at = []TrendTerm{{Term: "Trump", Sources: 8}, {Term: "Onbekend Woord", Sources: 4}}, time.Now()
+	a.trend.recent = map[string]time.Time{"trump": time.Now(), "onbekend woord": time.Now()} // chips served in the last hour
 	h := a.routes("/")
 	b := get(h, "GET", "/api/wiki?term=trump", nil).Body.String()
 	if !strings.Contains(b, `"title":"Donald Trump"`) || !strings.Contains(b, `"thumb":"api/img?u=`) || !strings.Contains(b, `"url":"`+srv.URL+`/wiki/Donald_Trump"`) {
@@ -969,5 +986,32 @@ func TestSolar(t *testing.T) {
 	}
 	if _, err := parseConfig([]byte(validConfig + "solar: { kwp: -1 }\n")); err == nil {
 		t.Error("negative kwp must be rejected")
+	}
+}
+
+func TestTrendingPerSources(t *testing.T) {
+	cfg := validConfig
+	for _, id := range []string{"b", "c", "d", "e"} {
+		cfg += fmt.Sprintf("  - { id: %s, name: %q, category: nl, url: \"https://%s.example/rss\" }\n", id, strings.ToUpper(id), id)
+	}
+	a := newTestApp(t, cfg)
+	now := time.Now()
+	for i, id := range []string{"b", "c", "d", "e"} {
+		a.news.sources[id] = &SourceState{Items: []Item{{ID: id + "1", Source: id, Title: "Storm Ciarán raast over Nederland", Published: now.Add(-time.Duration(i) * 10 * time.Minute)}}}
+	}
+	a.news.sources["a"] = &SourceState{Items: []Item{{ID: "a1", Source: "a", Title: "Iets heel anders", Published: now}}}
+	h := a.routes("/")
+	// detected across all sources (4 use it); shown to a visitor with any of those sources
+	if b := get(h, "GET", "/api/trending?sources=b", nil).Body.String(); !strings.Contains(b, `"term":"Storm Ciarán"`) || !strings.Contains(b, `"sources":4`) {
+		t.Errorf("a chosen source has the story: %s", b)
+	}
+	if b := get(h, "GET", "/api/trending?sources=a", nil).Body.String(); strings.Contains(b, "Ciarán") || !strings.Contains(b, `"terms":[]`) {
+		t.Errorf("none of the chosen sources has it: %s", b)
+	}
+	if _, ok := a.trendedRecently("storm ciarán", now); !ok {
+		t.Error("a served chip can be looked up on Wikipedia")
+	}
+	if _, ok := a.trendedRecently("Nederland", now); ok {
+		t.Error("a word that was never a chip cannot")
 	}
 }

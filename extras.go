@@ -555,8 +555,18 @@ var trendStop = func() map[string]bool {
 	return m
 }()
 
+// trendCache keeps the terms of all sources (recomputed at most every 5 min), the
+// visitor-specific selection per chosen set of sources (at most 100 sets), and
+// every term served in the last hour, for the Wikipedia lookup.
 type trendCache struct {
-	mu    sync.Mutex
+	mu     sync.Mutex
+	at     time.Time
+	all    []TrendTerm
+	sets   map[string]trendSet
+	recent map[string]time.Time // lowercase term -> last served
+}
+
+type trendSet struct {
 	at    time.Time
 	terms []TrendTerm
 }
@@ -739,32 +749,82 @@ func spelling(term string, orig []string) string {
 	return term
 }
 
-func (a *App) trending(now time.Time) []TrendTerm {
+// trending detects the terms across all sources (a strong signal: many outlets at
+// once), then keeps those that occur in the visitor's own sources in the last 24
+// hours, so every chip leads to articles the visitor can see.
+func (a *App) trending(now time.Time, ids []string) []TrendTerm {
+	key := strings.Join(slices.Sorted(slices.Values(ids)), ",")
 	a.trend.mu.Lock()
 	defer a.trend.mu.Unlock()
-	if now.Sub(a.trend.at) < 5*time.Minute && a.trend.terms != nil {
-		return a.trend.terms
+	if a.trend.sets == nil {
+		a.trend.sets, a.trend.recent = map[string]trendSet{}, map[string]time.Time{}
 	}
-	cfg := a.config()
-	var ids []string
-	for _, s := range cfg.Sources {
-		if s.IsEnabled() {
-			ids = append(ids, s.ID)
+	if a.trend.all == nil || now.Sub(a.trend.at) >= 5*time.Minute {
+		var every []string
+		for _, s := range a.config().Sources {
+			if s.IsEnabled() {
+				every = append(every, s.ID)
+			}
+		}
+		a.trend.all, a.trend.at = computeTrending(itemsOf(a.news, every), now, 30), now
+		clear(a.trend.sets)
+	}
+	st, ok := a.trend.sets[key]
+	if !ok {
+		var hay []string
+		for _, it := range itemsOf(a.news, ids) {
+			if now.Sub(it.Published) <= 24*time.Hour {
+				hay = append(hay, strings.ToLower(it.Title+" "+it.Summary))
+			}
+		}
+		st = trendSet{at: now, terms: []TrendTerm{}}
+		for _, t := range a.trend.all {
+			low := strings.ToLower(t.Term)
+			if slices.ContainsFunc(hay, func(h string) bool { return strings.Contains(h, low) }) {
+				st.terms = append(st.terms, t)
+				if len(st.terms) == 8 {
+					break
+				}
+			}
+		}
+		if len(a.trend.sets) >= 100 {
+			clear(a.trend.sets)
+		}
+		a.trend.sets[key] = st
+	}
+	for _, t := range st.terms {
+		a.trend.recent[strings.ToLower(t.Term)] = now
+	}
+	for k, t := range a.trend.recent {
+		if now.Sub(t) > time.Hour {
+			delete(a.trend.recent, k)
 		}
 	}
-	lists, _ := a.news.collect(ids)
+	return st.terms
+}
+
+func itemsOf(c *NewsCache, ids []string) []Item {
+	lists, _ := c.collect(ids)
 	var all []Item
 	for _, l := range lists {
 		all = append(all, l...)
 	}
-	a.trend.terms, a.trend.at = computeTrending(all, now, 8), now
-	return a.trend.terms
+	return all
+}
+
+// trendedRecently: the term was a trending chip for some visitor in the last hour.
+func (a *App) trendedRecently(term string, now time.Time) (string, bool) {
+	a.trend.mu.Lock()
+	defer a.trend.mu.Unlock()
+	t, ok := a.trend.recent[strings.ToLower(strings.TrimSpace(term))]
+	return strings.TrimSpace(term), ok && now.Sub(t) <= time.Hour
 }
 
 func (a *App) handleTrending(w http.ResponseWriter, r *http.Request) {
-	if !a.config().Trending.Enabled {
+	cfg := a.config()
+	if !cfg.Trending.Enabled {
 		writeJSON(w, r, http.StatusOK, 60, map[string]any{"enabled": false})
 		return
 	}
-	writeJSON(w, r, http.StatusOK, 300, map[string]any{"enabled": true, "terms": a.trending(time.Now()), "window_hours": 3})
+	writeJSON(w, r, http.StatusOK, 300, map[string]any{"enabled": true, "terms": a.trending(time.Now(), requestedSources(cfg, r.URL.Query().Get("sources"))), "window_hours": 3})
 }
