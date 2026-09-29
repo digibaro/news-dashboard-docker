@@ -274,6 +274,27 @@ satellite:
   layer: "mtg_fd:rgb_geocolour"
   interval: 10m                   # checks a ~6 KB capabilities file; the ~70 KB image only when new; min. 5m
 
+# Straling (in Luchtkwaliteit): the gamma dose rate of the RIVM Nationaal Meetnet Radioactiviteit
+# (~150 stations) via EURDEP, as published by the German BfS (open WFS, no key). Normal background is
+# about 0.05-0.15 µSv/h; rain can briefly raise it. "Raised" (top-bar notice and push topic) needs at
+# least alert_stations stations at or above alert_usv, so one wet station does not trigger it.
+radiation:
+  enabled: true
+  url: "https://www.imis.bfs.de/ogc/opendata/ows"
+  interval: 60m                   # hourly values, published with a few hours' delay; min. 15m
+  alert_usv: 0.3
+  alert_stations: 3
+
+# Zonnestroom (in Energieprijzen): expected yield today and tomorrow from the Open-Meteo forecast of
+# the sunlight on the panels, at the visitor's weather location. Visitors enter their own panels under
+# Instellingen; kwp > 0 here sets a default for everyone. azimuth: 0 south, -90 east, 90 west.
+solar:
+  enabled: true
+  url: "https://api.open-meteo.com/v1/forecast"
+  kwp: 0                          # 0 = hidden until a visitor enters their panels
+  tilt: 35
+  azimuth: 0
+
 # Teken en muggen: an estimate of tick and mosquito activity from the weather forecast (Open-Meteo);
 # there is no open source with measurements. Follows the visitor's air/pollen place.
 insects:
@@ -410,6 +431,8 @@ refresh:
   sports: 30m
   amber: 5m
   satellite: 10m
+  radiation: 30m
+  solar: 60m
   outages: 10m
   ap: 30m
   health: 30m

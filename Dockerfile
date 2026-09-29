@@ -9,7 +9,7 @@ FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
-COPY main.go feeds.go panels.go extras.go push.go waste.go sky.go nature.go sports.go amber.go satellite.go wiki.go main_test.go extras_test.go config.yaml.default VERSION ./
+COPY main.go feeds.go panels.go extras.go push.go waste.go sky.go nature.go sports.go amber.go satellite.go wiki.go radiation.go solar.go main_test.go extras_test.go config.yaml.default VERSION ./
 COPY web ./web
 COPY testdata ./testdata
 # the image is only built when vet and the unit tests pass (including a check of config.yaml.default)

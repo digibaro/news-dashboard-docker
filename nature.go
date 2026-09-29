@@ -15,6 +15,44 @@ import (
 // Open-Meteo's lightning potential index (LPI, from the ICON-D2 model), CAPE and
 // the thunderstorm weather codes. A forecast, not live lightning.
 
+// WxUV: the highest UV index in the next 24 hours (in the evening: tomorrow's),
+// with the WHO category: 0 laag (0-2), 1 matig (3-5), 2 hoog (6-7), 3 zeer hoog (8-10), 4 extreem (11+).
+type WxUV struct {
+	Max   float64 `json:"max"`
+	Peak  int64   `json:"peak"` // unix time of the highest hour
+	Level int     `json:"level"`
+}
+
+func uvLevel(v float64) int {
+	switch r := math.Round(v); {
+	case r >= 11:
+		return 4
+	case r >= 8:
+		return 3
+	case r >= 6:
+		return 2
+	case r >= 3:
+		return 1
+	}
+	return 0
+}
+
+func computeUV(times []int64, uv []*float64) *WxUV {
+	var best *WxUV
+	for i, t := range times {
+		if i >= len(uv) || uv[i] == nil {
+			continue
+		}
+		if best == nil || *uv[i] > best.Max {
+			best = &WxUV{Max: round1(*uv[i]), Peak: t}
+		}
+	}
+	if best != nil {
+		best.Level = uvLevel(best.Max)
+	}
+	return best
+}
+
 type WxThunder struct {
 	Level int   `json:"level"`          // 0 none, 1 small, 2 moderate, 3 high
 	Peak  int64 `json:"peak,omitempty"` // unix time of the highest risk

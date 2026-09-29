@@ -14,6 +14,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"io"
 	"math"
 	"math/big"
@@ -868,5 +869,105 @@ func TestParseGCP(t *testing.T) {
 	}
 	if _, err := parseGCP([]byte(`<html>`), now); err == nil {
 		t.Error("HTML must fail")
+	}
+}
+
+func TestUV(t *testing.T) {
+	f := func(v float64) *float64 { return &v }
+	uv := computeUV([]int64{100, 200, 300}, []*float64{f(1.2), f(6.4), nil})
+	if uv == nil || uv.Max != 6.4 || uv.Peak != 200 || uv.Level != 2 {
+		t.Errorf("uv %+v", uv)
+	}
+	for v, want := range map[float64]int{0: 0, 2.4: 0, 2.6: 1, 5.4: 1, 7.4: 2, 8: 3, 10.4: 3, 11: 4} {
+		if uvLevel(v) != want {
+			t.Errorf("level(%v) = %d, want %d", v, uvLevel(v), want)
+		}
+	}
+	if computeUV([]int64{1}, []*float64{nil}) != nil {
+		t.Error("no values: no UV")
+	}
+}
+
+func TestRadiation(t *testing.T) {
+	now := time.Date(2026, 9, 29, 8, 0, 0, 0, time.UTC)
+	feat := func(id, name string, lon, lat, v float64, end string) string {
+		return fmt.Sprintf(`{"type":"Feature","geometry":{"type":"Point","coordinates":[%v,%v]},"properties":{"id":%q,"name":%q,"site_status":1,
+			"analyzed_range_in_h":6,"end_measure":%q,"value":%v,"unit":"µSv/h","nuclide":"Gamma-ODL-Brutto","duration":"1h"}}`, lon, lat, id, name, end, v)
+	}
+	body := `{"type":"FeatureCollection","features":[` + strings.Join([]string{
+		feat("NL0902", "WIERINGERWERF", 5.05, 52.8, 0.088, "2026-09-29T05:00:00Z"),
+		feat("NL0902", "WIERINGERWERF", 5.05, 52.8, 0.5, "2026-09-29T05:00:00Z"), // duplicate range: ignored
+		feat("NL1001", "DEN HAAG-ZUID", 4.3, 52.05, 0.071, "2026-09-29T05:00:00Z"),
+		feat("NL1002", "DELFZIJL", 6.93, 53.33, 0.125, "2026-09-29T04:00:00Z"),
+		feat("NL1003", "OUD", 5.0, 52.0, 0.9, "2026-09-27T04:00:00Z"), // older than 12 h: left out of the summary
+		feat("DE0001", "BERLIN", 13.4, 52.5, 0.1, "2026-09-29T05:00:00Z"),
+	}, ",") + `]}`
+	list, err := parseRadiation([]byte(body))
+	if err != nil || len(list) != 4 || list[0].Value != 0.088 || list[1].Name != "Den Haag-Zuid" {
+		t.Fatalf("parse: %v %+v", err, list)
+	}
+	s := summarizeRadiation(list, 52.08, 4.31, 0.3, 3, now)
+	if s.Stations != 3 || s.Nearest == nil || s.Nearest.ID != "NL1001" || s.Km != 3 || s.Min != 0.071 || s.Max != 0.125 || s.MaxName != "Delfzijl" || s.Raised {
+		t.Errorf("summary %+v", s)
+	}
+	if s := summarizeRadiation(list, 52.08, 4.31, 0.08, 2, now); !s.Raised || s.Above != 2 {
+		t.Errorf("raised: %+v", s)
+	}
+	if _, err := parseRadiation([]byte(`{"features":[]}`)); err == nil {
+		t.Error("no stations must fail")
+	}
+	a := newTestApp(t, validConfig)
+	a.threats.ok(radKey, list, "", "")
+	b := get(a.routes("/"), "GET", "/api/radiation?lat=53.3&lon=6.9", nil).Body.String()
+	if !strings.Contains(b, `"name":"Delfzijl"`) || !strings.Contains(b, `"raised":false`) {
+		t.Errorf("handler: %s", b)
+	}
+	if get(a.routes("/"), "GET", "/api/radiation?lat=x", nil).Code != 400 {
+		t.Error("bad lat")
+	}
+}
+
+func TestSolar(t *testing.T) {
+	// two days of hourly values, Dutch time: 10:00-14:00 at 500 W/m² on day 1, 100 W/m² at noon on day 2
+	var times []int64
+	var gti []string
+	start := time.Date(2026, 9, 29, 0, 0, 0, 0, amsterdam)
+	for i := 0; i < 48; i++ {
+		tm := start.Add(time.Duration(i) * time.Hour)
+		times = append(times, tm.Unix())
+		v := "0"
+		if i >= 10 && i <= 14 {
+			v = "500"
+		}
+		if i == 36 {
+			v = "100"
+		}
+		gti = append(gti, v)
+	}
+	b, _ := json.Marshal(times)
+	body := fmt.Sprintf(`{"hourly":{"time":%s,"global_tilted_irradiance":[%s]}}`, b, strings.Join(gti, ","))
+	days, err := parseSolar([]byte(body))
+	if err != nil || len(days) != 2 {
+		t.Fatalf("%v %+v", err, days)
+	}
+	// 5 h × 500 W/m² = 2.5 kWh/m² × 0.8 = 2.0 kWh per kWp
+	if days[0].Date != "2026-09-29" || days[0].KWhPerKW != 2 || days[1].KWhPerKW != 0.08 {
+		t.Errorf("yield %+v", days)
+	}
+	if from := time.Unix(days[0].BestFrom, 0).In(amsterdam); from.Hour() != 9 || days[0].BestTo-days[0].BestFrom != 3*3600 {
+		t.Errorf("best window %v-%v", from, time.Unix(days[0].BestTo, 0).In(amsterdam))
+	}
+	if _, err := parseSolar([]byte(`{"hourly":{}}`)); err == nil {
+		t.Error("empty must fail")
+	}
+	a := newTestApp(t, validConfig)
+	h := a.routes("/")
+	for _, q := range []string{"tilt=91", "tilt=x", "az=200", "lat=100&lon=5"} {
+		if get(h, "GET", "/api/solar?"+q, nil).Code != 400 {
+			t.Errorf("%s must be rejected", q)
+		}
+	}
+	if _, err := parseConfig([]byte(validConfig + "solar: { kwp: -1 }\n")); err == nil {
+		t.Error("negative kwp must be rejected")
 	}
 }

@@ -209,7 +209,8 @@ type WxForecast struct {
 	Current WxCurrent `json:"current"`
 	Hourly  []WxHour  `json:"hourly"`
 	Daily   []WxDay   `json:"daily"`
-	Thunder WxThunder `json:"thunder"` // next 24 hours
+	Thunder WxThunder `json:"thunder"`      // next 24 hours
+	UV      *WxUV     `json:"uv,omitempty"` // highest UV in the next 24 hours
 }
 
 type RainPoint struct {
@@ -377,6 +378,7 @@ type omResp struct {
 		IsDay  []int      `json:"is_day"`
 		LPI    []*float64 `json:"lightning_potential"`
 		CAPE   []*float64 `json:"cape"`
+		UV     []*float64 `json:"uv_index"`
 	} `json:"hourly"`
 	Daily struct {
 		Time    []int64    `json:"time"`
@@ -395,7 +397,7 @@ type omResp struct {
 
 const openMeteoURL = "https://api.open-meteo.com/v1/forecast?current=temperature_2m,apparent_temperature,relative_humidity_2m," +
 	"precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,is_day" +
-	"&hourly=temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,is_day,lightning_potential,cape" +
+	"&hourly=temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,is_day,lightning_potential,cape,uv_index" +
 	"&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max," +
 	"wind_speed_10m_max,wind_direction_10m_dominant,sunrise,sunset,uv_index_max" +
 	"&timezone=auto&timeformat=unixtime&forecast_days=7&forecast_hours=24&wind_speed_unit=kmh"
@@ -450,6 +452,7 @@ func convertForecast(om *omResp) (WxForecast, error) {
 		f.Hourly = append(f.Hourly, h)
 	}
 	f.Thunder = computeThunder(hh.Time, hh.LPI, hh.CAPE, hh.Code)
+	f.UV = computeUV(hh.Time, hh.UV)
 	dd := om.Daily
 	for i, t := range dd.Time {
 		d := WxDay{Date: t, Code: at(dd.Code, i), Min: round1(at(dd.Min, i)), Max: round1(at(dd.Max, i)),
@@ -1724,6 +1727,11 @@ func (a *App) threatJobs(cfg *Config) []Job {
 		jobs = append(jobs, Job{Key: "burgernet:amber", Sig: cfg.Amber.URL, Interval: cfg.Amber.Interval.D(),
 			Run: a.fetchJob("burgernet:amber", func() string { return a.config().Amber.URL }, "application/json", nil,
 				func(b []byte) (any, error) { return parseAmber(b) }, nil)})
+	}
+	if cfg.Radiation.Enabled {
+		jobs = append(jobs, Job{Key: radKey, Sig: cfg.Radiation.URL, Interval: cfg.Radiation.Interval.D(),
+			Run: a.fetchJob(radKey, func() string { return radURL(a.config().Radiation.URL) }, "application/json", nil,
+				func(b []byte) (any, error) { return parseRadiation(b) }, nil)})
 	}
 	if cfg.Satellite.Enabled {
 		jobs = append(jobs, Job{Key: satKey, Sig: cfg.Satellite.URL + " " + cfg.Satellite.Layer, Interval: cfg.Satellite.Interval.D(), Run: a.satelliteJob})

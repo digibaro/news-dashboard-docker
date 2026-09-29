@@ -37,7 +37,7 @@ import (
 // visit, so after a restart without snapshot notifications resume once a device
 // opens the dashboard again.
 
-var pushTopics = []string{"amber", "nctv", "knmi", "nlalert", "quakes", "breaking", "waste"}
+var pushTopics = []string{"amber", "nctv", "knmi", "nlalert", "radiation", "quakes", "breaking", "waste"}
 
 // pushHosts are the push services of the major browsers; subscriptions to any
 // other host are refused, so the server never posts to arbitrary URLs.
@@ -389,6 +389,21 @@ func (a *App) runPushWatch(ctx context.Context) error {
 				return al.National || (s.Lat != nil && s.Lon != nil && al.covers(*s.Lat, *s.Lon))
 			}})
 	}
+	// Radiation: one message per episode of raised levels (several stations above the alert level).
+	if s, ok := a.radiationSummary(cfg.Weather.Location.Lat, cfg.Weather.Location.Lon); ok && s.Stations > 0 {
+		if !s.Raised {
+			delete(st.Alerts, "radiation:raised")
+		} else if _, seen := st.Alerts["radiation:raised"]; !seen {
+			st.Alerts["radiation:raised"] = now
+			if !first {
+				v := strings.Replace(fmt.Sprintf("%.2f", s.Max), ".", ",", 1)
+				msgs = append(msgs, pushMsg{Topic: "radiation", Tag: "radiation", Urgent: true, TTL: 6 * 3600, URL: "#panel-air",
+					Title: [2]string{"Verhoogde straling gemeten", "Raised radiation measured"},
+					Body: [2]string{fmt.Sprintf("%d meetposten van het RIVM meten %s µSv/u of meer (hoogste %s µSv/u in %s). Volg het nieuws en NL-Alert.", s.Above, strings.Replace(fmt.Sprintf("%.2f", s.Level), ".", ",", 1), v, s.MaxName),
+						fmt.Sprintf("%d RIVM stations measure %.2f µSv/h or more (highest %.2f µSv/h at %s). Follow the news and NL-Alert.", s.Above, s.Level, s.Max, s.MaxName)}})
+			}
+		}
+	}
 	for _, q := range asSlice[Quake](a.threats.get("knmi:quakes").Data) {
 		if _, seen := st.Quakes[q.ID]; seen {
 			continue
@@ -667,7 +682,7 @@ func (a *App) pushTopicsAvailable(cfg *Config) []string {
 	var out []string
 	for _, t := range pushTopics {
 		ok := map[string]bool{"amber": cfg.Amber.Enabled, "nctv": cfg.Alerts.NCTV.Enabled, "knmi": cfg.Alerts.KNMI, "nlalert": cfg.NLAlert.Enabled,
-			"quakes": cfg.Quakes.Enabled, "breaking": cfg.Push.BreakingSources >= 2, "waste": cfg.Waste.Enabled}[t]
+			"quakes": cfg.Quakes.Enabled, "breaking": cfg.Push.BreakingSources >= 2, "waste": cfg.Waste.Enabled, "radiation": cfg.Radiation.Enabled}[t]
 		if ok {
 			out = append(out, t)
 		}

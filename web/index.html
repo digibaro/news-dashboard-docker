@@ -494,6 +494,7 @@ table.tt { width: 100%; border-collapse: collapse; font-size: 12px; }
 .ab .short { display: none; }
 .ab > span:last-child { position: relative; min-width: 0; overflow: hidden; text-overflow: ellipsis; } /* relative: keeps .sr-only labels inside the clip */
 .ab { max-width: 100%; }
+.ab[hidden] { display: none; } /* .ab sets display, which would otherwise override the hidden attribute */
 /* phones: one badge per line from the first paint, so loading never changes the bar's height */
 @media (max-width: 699px) { .alertbar-in { flex-direction: column; gap: 2px; } .ab .long { display: none; } .ab .short { display: inline; } }
 .lvl-nctv1, .lvl-nctv2 { --lvl: var(--sev-low); }
@@ -502,6 +503,7 @@ table.tt { width: 100%; border-collapse: collapse; font-size: 12px; }
 .lvl-nctv5 { --lvl: var(--sev-crit); }
 .lvl-none { --lvl: var(--sev-low); }
 .lvl-nl-on { --lvl: var(--sev-crit); }
+.lvl-rad { --lvl: var(--sev-crit); }
 .ab .pc { margin-right: 9px; }
 .ab .pc:last-child { margin-right: 0; }
 .ab .pc b { font-weight: 650; color: var(--text); }
@@ -887,7 +889,15 @@ textarea.json {
 .sprow .m { color: var(--text-3); font-size: 12px; }
 .tag.live { color: var(--sev-crit); }
 .spev .plist { margin: 2px 0 6px; }
-.wxthunder { margin: 6px 0 0; font-size: 13px; color: var(--text-2); }
+.wxthunder, .wxuv { margin: 6px 0 0; font-size: 13px; color: var(--text-2); }
+.wxuv.lv2, .wxuv.lv3, .wxuv.lv4 { color: var(--sev-high); font-weight: 600; }
+.radl { margin: 8px 0 0; font-size: 13px; }
+.radl.up { color: var(--sev-crit); font-weight: 600; }
+.radl small { display: block; font-size: 12px; color: var(--text-3); font-weight: 400; }
+.solar { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); }
+.solar h3 { margin: 0 0 4px; font-size: 12px; font-weight: 650; color: var(--text-2); text-transform: uppercase; letter-spacing: .03em; }
+.solar h3 .sub { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.fld { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--text-2); }
 .wxthunder.lv2, .wxthunder.lv3 { color: var(--sev-crit); font-weight: 600; }
 .insk { height: 190px; } .skysk { height: 260px; } .spsk { height: 330px; }
 .meta .sh { margin-left: auto; }
@@ -982,6 +992,7 @@ textarea.json {
     <a class="ab" id="ab-knmi" href="https://www.knmi.nl/nederland-nu/weer/waarschuwingen" target="_blank" rel="noopener noreferrer"><span class="d" aria-hidden="true"></span><span>KNMI: …</span></a>
     <a class="ab" id="ab-p2k" href="#panel-alarms"><span><span class="long">Alarmeringen laatste uur: </span><span class="short">Alarmeringen (uur): </span>…</span></a>
     <a class="ab" id="ab-nl" href="#panel-nlalert"><span class="d" aria-hidden="true"></span><span>NL-Alert: …</span></a>
+    <a class="ab" id="ab-rad" href="#panel-air" hidden><span class="d lvl-rad" aria-hidden="true"></span><span>Straling: <strong>verhoogd</strong></span></a>
     <a class="ab" id="ab-nctv" href="https://www.nctv.nl/onderwerpen/d/dtn" target="_blank" rel="noopener noreferrer"><span class="d" aria-hidden="true"></span><span><span class="long">Dreigingsniveau terrorisme: </span><span class="short">Terreurdreiging: </span>…</span></a>
   </div>
 </div>
@@ -1094,6 +1105,13 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.18.0</h3>
+    <ul>
+      <li>Weer: de UV-index van vandaag (of morgen) met het tijdstip en een advies vanaf UV 3.</li>
+      <li>Luchtkwaliteit: de straling bij het dichtstbijzijnde meetpunt van het RIVM. Bij verhoogde straling op meerdere meetposten verschijnt een melding bovenaan, ook als pushmelding.</li>
+      <li>Energieprijzen: de verwachte opbrengst van je zonnepanelen vandaag en morgen. Vul je panelen in bij Instellingen → Zonnepanelen.</li>
+      <li>Bovenste balk: NL-Alert staat er alleen nog als er een actief bericht is, en KNMI alleen als er een weerwaarschuwing is.</li>
+    </ul>
     <h3>Versie 1.17.1</h3>
     <ul>
       <li>Treinstoringen: “Storingen op het spoor” en “Werkzaamheden” staan weer onder elkaar in plaats van in twee kolommen.</li>
@@ -1230,6 +1248,13 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.18.0</h3>
+    <ul>
+      <li>Weather: today's (or tomorrow's) UV index with its time and advice from UV 3.</li>
+      <li>Air quality: the radiation at the nearest RIVM station. When several stations measure raised levels, a notice appears at the top, also as a push notification.</li>
+      <li>Energy prices: the expected yield of your solar panels today and tomorrow. Enter your panels under Settings → Solar panels.</li>
+      <li>Top bar: NL-Alert only appears while an alert is active, and KNMI only while there is a weather warning.</li>
+    </ul>
     <h3>Version 1.17.1</h3>
     <ul>
       <li>Train disruptions: “Disruptions” and “Engineering works” are shown below each other again instead of in two columns.</li>
@@ -1466,6 +1491,21 @@ textarea.json {
       <p class="hint">Kies welke sporten je in de sportagenda ziet.</p>
       <div id="sports-opts" role="group" aria-labelledby="set-sports-h"></div>
     </section>
+    <section aria-labelledby="set-solar-h" id="set-solar" hidden>
+      <h3 id="set-solar-h">Zonnepanelen</h3>
+      <p class="hint">Voor de verwachte zonnestroom in Energieprijzen, op je weerlocatie. Alleen in je eigen browser bewaard.</p>
+      <div class="row" style="margin-top:0;align-items:flex-end">
+        <label class="fld">Vermogen (kWp)<input class="field" style="width:6.5rem" id="solar-kwp" type="text" inputmode="decimal" maxlength="7" autocomplete="off" spellcheck="false"></label>
+        <label class="fld">Richting<select class="field" id="solar-az">
+          <option value="0">Zuid</option><option value="-45">Zuidoost</option><option value="45">Zuidwest</option><option value="-90">Oost</option>
+          <option value="90">West</option><option value="-135">Noordoost</option><option value="135">Noordwest</option><option value="180">Noord</option>
+        </select></label>
+        <label class="fld">Hellingshoek (°)<input class="field" style="width:5.5rem" id="solar-tilt" type="number" min="0" max="90" step="5" inputmode="numeric"></label>
+        <button class="btn" type="button" id="solar-save">Opslaan</button>
+        <button class="btn" type="button" id="solar-clear">Wissen</button>
+      </div>
+      <p class="msg" id="solar-msg" role="status"></p>
+    </section>
     <section aria-labelledby="set-view-h">
       <h3 id="set-view-h">Weergave</h3>
       <div class="opt"><span id="lbl-mode">Modus<small>Overzicht: het belangrijkste van vandaag op één scherm. Kiosk: voor een wandscherm; groter en schuift vanzelf door. Ook via het adres: ?mode=digest of ?mode=kiosk.</small></span>
@@ -1582,7 +1622,7 @@ const MIN = 60e3;
 const DEFAULTS = {
   v: 2, theme: 'auto', sources: null, known: [], pageSize: 60, summaries: true,
   density: 'compact', category: 'all', weather: null, threatTab: 'ips', advFilter: 'all',
-  lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, trending: true, pushTopics: null, waste: null, sports: null, watch: [], mute: [],
+  lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, trending: true, pushTopics: null, waste: null, sports: null, solar: null, watch: [], mute: [],
   panels: { order: PANEL_IDS.slice(), collapsed: {}, hidden: {} },
 };
 
@@ -1813,7 +1853,7 @@ const EN = {
   'gevoel {feels} · wind {dir} {bft} ({name}) · {rh}% vocht': 'feels like {feels} · wind {dir} {bft} ({name}) · {rh}% humidity',
   'Neerslag komende 2 uur: {s}': 'Rain in the next 2 hours: {s}', '{time}: {mm} mm/u': '{time}: {mm} mm/h', '{time}: {desc}, {temp}': '{time}: {desc}, {temp}',
   '{desc}, minimum ': '{desc}, minimum ', 'maximum ': 'maximum ', 'kans op neerslag {p}%': 'chance of rain {p}%',
-  'Zon op {rise} · onder {set} · UV-index {uv}': 'Sunrise {rise} · sunset {set} · UV index {uv}',
+  'Zon op {rise} · onder {set}': 'Sunrise {rise} · sunset {set}',
   'let op: gegevens van {when}, de weerdienst is tijdelijk onbereikbaar': 'note: data from {when}, the weather service is temporarily unreachable',
   ' · bijgewerkt {t}': ' · updated {t}', 'Weer in {place}: {temp}, {desc}': 'Weather in {place}: {temp}, {desc}', ', code {lvl} voor {type}': ', code {lvl} for {type}',
   'Nu: {name}{region} ({lat}, {lon}).': 'Now: {name}{region} ({lat}, {lon}).', 'Nu: de standaardlocatie van deze server{name}.': 'Now: the default location of this server{name}.',
@@ -2463,6 +2503,38 @@ const EN = {
   "Wikipedia is nu niet bereikbaar ({err}).": "Wikipedia is unreachable right now ({err}).",
   "Geen Wikipedia-artikel gevonden voor “{term}”.": "No Wikipedia article found for “{term}”.",
   "Zoeken op Wikipedia": "Search Wikipedia",
+  // 1.18: UV, straling, zonnestroom
+  "laag": "low", "zeer hoog": "very high", "extreem": "extreme",
+  "UV vandaag max {v} ({level}) rond {t}": "UV today up to {v} ({level}) around {t}",
+  "UV morgen max {v} ({level}) rond {t}": "UV tomorrow up to {v} ({level}) around {t}",
+  "smeer je in als je langer buiten bent": "use sunscreen if you are outside for long",
+  "smeer je in en zoek tussen 12 en 15 uur de schaduw op": "use sunscreen and stay in the shade between 12:00 and 15:00",
+  "vermijd de zon rond het middaguur en smeer je goed in": "avoid the midday sun and use plenty of sunscreen",
+  "blijf rond het middaguur uit de zon": "stay out of the midday sun",
+  "Straling: {v} µSv/u · {state}": "Radiation: {v} µSv/h · {state}",
+  "verhoogd": "raised", "normaal": "normal",
+  " · verhoogd op {n} meetposten elders": " · raised at {n} stations elsewhere",
+  "Meetpost ": "Station ",
+  " ({km} km) om {t} · in Nederland {min}–{max} µSv/u · bron: ": " ({km} km) at {t} · in the Netherlands {min}–{max} µSv/h · source: ",
+  "{n} meetposten van het RIVM meten {level} µSv/u of meer; hoogste {max} µSv/u in {name}.": "{n} RIVM stations measure {level} µSv/h or more; highest {max} µSv/h at {name}.",
+  "Straling: ": "Radiation: ",
+  "RIVM via EURDEP · straling": "RIVM via EURDEP · radiation",
+  "Verhoogde straling op meerdere RIVM-meetposten": "Raised radiation at several RIVM stations",
+  "Zonnestroom": "Solar power",
+  "({kwp} kWp, {dir}, {tilt}°)": "({kwp} kWp, {dir}, {tilt}°)",
+  "zuid": "south", "zuidoost": "south-east", "zuidwest": "south-west", "oost": "east", "west": "west", "noordoost": "north-east", "noordwest": "north-west", "noord": "north",
+  "Zonnepanelen wijzigen": "Change solar panels",
+  "Vandaag ~": "Today ~", " · morgen ~": " · tomorrow ~",
+  "Meeste opbrengst vandaag {span}": "Most yield today {span}",
+  "Meeste opbrengst morgen {span}": "Most yield tomorrow {span}",
+  "Schatting uit de voorspelde zonnestraling, zonder schaduw · bron: ": "Estimate from the forecast sunlight, without shade · source: ",
+  "Vul een vermogen tussen 0,1 en 1000 kWp en een hellingshoek van 0 tot 90 graden in.": "Enter a power between 0.1 and 1000 kWp and a tilt of 0 to 90 degrees.",
+  "Opgeslagen: de verwachting staat in Energieprijzen.": "Saved: the forecast is in Energy prices.",
+  "Zonnepanelen gewist.": "Solar panels cleared.",
+  "Zonnepanelen": "Solar panels",
+  "Voor de verwachte zonnestroom in Energieprijzen, op je weerlocatie. Alleen in je eigen browser bewaard.": "For the expected solar power in Energy prices, at your weather location. Stored only in your own browser.",
+  "Vermogen (kWp)": "Power (kWp)", "Richting": "Direction", "Hellingshoek (°)": "Tilt (°)", "Wissen": "Clear",
+  "Zuid": "South", "Zuidoost": "South-east", "Zuidwest": "South-west", "Oost": "East", "West": "West", "Noordoost": "North-east", "Noordwest": "North-west", "Noord": "North",
 };
 
 // Sentences the server composes from parts (rain summary, directions, source names).
@@ -2612,6 +2684,10 @@ function sanitize(p) {
     if (/^[1-9]\d{3}[A-Z]{2}$/.test(pc) && Number.isInteger(nr) && nr >= 1 && nr <= 99999 && /^[A-Za-z0-9-]*$/.test(sfx)) d.waste = { postcode: pc, number: nr, suffix: sfx, provider: prov };
   }
   if (Array.isArray(p.sports)) d.sports = p.sports.filter(x => ['f1', 'mtb', 'athletics'].includes(x));
+  if (p.solar && typeof p.solar === 'object') {
+    const kwp = Number(p.solar.kwp), tilt = Number(p.solar.tilt), az = Number(p.solar.az);
+    if (kwp > 0 && kwp <= 1000 && Number.isInteger(tilt) && tilt >= 0 && tilt <= 90 && [0, -45, 45, -90, 90, -135, 135, 180].includes(az)) d.solar = { kwp: Math.round(kwp * 10) / 10, tilt, az };
+  }
   if (Array.isArray(p.pushTopics)) d.pushTopics = p.pushTopics.filter(x => typeof x === 'string' && /^[a-z]{2,12}$/.test(x)).slice(0, 10);
   const terms = a => Array.isArray(a) ? [...new Set(a.filter(t => typeof t === 'string').map(t => t.trim().slice(0, 60)).filter(Boolean))].slice(0, 50) : [];
   d.watch = terms(p.watch);
@@ -3301,6 +3377,7 @@ function renderWeather(body, extra) {
     out.push(h('div', { class: 'wxsec' }, h('h3', { text: 'Neerslag komende 2 uur' }), h('p', { class: 'pnote', text: d.errors.rain + '; er wordt automatisch opnieuw geprobeerd.' })));
   }
   if (d.thunder) out.push(thunderLine(d.thunder));
+  if (d.uv) out.push(uvLine(d.uv));
   // Next 24 hours, every 2 hours
   const hours = d.hourly.filter((_, i) => i % 2 === 0);
   out.push(h('div', { class: 'wxsec' }, h('h3', { id: 'wx-h24', text: 'Komende 24 uur' }),
@@ -3326,7 +3403,7 @@ function renderWeather(body, extra) {
   }))));
   const t0 = d.daily[0];
   if (t0?.sunrise) {
-    out.push(h('p', { class: 'sunline', text: t('Zon op {rise} · onder {set} · UV-index {uv}', { rise: fmt.time.format(new Date(t0.sunrise * 1000)), set: fmt.time.format(new Date(t0.sunset * 1000)), uv: Math.round(t0.uv) }) }));
+    out.push(h('p', { class: 'sunline', text: t('Zon op {rise} · onder {set}', { rise: fmt.time.format(new Date(t0.sunrise * 1000)), set: fmt.time.format(new Date(t0.sunset * 1000)) }) }));
   }
   const upd = new Date(d.updated);
   const notes = [];
@@ -3365,8 +3442,8 @@ function setWeatherLocation(loc, msg) {
   panelData.weather = null;
   renderPanel('weather');
   loadWeather();
-  if (!prefs.air) { loadAir(); loadPollen(); loadInsects(); } // they follow the weather location
-  panelData.sky = null; renderPanel('sky'); loadSky(); loadAmber();
+  if (!prefs.air) { loadAir(); loadPollen(); loadInsects(); loadRadiation(); } // they follow the weather location
+  panelData.sky = null; renderPanel('sky'); loadSky(); loadAmber(); loadSolar();
   panelData.nlalert = null; renderPanel('nlalert'); loadNLAlert();
   pushSub().then(sub => sub && Notification.permission === 'granted' && pushRegister(sub)).catch(() => {}); // NL-Alert area follows the place
 }
@@ -3692,7 +3769,7 @@ async function loadAlerts() {
   else {
     const k = d.knmi?.status;
     if (!k) set('#ab-knmi', '', ['KNMI: ', 'waarschuwingen onbekend'], 'MeteoAlarm is niet bereikbaar.', d.knmi?.url);
-    else if (k.level === 'none') set('#ab-knmi', 'lvl-none', ['KNMI: ', h('strong', { text: 'geen waarschuwingen' })], 'Geen weerwaarschuwingen voor Nederland.', d.knmi.url);
+    else if (k.level === 'none') $('#ab-knmi').hidden = true; // no warnings: nothing in the top bar (the Weer panel shows warnings when there are any)
     else {
       const when = k.active ? '' : k.onset ? t(' vanaf {t}', { t: fmt.warn.format(new Date(k.onset)) }) : t(' (aangekondigd)');
       set('#ab-knmi', 'lvl-' + k.level,
@@ -4007,9 +4084,65 @@ function renderEnergy(body) {
     out.push(h('p', { class: 'eline', text: t('Laagste {lo} om {lt} · hoogste {hi} om {ht}', { lo: eur(lo.p), lt: fmt.time.format(lo.date), hi: eur(hi.p), ht: fmt.time.format(hi.date) }) }));
   }
   if (!days.tomorrow.length) out.push(h('p', { class: 'eline', text: t('De prijzen voor morgen verschijnen rond 13:00.') }));
+  const sol = solarSection();
+  if (sol) out.push(sol);
   out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://www.energyzero.nl/', 'EnergyZero'), ' · ',
     d.all_in ? t('incl. btw en de in config.yaml ingestelde toeslagen') : t('marktprijs (day-ahead) incl. btw, zonder energiebelasting en opslag van je leverancier')));
   body.replaceChildren(...out);
+}
+
+// ---------------------------------------------------------------- zonnestroom (Open-Meteo, in Energieprijzen)
+const SOLAR_DIR = { 0: 'zuid', '-45': 'zuidoost', 45: 'zuidwest', '-90': 'oost', 90: 'west', '-135': 'noordoost', 135: 'noordwest', 180: 'noord' };
+const solarConf = () => prefs.solar || (catalog?.solar?.kwp > 0 ? { kwp: catalog.solar.kwp, tilt: catalog.solar.tilt, az: catalog.solar.az } : null);
+let solarSeq = 0;
+async function loadSolar() {
+  const c = solarConf();
+  if (!catalog?.solar?.enabled || !c) { panelData.solar = null; renderPanel('energy'); return; }
+  const seq = ++solarSeq, l = prefs.weather;
+  try {
+    const d = await api(`api/solar?tilt=${c.tilt}&az=${c.az}` + (l ? `&lat=${l.lat}&lon=${l.lon}` : ''));
+    if (seq !== solarSeq) return;
+    panelData.solar = { data: d };
+  } catch (e) { if (seq !== solarSeq) return; panelData.solar = { error: e }; }
+  renderPanel('energy');
+}
+function solarSection() {
+  const c = solarConf(), st = panelData.solar;
+  if (!catalog?.solar?.enabled || !c || !st) return null;
+  const kwh = v => (Math.round(v * c.kwp * 10) / 10).toLocaleString(locale(), { maximumFractionDigits: 1 });
+  const head = h('h3', null, t('Zonnestroom'), h('span', { class: 'sub', text: ' ' + t('({kwp} kWp, {dir}, {tilt}°)', { kwp: c.kwp.toLocaleString(locale()), dir: t(SOLAR_DIR[c.az]), tilt: c.tilt }) + ' · ' }),
+    h('button', { class: 'linkbtn', type: 'button', onclick: () => openSettings('solar'), 'aria-label': t('Zonnepanelen wijzigen'), text: t('wijzigen') }));
+  const days = st.data?.days;
+  if (!days?.length) return h('div', { class: 'solar' }, head, h('p', { class: 'pnote', text: t('De verwachting kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.data?.error || st.error?.message) }) }));
+  const now = Date.now(), [d0, d1] = days;
+  const next = [d0, d1].find(d => d && d.best_to * 1000 > now && d.kwh_per_kw > 0);
+  return h('div', { class: 'solar' }, head,
+    h('p', { class: 'eline' }, t('Vandaag ~'), h('b', { text: kwh(d0.kwh_per_kw) + ' kWh' }), d1 ? [t(' · morgen ~'), h('b', { text: kwh(d1.kwh_per_kw) + ' kWh' })] : null),
+    next ? h('p', { class: 'eline', text: t(next === d0 ? 'Meeste opbrengst vandaag {span}' : 'Meeste opbrengst morgen {span}', { span: hourSpan(new Date(next.best_from * 1000), 3) }) }) : null,
+    h('p', { class: 'pfoot' }, t('Schatting uit de voorspelde zonnestraling, zonder schaduw · bron: '), extLink('https://open-meteo.com/', 'Open-Meteo')));
+}
+function wireSolarSettings() {
+  const msg = $('#solar-msg');
+  $('#solar-save').addEventListener('click', () => {
+    const kwp = Number(String($('#solar-kwp').value).trim().replace(',', '.')), tilt = Number($('#solar-tilt').value), az = Number($('#solar-az').value);
+    const p = sanitize({ solar: { kwp, tilt, az } }).solar;
+    msg.classList.toggle('err', !p);
+    if (!p) { msg.textContent = t('Vul een vermogen tussen 0,1 en 1000 kWp en een hellingshoek van 0 tot 90 graden in.'); return; }
+    prefs.solar = p; savePrefs();
+    msg.textContent = t('Opgeslagen: de verwachting staat in Energieprijzen.');
+    loadSolar();
+  });
+  $('#solar-clear').addEventListener('click', () => {
+    prefs.solar = null; savePrefs(); fillSolarSettings();
+    msg.classList.remove('err'); msg.textContent = t('Zonnepanelen gewist.');
+    loadSolar();
+  });
+}
+function fillSolarSettings() {
+  const c = solarConf();
+  $('#solar-kwp').value = c ? c.kwp.toLocaleString(locale()) : '';
+  $('#solar-tilt').value = String(c?.tilt ?? catalog?.solar?.tilt ?? 35);
+  $('#solar-az').value = String(c?.az ?? 0);
 }
 
 // ---------------------------------------------------------------- luchtkwaliteit (Luchtmeetnet)
@@ -4050,9 +4183,40 @@ function renderAir(body, extra) {
     h('li', null, h('b', { text: AIR_NAMES[c.formula] || c.formula }), ' ', c.value.toLocaleString(locale()), ' ', h('span', { text: 'µg/m³' })))));
   if (s.distance_km > 25) out.push(h('p', { class: 'pnote', text: t('Het dichtstbijzijnde meetstation ligt op {d} km; de waarde kan afwijken van jouw plek.', { d: Math.round(s.distance_km) }) }));
   out.push(h('p', { class: 'asc', text: t('Luchtkwaliteitsindex 1–11: 1–3 goed · 4–6 matig · 7–8 onvoldoende · 9–10 slecht · 11 zeer slecht') }));
+  const rad = radLine();
+  if (rad) out.push(rad);
   out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink(r.source?.url || 'https://www.luchtmeetnet.nl/', 'Luchtmeetnet'), t(' (RIVM, GGD’s, DCMR en provincies) · gemeten {t}', { t: fmt.time.format(new Date(r.lki.at)) })));
   body.replaceChildren(...out);
 }
+// ---------------------------------------------------------------- straling (RIVM via EURDEP)
+let radSeq = 0;
+async function loadRadiation() {
+  if (!catalog?.radiation) return;
+  const seq = ++radSeq, l = airLoc();
+  try {
+    const d = await api('api/radiation' + (l ? `?lat=${l.lat}&lon=${l.lon}` : ''));
+    if (seq !== radSeq) return;
+    panelData.radiation = { data: d };
+  } catch (e) { if (seq !== radSeq) return; panelData.radiation = { ...(panelData.radiation || {}), error: e }; }
+  renderPanel('air'); renderRadBadge();
+}
+const usv = v => v.toLocaleString(locale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function radLine() {
+  const s = panelData.radiation?.data?.data, n = s?.nearest;
+  if (!n) return null;
+  const up = n.value >= s.level;
+  return h('p', { class: 'radl' + (up || s.raised ? ' up' : '') }, h('span', { 'aria-hidden': 'true', text: '☢ ' }),
+    t('Straling: {v} µSv/u · {state}', { v: usv(n.value), state: up ? t('verhoogd') : t('normaal') }),
+    s.raised && !up ? t(' · verhoogd op {n} meetposten elders', { n: s.above }) : '',
+    h('small', null, t('Meetpost '), h('span', { translate: 'no', text: n.name }), t(' ({km} km) om {t} · in Nederland {min}–{max} µSv/u · bron: ', { km: s.km, t: fmt.time.format(new Date(n.time)), min: usv(s.min), max: usv(s.max) }),
+      extLink('https://www.rivm.nl/nationaal-meetnet-radioactiviteit', 'RIVM'), ' via ', extLink('https://remon.jrc.ec.europa.eu/', 'EURDEP')));
+}
+function renderRadBadge() {
+  const a = $('#ab-rad'), s = panelData.radiation?.data?.data;
+  a.hidden = !s?.raised;
+  if (s?.raised) a.title = t('{n} meetposten van het RIVM meten {level} µSv/u of meer; hoogste {max} µSv/u in {name}.', { n: s.above, level: usv(s.level), max: usv(s.max), name: s.max_name });
+}
+
 function updateAirHint() {
   const el = $('#air-now'); if (!el) return;
   el.textContent = prefs.air ? t('Nu: {name}.', { name: tr(prefs.air.name) }) : t('Nu: zelfde als je weerlocatie ({name}).', { name: airLocName() });
@@ -4065,6 +4229,7 @@ function setAirLocation(loc, msg) {
   $('#air-msg').classList.remove('err'); $('#air-msg').textContent = msg;
   panelData.air = null; renderPanel('air'); loadAir();
   panelData.pollen = null; renderPanel('pollen'); loadPollen();
+  loadRadiation();
 }
 function wireAirSettings() {
   let timer, seq = 0;
@@ -4539,7 +4704,7 @@ function renderNLAlert(body) {
     t(' · "jouw omgeving": je weerlocatie ({name}) ligt in het gebied van het bericht', { name: wxLocName() })));
   body.replaceChildren(...out);
 }
-// Top bar: "NL-Alert: in <plaats>" for an active alert, else "NL-Alert: geen".
+// Top bar: "NL-Alert: in <plaats>" for an active alert; hidden when there is none (since 1.18.0).
 // The place is the text after the last " in " of the first sentence; after a comma
 // only the last part ("Bonksel, Asten" -> Asten); longer than 20 characters: the
 // last word, usually the town ("Kalverdijkje Leeuwarden" -> Leeuwarden).
@@ -4555,14 +4720,14 @@ function nlPlace(text) {
 function renderNLBadge() {
   const a = $('#ab-nl');
   if (!catalog?.nlalert) { a.hidden = true; return; }
-  a.hidden = false;
   const r = panelData.nlalert?.data;
   const now = Date.now();
   const act = (r?.alerts || []).filter(x => !x.withdrawn && new Date(x.start) <= now && (!x.stop || new Date(x.stop) > now))
     .sort((x, y) => (y.near === true) - (x.near === true)); // the alert for your own area first
+  a.hidden = !!r?.alerts && !act.length; // no active NL-Alert: nothing in the top bar (the panel still says so)
+  if (a.hidden) return;
   let parts, lvl = '', title = '';
   if (!r?.alerts) parts = ['NL-Alert: ', t('onbekend')];
-  else if (!act.length) { parts = ['NL-Alert: ', h('strong', { text: t('geen') })]; lvl = 'lvl-none'; title = t('Geen actieve NL-Alerts.'); }
   else {
     const place = nlPlace(act[0].text);
     parts = ['NL-Alert: ', place ? [t('in') + ' ', h('strong', { translate: 'no', text: place })] : h('strong', { text: t('actief') }),
@@ -4902,6 +5067,7 @@ const PUSH_LABELS = {
   knmi: () => t('KNMI code oranje of rood'),
   amber: () => t('AMBER Alert, en Vermist Kind Alert in jouw omgeving'),
   nlalert: () => t('NL-Alert in jouw omgeving (je weerlocatie)'),
+  radiation: () => t('Verhoogde straling op meerdere RIVM-meetposten'),
   quakes: () => t('Aardbeving vanaf M{m}', { m: (pushInfo?.quake_min_mag ?? 2.5).toLocaleString(locale()) }),
   breaking: () => t('Groot nieuws: {n} of meer bronnen binnen een uur', { n: pushInfo?.breaking_sources ?? 6 }),
   waste: () => t('Afval: de avond vóór de ophaaldag ({h}:00), voor je adres', { h: pushInfo?.waste_hour ?? 19 }),
@@ -4990,6 +5156,14 @@ async function pushTest() {
 
 // ---------------------------------------------------------------- onweer (weather panel)
 const THUNDER_NL = ['geen kans', 'kleine kans', 'matige kans', 'grote kans'];
+// UV: the highest value in the next 24 hours (WHO categories); advice from 3 (matig).
+const UV_NL = ['laag', 'matig', 'hoog', 'zeer hoog', 'extreem'];
+const UV_ADVICE = ['', 'smeer je in als je langer buiten bent', 'smeer je in en zoek tussen 12 en 15 uur de schaduw op', 'vermijd de zon rond het middaguur en smeer je goed in', 'blijf rond het middaguur uit de zon'];
+function uvLine(uv) {
+  const pk = new Date(uv.peak * 1000), today = dayKey(pk) === dayKey(new Date());
+  const txt = t(today ? 'UV vandaag max {v} ({level}) rond {t}' : 'UV morgen max {v} ({level}) rond {t}', { v: Math.round(uv.max), level: t(UV_NL[uv.level]), t: fmt.time.format(pk) });
+  return h('p', { class: 'wxuv lv' + uv.level }, h('span', { 'aria-hidden': 'true', text: '☀ ' }), uv.level ? txt + ' · ' + t(UV_ADVICE[uv.level]) : txt);
+}
 function thunderLine(th) {
   const when = th.level && th.peak ? t(', vooral rond {t}', { t: fmt.time.format(new Date(th.peak * 1000)) }) : '';
   return h('p', { class: 'wxthunder lv' + th.level }, h('span', { 'aria-hidden': 'true', text: '⚡ ' }),
@@ -5321,7 +5495,7 @@ function wireMobileViews() {
 function refreshView(v) {
   const panels = () => [loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(), loadBreaches(), loadOutages(), loadHealthPanel(),
     loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(),
-    loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite()];
+    loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar()];
   const jobs = v === 'news' ? [loadNews({ replace: true }), loadTrending()] : v === 'panels' ? panels() : [loadNews({ replace: true }), ...panels()];
   return Promise.allSettled(jobs);
 }
@@ -5605,6 +5779,8 @@ function openSettings(target) {
   $('#set-air').hidden = !catalog.air;
   $('#set-waste').hidden = !catalog.waste;
   $('#set-sports').hidden = !catalog.sports?.enabled;
+  $('#set-solar').hidden = !catalog.solar?.enabled;
+  fillSolarSettings(); $('#solar-msg').textContent = '';
   $('#sports-opts').replaceChildren(...(catalog.sports?.sports || []).map(sp => h('label', { class: 'opt' }, h('span', { text: t(SPORT_NL[sp] || sp) }),
     h('input', { type: 'checkbox', class: 'switch', role: 'switch', 'data-sport': sp, checked: chosenSports().includes(sp),
       onchange: () => { prefs.sports = [...$('#sports-opts').querySelectorAll('input:checked')].map(c => c.dataset.sport); savePrefs(); renderPanel('sports'); } }))));
@@ -5622,9 +5798,9 @@ function openSettings(target) {
   if (!dlg.open) dlg.showModal();
   loadHealth();
   if (typeof target === 'string') { // called from a button with a section or category to show
-    const el = target === 'watch' ? $('#set-watch') : target === 'presets' ? $('#set-src-h') : target === 'air' ? $('#set-air') : target === 'waste' ? $('#set-waste') : target === 'sports' ? $('#set-sports') : $(`#src-groups [data-cat="${target}"]`);
+    const el = target === 'watch' ? $('#set-watch') : target === 'presets' ? $('#set-src-h') : target === 'air' ? $('#set-air') : target === 'waste' ? $('#set-waste') : target === 'sports' ? $('#set-sports') : target === 'solar' ? $('#set-solar') : $(`#src-groups [data-cat="${target}"]`);
     el?.scrollIntoView({ block: 'start' });
-    (target === 'watch' ? $('#watch-in') : target === 'presets' ? $('#qpresets button:not([disabled])') : target === 'air' ? $('#air-search') : target === 'waste' ? $('#waste-pc') : target === 'sports' ? $('#sports-opts input') : el?.querySelector('input'))?.focus({ preventScroll: true });
+    (target === 'watch' ? $('#watch-in') : target === 'presets' ? $('#qpresets button:not([disabled])') : target === 'air' ? $('#air-search') : target === 'waste' ? $('#waste-pc') : target === 'sports' ? $('#sports-opts input') : target === 'solar' ? $('#solar-kwp') : el?.querySelector('input'))?.focus({ preventScroll: true });
   }
 }
 function buildQuickPresets() {
@@ -5978,6 +6154,7 @@ function wire() {
   $('#wx-geo').addEventListener('click', useMyLocation);
   wireAirSettings();
   wireWasteSettings();
+  wireSolarSettings();
   for (const r of document.querySelectorAll('input[name="mode"]')) r.addEventListener('change', () => setMode(r.value));
   $('#digest-exit').addEventListener('click', () => setMode('normal'));
   $('#kiosk-exit').addEventListener('click', () => setMode('normal'));
@@ -6047,7 +6224,7 @@ async function init() {
   if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
   await Promise.allSettled([loadNews({ replace: true }), loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(),
     loadBreaches(), loadOutages(), loadHealthPanel(), loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(), loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadTrending(), initPush(),
-    loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite()]);
+    loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar()]);
   kioskFit(); // the header and top bar have their final height now
   panelFromHash(); // e.g. a push notification that opens #panel-waste
   // intervals from config.yaml (refresh:), in seconds; defaults if the server is older
@@ -6080,6 +6257,8 @@ async function init() {
   every(R('amber', 5), loadAmber);
   every(R('sky', 30), loadSky);
   every(R('satellite', 10), loadSatellite);
+  every(R('radiation', 30), loadRadiation);
+  every(R('solar', 60), loadSolar);
   every(R('sports', 30), loadSports);
   every(R('outages', 10), loadOutages);
   every(R('health', 30), loadHealthPanel);
