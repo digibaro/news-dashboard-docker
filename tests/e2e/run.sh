@@ -30,7 +30,7 @@ trap cleanup EXIT
 BIN=${NDB_BIN:-}
 if [ -z "$BIN" ]; then
   echo "building the dashboard…"
-  (cd "$ROOT" && CGO_ENABLED=0 go build -o "$WORK/ndb" .)
+  (cd "$ROOT" && CGO_ENABLED=0 go build -buildvcs=false -o "$WORK/ndb" .) # no git stamp: the checkout may belong to another user
   BIN="$WORK/ndb"
 fi
 
