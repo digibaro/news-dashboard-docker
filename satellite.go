@@ -22,8 +22,13 @@ import (
 // fetches it and serves it itself, so visitors never contact EUMETSAT.
 // Coastlines and borders come as a separate transparent PNG: the WMS drops
 // untimed overlay layers from a request with a time parameter.
+// EUMETSAT renders a new image on the first request, which can take a minute
+// (later requests are served from its cache in seconds), hence satTimeout.
 
-const satKey = "eumetsat:satellite"
+const (
+	satKey     = "eumetsat:satellite"
+	satTimeout = 60 * time.Second
+)
 
 // Web Mercator (EPSG:3857) box around the Benelux: lon -4..14, lat 48.5..56.5.
 const (
@@ -89,7 +94,7 @@ func (a *App) fetchSatellite(ctx context.Context) error {
 	prev, _ := a.threats.get(satKey).Data.(SatImage)
 
 	resp, err := a.fetcher.Do(ctx, FetchReq{URL: fmt.Sprintf("%s/%s/%s/ows?service=WMS&version=1.3.0&request=GetCapabilities",
-		base, url.PathEscape(ws), url.PathEscape(name)), Accept: "application/xml, text/xml"})
+		base, url.PathEscape(ws), url.PathEscape(name)), Accept: "application/xml, text/xml", Timeout: satTimeout})
 	if err != nil {
 		return fmt.Errorf("capabilities: %w", err)
 	}
@@ -99,7 +104,7 @@ func (a *App) fetchSatellite(ctx context.Context) error {
 	}
 	cur := prev
 	if !latest.Equal(prev.Time) || prev.Img == nil {
-		resp, err := a.fetcher.Do(ctx, FetchReq{URL: satMapURL(base, cfg.Layer, "image/jpeg", latest.Format(time.RFC3339)), Accept: "image/jpeg"})
+		resp, err := a.fetcher.Do(ctx, FetchReq{URL: satMapURL(base, cfg.Layer, "image/jpeg", latest.Format(time.RFC3339)), Accept: "image/jpeg", Timeout: satTimeout})
 		if err != nil {
 			return fmt.Errorf("image: %w", err)
 		}
@@ -110,7 +115,7 @@ func (a *App) fetchSatellite(ctx context.Context) error {
 	}
 	if cur.Overlay == nil || time.Since(cur.OverlayAt) > 7*24*time.Hour {
 		// Optional: without it the image shows without coastlines.
-		if resp, err := a.fetcher.Do(ctx, FetchReq{URL: satMapURL(base, satOverlayLayers, "image/png", ""), Accept: "image/png"}); err == nil && isPNG(resp.Body) {
+		if resp, err := a.fetcher.Do(ctx, FetchReq{URL: satMapURL(base, satOverlayLayers, "image/png", ""), Accept: "image/png", Timeout: satTimeout}); err == nil && isPNG(resp.Body) {
 			cur.Overlay, cur.OverlayAt = resp.Body, time.Now()
 		} else if err != nil {
 			slog.Debug("satellite overlay failed", "err", err)

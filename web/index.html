@@ -1107,6 +1107,11 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.20.0</h3>
+    <ul>
+      <li>De Correspondent is weer een bron (Onderzoek).</li>
+      <li>Aftellen leest makkelijker: “over 6 maanden” of “over 3,5 jaar” in plaats van honderden dagen.</li>
+    </ul>
     <h3>Versie 1.19.1</h3>
     <ul>
       <li>Sportagenda: een pictogram voor elke sport, en “Voetbal (EK/WK)” heet nu “Voetbal”.</li>
@@ -1259,6 +1264,11 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.20.0</h3>
+    <ul>
+      <li>De Correspondent is a source again (Investigative).</li>
+      <li>Countdowns are easier to read: “in 6 months” or “in 3.5 years” instead of hundreds of days.</li>
+    </ul>
     <h3>Version 1.19.1</h3>
     <ul>
       <li>Sports calendar: an icon for each sport, and “Football (Euros/World Cup)” is now simply “Football”.</li>
@@ -2054,6 +2064,7 @@ const EN = {
   "vandaag": "today",
   "morgen": "tomorrow",
   "over {n} dagen": "in {n} days",
+  "over 1 maand": "in 1 month", "over {n} maanden": "in {n} months", "over {n} jaar": "in {n} years",
   "Vandaag kon niet worden geladen ({err}).": "Today could not be loaded ({err}).",
   "Dit paneel staat uit in config.yaml (today.enabled).": "This panel is disabled in config.yaml (today.enabled).",
   " · morgen {n} min korter": " · {n} min shorter tomorrow",
@@ -4366,7 +4377,15 @@ const SCHOOL_REGION = { Groningen: 'noord', Friesland: 'noord', 'Fryslân': 'noo
   'Noord-Holland': 'noord', Utrecht: 'midden', 'Zuid-Holland': 'midden', Gelderland: 'midden', 'Noord-Brabant': 'zuid', Limburg: 'zuid', Zeeland: 'zuid' };
 const dateOnly = s => new Date(s + 'T12:00:00Z');
 const daysUntil = s => Math.round((dateOnly(s) - dateOnly(dayKey(new Date()))) / 864e5);
-const inDays = n => n === 0 ? t('vandaag') : n === 1 ? t('morgen') : t('over {n} dagen', { n });
+// "over 12 dagen" up to a month, then months (up to 18), then years in halves: "over 3,5 jaar"
+const inDays = n => {
+  if (n === 0) return t('vandaag');
+  if (n === 1) return t('morgen');
+  if (n <= 31) return t('over {n} dagen', { n });
+  const m = Math.round(n / 30.44);
+  if (m < 18) return m === 1 ? t('over 1 maand') : t('over {n} maanden', { n: m });
+  return t('over {n} jaar', { n: (Math.round(n / 365.25 * 2) / 2).toLocaleString(locale()) });
+};
 function renderToday(body) {
   const st = panelData.today;
   if (!st) { body.replaceChildren(h('div', { class: 'tsk vsk', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:85%' }))); return; }
@@ -5337,7 +5356,7 @@ function renderSports(body) {
       for (const e of evs) {
         const n = daysUntil(e.start);
         const status = e.status === 'live' ? h('span', { class: 'tag live', text: t('nu bezig') }) : e.status === 'done' ? h('span', { class: 'tag plain', text: t('afgelopen') })
-          : h('span', { class: 'tag plain', text: inDays(n) });
+          : h('span', { class: 'tag plain', title: n > 31 ? t('over {n} dagen', { n }) : null, text: inDays(n) });
         const dates = e.start === e.end ? fmt.date.format(dateOnly(e.start)) : `${fmt.wdmUTC.format(dateOnly(e.start))} – ${fmt.date.format(dateOnly(e.end))}`;
         sec.push(h('div', { class: 'spev' }, h('p', { class: 'sprow' }, status, ' ', h('b', { translate: 'no', text: e.name }), ` · ${dates}`,
           e.tentative ? h('span', { class: 'm', title: t('De organisatie heeft deze data nog niet bevestigd.'), text: ' ' + t('(datum voorlopig)') }) : null,

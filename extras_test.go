@@ -631,13 +631,13 @@ func TestSportEvents(t *testing.T) {
 	for i := 1; i <= 5; i++ {
 		b += fmt.Sprintf("    - { sport: road, name: \"Koers %d\", start: \"2027-0%d-01\", end: \"2027-0%d-01\" }\n", i, i, i)
 	}
-	b += "    - { sport: football, name: \"WK vrouwen 2027\", start: \"2027-06-24\", end: \"2027-07-25\", note: \"Brazilië\", tentative: true }\n"
+	b += "    - { sport: football, name: \"WK vrouwen 2099\", start: \"2099-06-24\", end: \"2099-07-25\", note: \"Brazilië\", tentative: true }\n" // far ahead: the handler below uses the real clock
 	a2 := newTestApp(t, b)
 	got = nil
 	for _, e := range a2.sportEvents(a2.cfg, time.Date(2026, 12, 1, 12, 0, 0, 0, amsterdam)) {
 		got = append(got, e.Name)
 	}
-	if strings.Join(got, "|") != "Koers 1|Koers 2|Koers 3|WK vrouwen 2027" {
+	if strings.Join(got, "|") != "Koers 1|Koers 2|Koers 3|WK vrouwen 2099" {
 		t.Errorf("at most three coming events per sport: %v", got)
 	}
 	if body := get(a2.routes("/"), "GET", "/api/sports", nil).Body.String(); !strings.Contains(body, `"note":"Brazilië"`) || !strings.Contains(body, `"tentative":true`) {
@@ -934,6 +934,11 @@ func TestRadiation(t *testing.T) {
 		t.Error("no stations must fail")
 	}
 	a := newTestApp(t, validConfig)
+	for i := range list { // the handler uses the real clock: make the readings three hours old
+		if list[i].ID != "NL1003" {
+			list[i].Time = time.Now().Add(-3 * time.Hour)
+		}
+	}
 	a.threats.ok(radKey, list, "", "")
 	b := get(a.routes("/"), "GET", "/api/radiation?lat=53.3&lon=6.9", nil).Body.String()
 	if !strings.Contains(b, `"name":"Delfzijl"`) || !strings.Contains(b, `"raised":false`) {
@@ -1013,5 +1018,21 @@ func TestTrendingPerSources(t *testing.T) {
 	}
 	if _, ok := a.trendedRecently("Nederland", now); ok {
 		t.Error("a word that was never a chip cannot")
+	}
+}
+
+// A slow source (EUMETSAT renders a new image on request) may get its own, longer timeout.
+func TestFetchTimeoutOverride(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(300 * time.Millisecond)
+		w.Write([]byte("ok"))
+	}))
+	defer srv.Close()
+	f := newFetcher(2, func() string { return "test" }, func() time.Duration { return 100 * time.Millisecond })
+	if _, err := f.Do(context.Background(), FetchReq{URL: srv.URL}); err == nil {
+		t.Error("the configured timeout must still apply")
+	}
+	if resp, err := f.Do(context.Background(), FetchReq{URL: srv.URL, Timeout: 2 * time.Second}); err != nil || string(resp.Body) != "ok" {
+		t.Errorf("with a longer timeout: %v", err)
 	}
 }

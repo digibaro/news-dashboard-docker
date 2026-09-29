@@ -38,3 +38,4 @@
 
 # Local backups
 *.bak
+tests/e2e/node_modules/

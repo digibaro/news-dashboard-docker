@@ -82,6 +82,7 @@ type FetchReq struct {
 	ETag, LastModified  string
 	Header              map[string]string
 	Body                []byte
+	Timeout             time.Duration // overrides fetch.timeout for a slow source (0 = the configured timeout)
 }
 
 type FetchResp struct {
@@ -127,7 +128,11 @@ func (f *Fetcher) Do(ctx context.Context, fr FetchReq) (*FetchResp, error) {
 	}
 	defer release()
 
-	ctx, cancel := context.WithTimeout(ctx, f.timeout())
+	timeout := f.timeout()
+	if fr.Timeout > 0 {
+		timeout = fr.Timeout
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	method := fr.Method
 	if method == "" {

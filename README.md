@@ -731,11 +731,20 @@ go run . -config config.yaml         # http://127.0.0.1:8080
 go run . -check-feeds                # verify all feeds
 ```
 
+**Browser tests** (`tests/e2e`): 27 Playwright suites with almost 900 checks of the real page in Chromium: layout on desktop and phone, light and dark, Dutch and English, accessibility (axe), keyboard use, the top bar, every panel, push settings, and hostile feeds (XSS, bad links). `run.sh` builds the binary, writes test configurations derived from `config.yaml.default`, starts five servers (default, mock KNMI warnings, hostile feed, push on, accent colour) and runs the suites; a failing suite is retried once, because the servers fetch the real feeds. GitHub Actions runs them on every push to `main` and on pull requests (workflow *E2E*).
+
+```sh
+cd tests/e2e && npm ci && npx playwright install --with-deps chromium
+./run.sh                 # all suites (about 30 minutes)
+./run.sh v119 swipe      # only these
+```
+
 **Repository layout:**
 - `main.go`: config, HTTP server, API
 - `feeds.go`: fetcher, scheduler, feed parser, news cache, `-check-feeds`
 - `panels.go`: weather, threats, advisories
 - `web/index.html`: the entire frontend, embedded with `go:embed`. It uses no framework, no build step and no CDN.
+- `tests/e2e`: the browser tests (see above).
 
 **Dependency:** `gopkg.in/yaml.v3` is the only one.
 
@@ -765,6 +774,11 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.20.0
+- **De Correspondent is back** as a source (category Onderzoek, € label): it publishes a feed again at `decorrespondent.nl/feed/v1/publications`. It is also part of the "Onderzoek" preset. Pointer (only a podcast feed) and Techzine (blocks every request) stay off; the notes in `config.yaml` are updated.
+- **Readable countdowns:** "over 6 maanden" and "over 3,5 jaar" instead of "over 172 dagen" or "over 1348 dagen" (Sportagenda and Vandaag); the exact number of days shows on hover.
+- **Browser tests in the repository:** the 27 Playwright suites (almost 900 checks) now live in `tests/e2e` with a runner that starts its own test servers, and GitHub Actions runs them on every push to `main` (workflow *E2E*).
 
 ### 1.19.1
 - **Sportagenda:** an icon in front of each sport (🏎️ Formule 1, 🚴 Wielrennen, 🚵 Mountainbike, 🏃 Atletiek, ⚽ Voetbal), and "Voetbal (EK/WK)" is now simply "Voetbal".

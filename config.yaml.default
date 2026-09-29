@@ -490,7 +490,7 @@ presets:
   - { id: regio,   name: "Mijn regio",      description: "De regionale omroep bij je weerlocatie", name_en: "My region", description_en: "The regional broadcaster for your weather location", region: true }
   - { id: tech,    name: "Tech & security", description: "Tweakers, Security.NL, Bits of Freedom en meer", description_en: "Tweakers, Security.NL, Bits of Freedom and more", sources: [tweakers, security-nl, nos-tech, bits-of-freedom, bleepingcomputer, the-record] }
   - { id: finance, name: "Economie",        description: "Economie en financiële markten", name_en: "Economy", description_en: "Economy and financial markets", sources: [nos-economie, nu-economie, telegraaf-dft, bbc-business] }
-  - { id: onderzoek, name: "Onderzoek",     description: "Follow the Money, Investico, De Groene en meer", name_en: "Investigative", description_en: "Follow the Money, Investico, De Groene and more", sources: [ftm, investico, groene, lighthouse-reports, bellingcat] }
+  - { id: onderzoek, name: "Onderzoek",     description: "Follow the Money, De Correspondent, Investico, De Groene en meer", name_en: "Investigative", description_en: "Follow the Money, De Correspondent, Investico, De Groene and more", sources: [ftm, correspondent, investico, groene, lighthouse-reports, bellingcat] }
   - { id: sport,   name: "Sport",           description: "Voetbal, wielrennen en ander sportnieuws", description_en: "Football, cycling and other sports news", sources: [nos-sport, nos-voetbal, nu-sport, wielerflits] }
   - { id: world,   name: "Internationaal",  description: "Wereldnieuws van BBC, The Guardian en DW", name_en: "International", description_en: "World news from BBC, The Guardian and DW", sources: [nos-buitenland, bbc-world, guardian-world, dw] }
   - { id: be,      name: "België",          description: "VRT NWS, HLN, De Tijd en Sporza", name_en: "Belgium", description_en: "VRT NWS, HLN, De Tijd and Sporza", sources: [vrt-nws, hln, tijd, sporza] }
@@ -556,7 +556,7 @@ sources:
   - { id: iculture,       name: "iCulture",       category: tech, url: "https://www.iculture.nl/feed/", homepage: "https://www.iculture.nl", lang: nl }
   - { id: androidworld,   name: "AndroidWorld",   category: tech, url: "https://androidworld.nl/feed/", homepage: "https://androidworld.nl", lang: nl }
   - { id: androidplanet,  name: "Android Planet", category: tech, url: "https://www.androidplanet.nl/feed/", homepage: "https://www.androidplanet.nl", lang: nl }
-  # TODO: techzine.nl returns HTTP 403 (bot protection) for every feed path, also /rss; re-check later.
+  # TODO: techzine.nl returns HTTP 403 (bot protection) for every feed path, also /rss (re-checked 2026-09-29).
   - { id: techzine,       name: "Techzine",       category: tech, url: "https://www.techzine.nl/feed/", homepage: "https://www.techzine.nl", lang: nl, enabled: false }
   # Extra security sources (SPEC §8.1): disabled by default. divd verified working 2026-09-24.
   # TODO: the Fraudehelpdesk WordPress feed is reachable but contains no items (checked 2026-09-24).
@@ -594,8 +594,9 @@ sources:
   - { id: groene,         name: "De Groene Amsterdammer", category: onderzoek, url: "https://www.groene.nl/rss", homepage: "https://www.groene.nl", lang: nl, interval: 30m, max_age: 720h, paywall: true }
   - { id: lighthouse-reports, name: "Lighthouse Reports", category: onderzoek, url: "https://www.lighthousereports.com/feed/", homepage: "https://www.lighthousereports.com", lang: en, interval: 1h, max_age: 720h }
   - { id: bellingcat,     name: "Bellingcat",     category: onderzoek, url: "https://www.bellingcat.com/feed/", homepage: "https://www.bellingcat.com", lang: en, interval: 1h, max_age: 720h }
-  # TODO: De Correspondent and Pointer (KRO-NCRV) publish no RSS feed (checked 2026-09-26).
-  - { id: correspondent,  name: "De Correspondent", category: onderzoek, url: "https://decorrespondent.nl/feed", homepage: "https://decorrespondent.nl", lang: nl, enabled: false }
+  # De Correspondent: the feed from decorrespondent.nl/rss (part of each article free, the rest for members).
+  - { id: correspondent,  name: "De Correspondent", category: onderzoek, url: "https://decorrespondent.nl/feed/v1/publications", homepage: "https://decorrespondent.nl", lang: nl, interval: 30m, max_age: 720h, paywall: true }
+  # TODO: Pointer (KRO-NCRV) publishes only a podcast feed (podcast.npo.nl/feed/pointer.xml), no article feed (checked 2026-09-29).
   - { id: pointer,        name: "Pointer",        category: onderzoek, url: "https://pointer.kro-ncrv.nl/feed", homepage: "https://pointer.kro-ncrv.nl", lang: nl, enabled: false }
 
   # --- Sport ---
