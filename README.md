@@ -755,6 +755,9 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 
 ## Changelog
 
+### 1.17.1
+- **Treinstoringen:** "Storingen op het spoor" and "Werkzaamheden" are below each other again. Since 1.16.0 they were shown as two columns, because the new trending-chip wrapper shared its CSS class name with these sections.
+
 ### 1.17.0
 - **Storingen:** the status of **Google Cloud** (from `status.cloud.google.com/incidents.json`: ongoing incidents with the affected regions, e.g. europe-west4, and those resolved in the last 24 h) and **STACKIT** (its Atlassian Statuspage).
 - New outage format `gcp`.

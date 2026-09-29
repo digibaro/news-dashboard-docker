@@ -668,8 +668,8 @@ table.tt { width: 100%; border-collapse: collapse; font-size: 12px; }
 .tchip:hover { border-color: var(--line-strong); }
 .tchip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
 .trend { position: relative; }
-.tgrp { display: inline-flex; align-items: stretch; }
-.tgrp .tchip:not(:last-child) { border-radius: 999px 0 0 999px; }
+.tchipgrp { display: inline-flex; align-items: stretch; }
+.tchipgrp .tchip:not(:last-child) { border-radius: 999px 0 0 999px; }
 .tinfo { font: inherit; font-size: 12px; border: 1px solid var(--line); border-left: 0; background: var(--surface); color: var(--text-2); border-radius: 0 999px 999px 0; padding: 0 8px 0 6px; cursor: pointer; min-height: 24px; min-width: 24px; }
 .tinfo:hover, .tinfo[aria-expanded="true"] { color: var(--accent); border-color: var(--line-strong); }
 .wikicard { position: absolute; z-index: 20; width: min(360px, calc(100% - 4px)); background: var(--bg); color: var(--text); border: 1px solid var(--line-strong); border-radius: 10px; box-shadow: 0 8px 24px rgb(0 0 0 / .18); padding: 10px 12px; font-size: 13px; line-height: 1.45; }
@@ -1094,6 +1094,10 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.17.1</h3>
+    <ul>
+      <li>Treinstoringen: “Storingen op het spoor” en “Werkzaamheden” staan weer onder elkaar in plaats van in twee kolommen.</li>
+    </ul>
     <h3>Versie 1.17.0</h3>
     <ul>
       <li>Storingen: ook de status van Google Cloud (met de getroffen regio’s) en STACKIT.</li>
@@ -1226,6 +1230,10 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.17.1</h3>
+    <ul>
+      <li>Train disruptions: “Disruptions” and “Engineering works” are shown below each other again instead of in two columns.</li>
+    </ul>
     <h3>Version 1.17.0</h3>
     <ul>
       <li>Outages: the status of Google Cloud (with the affected regions) and STACKIT as well.</li>
@@ -4718,7 +4726,7 @@ function renderTrending() {
     const info = h('button', { type: 'button', class: 'tinfo', 'aria-expanded': String(wikiOpen?.term === x.term), 'aria-controls': 'wikicard',
       'aria-label': t('Uitleg over {term} (Wikipedia)', { term: x.term }), title: t('Uitleg (Wikipedia)'), text: 'ⓘ',
       onclick: e => { e.stopPropagation(); wikiOpen?.term === x.term ? closeWiki(true) : openWiki(x.term, true); } });
-    return h('span', { class: 'tgrp', 'data-term': x.term, onpointerenter: e => wikiHover(e, x.term, true), onpointerleave: e => wikiHover(e, x.term, false) }, chip, info);
+    return h('span', { class: 'tchipgrp', 'data-term': x.term, onpointerenter: e => wikiHover(e, x.term, true), onpointerleave: e => wikiHover(e, x.term, false) }, chip, info);
   }), wikiCard());
   if (wikiOpen && !terms.some(x => x.term === wikiOpen.term)) closeWiki(); else if (wikiOpen) placeWiki();
 }
@@ -4737,7 +4745,7 @@ function wikiHover(e, term, enter) {
   if (enter) { if (wikiOpen?.term !== term) wikiTimer = setTimeout(() => openWiki(term, false), 500); }
   else if (wikiOpen && !wikiOpen.pinned) wikiTimer = setTimeout(() => closeWiki(), 250);
 }
-function wikiInfoBtn(term) { return [...document.querySelectorAll('#trending .tgrp')].find(g => g.dataset.term === term)?.querySelector('.tinfo'); }
+function wikiInfoBtn(term) { return [...document.querySelectorAll('#trending .tchipgrp')].find(g => g.dataset.term === term)?.querySelector('.tinfo'); }
 async function openWiki(term, pinned) {
   clearTimeout(wikiTimer);
   wikiOpen = { term, pinned };
