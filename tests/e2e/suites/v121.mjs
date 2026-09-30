@@ -77,6 +77,18 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   await ctx.close();
 }
 
+// ---------- a slow category stays filled with all sources chosen (1.21.1)
+{
+  const all = cat.sources.map(s => s.id);
+  const [ctx, p, errs] = await open(1440, { prefs: { sources: all, known: all } });
+  const req = await p.evaluate(() => performance.getEntriesByType('resource').map(e => e.name).find(n => n.includes('api/news?')));
+  await p.click('#chips [data-cat="onderzoek"]'); await p.waitForTimeout(500);
+  const n = await p.$$eval('#stream .item', l => l.length);
+  ok(/per_source=10/.test(req) && n > 5, `all ${all.length} sources: the Onderzoek category shows ${n} articles`);
+  ok(errs.length === 0, 'no page errors ' + errs.join('|'));
+  await ctx.close();
+}
+
 // ---------- data saver
 {
   const [ctx, p, errs] = await open(1440, { prefs: { images: true, saver: 'on' } });

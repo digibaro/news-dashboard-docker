@@ -1212,3 +1212,58 @@ func TestIconServices(t *testing.T) {
 		t.Errorf("icon_services can be turned off separately: %v %+v", err, c.Features)
 	}
 }
+
+// A slow source keeps its newest articles in the list, even with many busy sources.
+func TestTopUpPerSource(t *testing.T) {
+	now := time.Now()
+	mk := func(src string, i int, age time.Duration) Item {
+		u := fmt.Sprintf("https://%s.example/%d", src, i)
+		title := fmt.Sprintf("%s bericht %d", src, i)
+		return Item{ID: u, Source: src, Title: title, URL: u, canon: canonicalURL(u), normTitle: normalizeTitle(title), Published: now.Add(-age)}
+	}
+	var busy, slow []Item
+	for i := 0; i < 30; i++ {
+		busy = append(busy, mk("busy", i, time.Duration(i)*time.Minute))
+	}
+	for i := 0; i < 5; i++ {
+		slow = append(slow, mk("slow", i, time.Duration(48+i*24)*time.Hour))
+	}
+	lists := [][]Item{busy, slow}
+	base := mergeItems(lists, time.Time{}, 10, nil)
+	if slices.ContainsFunc(base, func(it Item) bool { return it.Source == "slow" }) {
+		t.Fatal("setup: the slow source should fall outside the newest 10")
+	}
+	got := topUpPerSource(base, lists, time.Time{}, 3)
+	n := map[string]int{}
+	for i, it := range got {
+		n[it.Source]++
+		if i > 0 && it.Published.After(got[i-1].Published) {
+			t.Fatal("not newest first")
+		}
+	}
+	if n["busy"] != 10 || n["slow"] != 3 || got[len(got)-1].Title != "slow bericht 2" {
+		t.Errorf("per source: %v, last %q", n, got[len(got)-1].Title)
+	}
+	if again := topUpPerSource(got, lists, time.Time{}, 3); len(again) != len(got) {
+		t.Error("no duplicates when a source already has enough")
+	}
+	if got := topUpPerSource(base, lists, now.Add(-72*time.Hour), 3); len(got) != 11 {
+		t.Errorf("since is respected: %d items", len(got))
+	}
+	// the handler: per_source is opt-in
+	a := newTestApp(t, validConfig+"  - { id: b, name: \"B\", category: nl, url: \"https://b.example/rss\" }\n")
+	for i := 0; i < 30; i++ {
+		busy[i].Source = "a"
+	}
+	for i := range slow {
+		slow[i].Source = "b"
+	}
+	a.news.sources["a"], a.news.sources["b"] = &SourceState{Items: busy}, &SourceState{Items: slow}
+	h := a.routes("/")
+	if b := get(h, "GET", "/api/news?sources=a,b&limit=10&group=0", nil).Body.String(); strings.Contains(b, `"source":"b"`) {
+		t.Error("without per_source the slow source is outside the limit")
+	}
+	if b := get(h, "GET", "/api/news?sources=a,b&limit=10&group=0&per_source=4", nil).Body.String(); strings.Count(b, `"source":"b"`) != 4 {
+		t.Errorf("per_source=4: %d from the slow source", strings.Count(b, `"source":"b"`))
+	}
+}

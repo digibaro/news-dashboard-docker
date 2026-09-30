@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -503,6 +504,53 @@ func mergeItems(lists [][]Item, since time.Time, limit int, lang map[string]stri
 	}
 	if len(out) > limit {
 		out = out[:limit]
+	}
+	return out
+}
+
+// topUpPerSource adds older articles so every source has at least minPer in the
+// list (counting grouped articles too). Without it, a slow source (investigative
+// outlets publish a few pieces a week) falls outside the newest N articles of 80
+// busy sources, and its category looks empty. The result stays newest first.
+func topUpPerSource(out []Item, lists [][]Item, since time.Time, minPer int) []Item {
+	if minPer <= 0 {
+		return out
+	}
+	have := map[string]int{}
+	seenURL, seenTitle := map[string]bool{}, map[string]bool{}
+	for _, it := range out {
+		have[it.Source]++
+		seenURL[it.canon], seenTitle[it.Source+"\x00"+it.normTitle] = true, true
+		for _, r := range it.Related {
+			have[r.Source]++
+			seenURL[canonicalURL(r.URL)] = true
+		}
+	}
+	added := false
+	for _, l := range lists {
+		list := slices.Clone(l)
+		sort.SliceStable(list, func(i, j int) bool { return list[i].Published.After(list[j].Published) })
+		for _, it := range list {
+			if have[it.Source] >= minPer {
+				break
+			}
+			tk := it.Source + "\x00" + it.normTitle
+			if (!since.IsZero() && !it.Published.After(since)) || seenURL[it.canon] || (it.normTitle != "" && seenTitle[tk]) {
+				continue
+			}
+			seenURL[it.canon], seenTitle[tk] = true, true
+			have[it.Source]++
+			out = append(out, it)
+			added = true
+		}
+	}
+	if added {
+		sort.SliceStable(out, func(i, j int) bool {
+			if !out[i].Published.Equal(out[j].Published) {
+				return out[i].Published.After(out[j].Published)
+			}
+			return out[i].Source < out[j].Source
+		})
 	}
 	return out
 }

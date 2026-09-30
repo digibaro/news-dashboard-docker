@@ -1111,6 +1111,10 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.21.1</h3>
+    <ul>
+      <li>Hersteld: met veel bronnen aan bleef een categorie met trage bronnen (zoals Onderzoek) leeg. Elke bron houdt nu zijn tien nieuwste berichten in de lijst.</li>
+    </ul>
     <h3>Versie 1.21.0</h3>
     <ul>
       <li>Bij elk bericht het eigen pictogram van de nieuwssite in plaats van een gekleurde stip.</li>
@@ -1273,6 +1277,10 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.21.1</h3>
+    <ul>
+      <li>Fixed: with many sources on, a category with slow sources (such as Investigative) stayed empty. Every source now keeps its ten newest articles in the list.</li>
+    </ul>
     <h3>Version 1.21.0</h3>
     <ul>
       <li>Each article shows the news site's own icon instead of a coloured dot.</li>
@@ -3027,7 +3035,8 @@ async function loadNews(opts = {}) {
   const ids = enabledIds();
   if (!ids.length) { items = []; pending = null; status = {}; newsError = null; renderAll(); return; }
   try {
-    const data = await api('api/news?limit=300' + (prefs.group ? '' : '&group=0') + '&sources=' + encodeURIComponent(ids.join(',')));
+    // per_source: slow sources (e.g. investigative outlets) keep their newest 10, even with many busy sources chosen
+    const data = await api('api/news?limit=300&per_source=10' + (prefs.group ? '' : '&group=0') + '&sources=' + encodeURIComponent(ids.join(',')));
     if (seq !== newsSeq) return;
     newsError = null;
     status = data.status || {};

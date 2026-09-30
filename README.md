@@ -681,7 +681,7 @@ All JSON responses:
 |---|---|
 | `GET /` | the dashboard |
 | `GET /api/catalog` | categories, sources (without feed URLs), features, advisory sources |
-| `GET /api/news?sources=a,b&limit=60&since=&group=` | merged, de-duplicated, date-sorted items with `related` (same story elsewhere) + per-source status. `since`: RFC 3339 or unix seconds; `group=0` disables story grouping |
+| `GET /api/news?sources=a,b&limit=60&since=&group=&per_source=` | merged, de-duplicated, date-sorted items with `related` (same story elsewhere) + per-source status. `since`: RFC 3339 or unix seconds; `group=0` disables story grouping; `per_source` (max. 20) adds older articles so every source has at least that many |
 | `GET /api/img?u=&s=` | thumbnail through the image proxy (only URLs signed by this server) |
 | `GET /manifest.webmanifest`, `/icon-*.png`, `/sw.js` | installable web app: manifest, icons (drawn at startup) and offline service worker |
 | `GET /api/weather?lat=&lon=&region=&cc=` | current, 24 h, 7 days, rain 2 h, warnings (defaults to the configured location) |
@@ -778,6 +778,9 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.21.1
+- **Fix: a category with slow sources looked empty with many sources on.** The page loads the 300 newest articles; with all ~85 sources chosen, those cover only the last hours, so investigative outlets (a few pieces a week) never made it in and "Onderzoek" showed no articles. Every chosen source now also keeps its 10 newest articles (`per_source=10`), so its category and chip count stay filled; with the default sources this changes almost nothing.
 
 ### 1.21.0
 - **Source icons:** the news sites' own small icons instead of coloured dots, in the news list, the coverage view and the source settings. The server picks the sharpest icon a site offers (apple-touch-icon, a declared PNG icon, then `/favicon.ico`, including classic ICO files), scales it to a 32×32 PNG, serves it itself and refreshes it weekly. Icons from a cookie-consent page on another domain are ignored. Sites that show the server only a cookie wall or block it (NU.nl, RTL Nieuws, De Telegraaf, De Tijd) get their icon from DuckDuckGo's or Google's favicon service (`features.icon_services`, only the site's name is sent). In dark mode icons sit on a small light tile. All 65 sites have an icon. Turn it off with `features.source_icons: false`.

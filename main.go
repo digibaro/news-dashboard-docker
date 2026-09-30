@@ -1736,8 +1736,12 @@ func (a *App) handleNews(w http.ResponseWriter, r *http.Request) {
 			lang[s.ID] = s.Lang
 		}
 	}
+	perSource := 0 // at least this many articles per source, on top of the limit (max. 20)
+	if v, err := strconv.Atoi(q.Get("per_source")); err == nil {
+		perSource = min(max(v, 0), 20)
+	}
 	lists, status := a.news.collect(ids)
-	items := mergeItems(lists, since, limit, lang)
+	items := topUpPerSource(mergeItems(lists, since, limit, lang), lists, since, perSource)
 	if cfg.Features.ProxyImages {
 		items = a.images.rewrite(items)
 	}
