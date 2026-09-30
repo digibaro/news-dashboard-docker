@@ -1728,6 +1728,9 @@ func (a *App) threatJobs(cfg *Config) []Job {
 			Run: a.fetchJob("burgernet:amber", func() string { return a.config().Amber.URL }, "application/json", nil,
 				func(b []byte) (any, error) { return parseAmber(b) }, nil)})
 	}
+	if cfg.Features.SourceIcons { // the job itself skips icons that are fresh: weekly, or after 6 h on failure
+		jobs = append(jobs, Job{Key: "icons", Sig: "icons", Interval: time.Hour, Run: a.iconJob})
+	}
 	if cfg.Radiation.Enabled {
 		jobs = append(jobs, Job{Key: radKey, Sig: cfg.Radiation.URL, Interval: cfg.Radiation.Interval.D(),
 			Run: a.fetchJob(radKey, func() string { return radURL(a.config().Radiation.URL) }, "application/json", nil,

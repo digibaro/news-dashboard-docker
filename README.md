@@ -51,6 +51,8 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Trending:** words and names that suddenly appear in many headlines in the last 3 hours; click one to search. Hover over one (or tap ⓘ) for a short explanation from Wikipedia.
 - **Search operators:** `bron:nos` or `source:nos` (only that source; `bron:"de volkskrant"` for names with a space), `"exact words"`, and `-word` or `-bron:x` to leave out.
 - **Paywall label:** a € next to articles from sources marked `paywall: true` (some or all articles need a subscription).
+- **Source icons:** each article shows the news site's own small icon instead of a coloured dot. The server fetches the sharpest icon the site offers (apple-touch-icon, a PNG icon or `/favicon.ico`) once a week and serves it itself. Sites that show the server only a cookie wall or block it get their icon from DuckDuckGo's or Google's favicon service instead; a site without any icon keeps the dot.
+- **Data saver:** under Instellingen → Weergave: Automatisch / Aan / Uit. When on, the page refreshes 3× less often and loads no images (thumbnails, source icons, the satellite image only on request). Automatic turns it on when the browser asks to save data, on a 2G connection, or with a battery below 20 % that is not charging.
 - **Read state:** read/unread plus a "Bewaard" list with **notes, labels** and export to Markdown or JSON.
 - **OPML:** export the chosen sources, or import a list from another reader (only feeds that exist on this server are turned on).
 - **Push notifications** (opt-in, per device): NL-Alert in your area, KNMI code orange/red, raised radiation, NCTV threat level, earthquakes, big news and the evening before waste collection. See [Push notifications](#push-notifications).
@@ -164,7 +166,7 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 | `server` | `listen` address, `base_path` (e.g. `/nieuws/` for a subfolder), `trusted_proxies` (whose `X-Forwarded-For` is believed), `log_level`, `metrics` (Prometheus endpoint, default off) |
 | `fetch` | `user_agent` (**put your site and e-mail here**), default refresh `interval`, `timeout`, `max_concurrent` (max 2 per host is fixed) |
 | `cache` | `max_items_per_source`, `max_age`, `snapshot_path` (empty = no disk writes, see below) |
-| `features` | `show_images` (keep feed images), `proxy_images` (serve them through `/api/img`, see below), `geolocation` (ip-api lookups), `allow_custom_feeds` (reserved, see below) |
+| `features` | `show_images` (keep feed images), `proxy_images` (serve them through `/api/img`, see below), `source_icons` (the news sites' own icons, default on), `icon_services` (fallback to DuckDuckGo's and Google's favicon services for sites that block the server, default on), `geolocation` (ip-api lookups), `allow_custom_feeds` (reserved, see below) |
 | `refresh` | how often an open browser tab asks the server for new data, per panel: `news`, `alerts`, `weather`, `today`, `air`, `pollen`, `traffic`, `trains`, `alarms`, `quakes`, `nlalert`, `energy`, `fuel`, `economy`, `markets`, `waste`, `trending`, `amber`, `insects`, `sky`, `sports`, `satellite`, `radiation`, `solar`, `politics`, `threats`, `advisories`, `breaches`, `ransomware`, `utilities`, `outages`, `ap`, `health` (1m–24h, see below) |
 | `keys` | `abusech_auth_key` (optional), `ns_api_key` (Treinstoringen) |
 | `energy` | Energieprijzen: `enabled`, `url`, `interval` (min. 15m), `vat` (0.21), `electricity_extra` / `gas_extra` (€ added per kWh / m³, e.g. energy tax and markup; default 0) |
@@ -616,6 +618,7 @@ A URL sets the mode for that visit only, without changing the saved choice: `htt
   - The Content-Security-Policy only allows the page's own origin, plus `https:` images when `show_images` is on.
   - Feed titles and summaries are stripped of all HTML on the server and rendered as text in the browser.
   - Links are limited to `http(s)` and open with `rel="noopener noreferrer"`.
+- **Source icons** are fetched by the server from the news sites' own pages (never by the browser), kept in memory and refreshed weekly; SVG icons are skipped because they can contain scripts, and the fetches refuse private network addresses like the image proxy. For sites that block the server, it asks DuckDuckGo's and then Google's favicon service, sending only the site's name (e.g. `www.nu.nl`); turn that off with `features.icon_services: false`.
 - **"Gebruik mijn locatie"** rounds coordinates to 2 decimals (~1 km) in the browser, and sends them only to this server.
 - **Afvalkalender address:** kept in the browser. The server uses it only to ask the municipal calendars, keeps the result up to 6 hours in memory, and never logs it.
 - **Push notifications** are opt-in per device. The server keeps each subscription (the push-service URL and two keys, the chosen topics, the language, the weather location rounded to ~1 km and, for the waste reminder, the address) in memory; with `cache.snapshot_path` set also in `<snapshot>.push.json` (mode 0600). Turning notifications off removes it.
@@ -701,6 +704,7 @@ All JSON responses:
 | `GET /api/insects?lat=&lon=` | Teken en muggen: 3 `days` with `ticks` and `mosquito` levels 0–3 (an estimate) |
 | `GET /api/sky?lat=&lon=` | Vanavond aan de hemel: sunset, dark, dawn, `moon` (phase, rise, set), `planets` (from, until, best time, altitude, direction), `kp` and `aurora` (0–3), `clouds`, `meteor` |
 | `GET /api/sports` | Sportagenda: `f1` (next race with sessions, last podium, standings) and `events` (per sport the current or just-finished events and the next three, with `note`, `tentative` and `headlines`) |
+| `GET /api/icon?s=` | A news site's icon (32×32 PNG) for a configured source; the catalog lists the link per source (`icon`) once the icon is there |
 | `GET /api/trending` | Trending: up to 8 `terms` with the number of `sources` in the last 3 hours |
 | `GET /api/wiki?term=` | Wikipedia summary for a current trending term: `summary` (`found`, `title`, `description`, `extract`, `url`, `thumb` via `api/img`) and a `search` link; 404 for other terms |
 | `GET /api/radiation?lat=&lon=` | Straling: `nearest` station (name, value µSv/h, time), `km`, national `min`/`median`/`max`, `raised`, `above`, `level` |
@@ -731,11 +735,11 @@ go run . -config config.yaml         # http://127.0.0.1:8080
 go run . -check-feeds                # verify all feeds
 ```
 
-**Browser tests** (`tests/e2e`): 27 Playwright suites with almost 900 checks of the real page in Chromium: layout on desktop and phone, light and dark, Dutch and English, accessibility (axe), keyboard use, the top bar, every panel, push settings, and hostile feeds (XSS, bad links). `run.sh` builds the binary, writes test configurations derived from `config.yaml.default`, starts five servers (default, mock KNMI warnings, hostile feed, push on, accent colour) and runs the suites; a failing suite is retried once, because the servers fetch the real feeds. GitHub Actions runs them on every push to `main` and on pull requests (workflow *E2E*).
+**Browser tests** (`tests/e2e`): 28 Playwright suites with more than 900 checks of the real page in Chromium: layout on desktop and phone, light and dark, Dutch and English, accessibility (axe), keyboard use, the top bar, every panel, push settings, and hostile feeds (XSS, bad links). `run.sh` builds the binary, writes test configurations derived from `config.yaml.default`, starts five servers (default, mock KNMI warnings, hostile feed, push on, accent colour) and runs the suites; a failing suite is retried once, because the servers fetch the real feeds. GitHub Actions runs them on every push to `main` and on pull requests (workflow *E2E*).
 
 ```sh
 cd tests/e2e && npm ci && npx playwright install --with-deps chromium
-./run.sh                 # all suites (about 30 minutes)
+./run.sh                 # all suites (about 10 minutes)
 ./run.sh v119 swipe      # only these
 ```
 
@@ -774,6 +778,11 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.21.0
+- **Source icons:** the news sites' own small icons instead of coloured dots, in the news list, the coverage view and the source settings. The server picks the sharpest icon a site offers (apple-touch-icon, a declared PNG icon, then `/favicon.ico`, including classic ICO files), scales it to a 32×32 PNG, serves it itself and refreshes it weekly. Icons from a cookie-consent page on another domain are ignored. Sites that show the server only a cookie wall or block it (NU.nl, RTL Nieuws, De Telegraaf, De Tijd) get their icon from DuckDuckGo's or Google's favicon service (`features.icon_services`, only the site's name is sent). In dark mode icons sit on a small light tile. All 65 sites have an icon. Turn it off with `features.source_icons: false`.
+- **Data saver** (Instellingen → Weergave: Automatisch / Aan / Uit): refresh 3× less often and no images (thumbnails, source icons; the satellite image on request). Automatic follows the browser's data-saver setting, a 2G connection, or a battery below 20 % that is not charging; a note "databesparing" appears next to the news time.
+- RTV Oost's homepage is now `oost.nl` (the old address redirects over plain http).
 
 ### 1.20.0
 - **De Correspondent is back** as a source (category Onderzoek, € label): it publishes a feed again at `decorrespondent.nl/feed/v1/publications`. It is also part of the "Onderzoek" preset. Pointer (only a podcast feed) and Techzine (blocks every request) stay off; the notes in `config.yaml` are updated.

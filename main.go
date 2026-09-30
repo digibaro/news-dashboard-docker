@@ -113,6 +113,7 @@ type Source struct {
 	Type           string   `yaml:"type" json:"-"`                  // rss|atom|rdf|json; empty = auto-detect
 	DefaultEnabled bool     `yaml:"default_enabled" json:"default_enabled"`
 	Paywall        bool     `yaml:"paywall" json:"paywall,omitempty"` // (some) articles need a subscription: € label
+	Icon           string   `yaml:"-" json:"icon,omitempty"`          // set by the catalog: link to the site's icon
 	Enabled        *bool    `yaml:"enabled" json:"-"`                 // nil = true
 	Interval       Duration `yaml:"interval" json:"-"`
 	MaxAge         Duration `yaml:"max_age" json:"-"` // overrides cache.max_age, e.g. for low-volume sources
@@ -169,6 +170,8 @@ type Config struct {
 	Features struct {
 		AllowCustomFeeds bool `yaml:"allow_custom_feeds"`
 		ShowImages       bool `yaml:"show_images"`
+		SourceIcons      bool `yaml:"source_icons"`  // the news site's own small icon instead of a coloured dot
+		IconServices     bool `yaml:"icon_services"` // fallback: DuckDuckGo's, then Google's favicon service (site name only)
 		ProxyImages      bool `yaml:"proxy_images"`
 		Geolocation      bool `yaml:"geolocation"`
 	} `yaml:"features"`
@@ -441,6 +444,7 @@ func defaultConfig() *Config {
 	c.Cache.MaxItemsPerSource = 50
 	c.Cache.MaxAge = Duration(72 * time.Hour)
 	c.Features.Geolocation = true
+	c.Features.SourceIcons, c.Features.IconServices = true, true
 	c.Weather.Location = Location{Name: "Utrecht", Lat: 52.09, Lon: 5.12, Region: "Utrecht", Country: "NL"}
 	c.Weather.Interval = Duration(15 * time.Minute)
 	c.Weather.Units = "metric"
@@ -1051,6 +1055,7 @@ type App struct {
 	insects   *ttlCache[InsectData]     // tick/mosquito estimate per ~10 km cell
 	wikiCache *ttlCache[WikiSummary]    // Wikipedia summary per trending term, 24 h
 	solar     *ttlCache[[]SolarDay]     // solar yield per ~10 km cell, tilt and direction
+	icons     *iconCache                // news site icons per host
 	skyClouds *ttlCache[[]cloudPoint]   // cloud cover per ~10 km cell
 	wasteIdx  wasteIndex                // address -> municipal calendar
 	push      *pushHub                  // Web Push subscriptions and watcher state
@@ -1212,7 +1217,7 @@ func run(cfgPath string) error {
 	a := &App{cfgPath: cfgPath, level: level, started: time.Now(), news: newNewsCache(), sched: newScheduler(), wx: newWeatherCaches(),
 		threats: newStateStore(), geo: newGeoCache(10000), metrics: newHTTPMetrics(),
 		alarms: newTTLCache[[]Alarm](500), air: newTTLCache[[]AirComponent](200), pollen: newTTLCache[PollenData](300), p2k: newP2KCounters(),
-		push: newPushHub(), waste: newTTLCache[WasteResult](1000), insects: newTTLCache[InsectData](300), wikiCache: newTTLCache[WikiSummary](200), solar: newTTLCache[[]SolarDay](500), skyClouds: newTTLCache[[]cloudPoint](300)}
+		push: newPushHub(), waste: newTTLCache[WasteResult](1000), insects: newTTLCache[InsectData](300), wikiCache: newTTLCache[WikiSummary](200), solar: newTTLCache[[]SolarDay](500), icons: newIconCache(), skyClouds: newTTLCache[[]cloudPoint](300)}
 	if st, err := os.Stat(cfgPath); err == nil {
 		a.cfgMod = st.ModTime()
 	}
@@ -1430,6 +1435,7 @@ func (a *App) routes(basePath string) http.Handler {
 	handle("GET /api/insects", a.handleInsects)
 	handle("GET /api/amber", a.handleAmber)
 	handle("GET /api/wiki", a.handleWiki)
+	handle("GET /api/icon", a.handleIcon)
 	handle("GET /api/radiation", a.handleRadiation)
 	handle("GET /api/solar", a.handleSolar)
 	handle("GET /api/satellite", a.handleSatellite)
@@ -1611,6 +1617,9 @@ func (a *App) handleCatalog(w http.ResponseWriter, r *http.Request) {
 	sources := make([]Source, 0, len(cfg.Sources))
 	for _, s := range cfg.Sources {
 		if s.IsEnabled() {
+			if cfg.Features.SourceIcons {
+				s.Icon = a.iconURL(s)
+			}
 			sources = append(sources, s)
 		}
 	}

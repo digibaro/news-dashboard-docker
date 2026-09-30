@@ -15,11 +15,15 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"image"
+	"image/color"
+	"image/png"
 	"io"
 	"math"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"slices"
 	"strings"
@@ -1034,5 +1038,177 @@ func TestFetchTimeoutOverride(t *testing.T) {
 	}
 	if resp, err := f.Do(context.Background(), FetchReq{URL: srv.URL, Timeout: 2 * time.Second}); err != nil || string(resp.Body) != "ok" {
 		t.Errorf("with a longer timeout: %v", err)
+	}
+}
+
+func TestIconCandidates(t *testing.T) {
+	page, _ := url.Parse("https://www.example.nl/nieuws/")
+	html := `<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="mask-icon" href="/mask.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href='https://cdn.example.nl/icon-192.png'>
+<link rel="apple-touch-icon" href="apple.png">
+<link rel="shortcut icon" href="/favicon.ico">
+<link rel="stylesheet" href="/x.css">`
+	got := strings.Join(iconCandidates(page, html), " ")
+	want := "https://www.example.nl/nieuws/apple.png https://cdn.example.nl/icon-192.png https://www.example.nl/icon-32.png https://www.example.nl/favicon.ico https://www.example.nl/favicon.ico"
+	if got != want {
+		t.Errorf("candidates:\n got %s\nwant %s", got, want)
+	}
+	if got := iconCandidates(page, "<html>no icons</html>"); len(got) != 1 || got[0] != "https://www.example.nl/favicon.ico" {
+		t.Errorf("fallback: %v", got)
+	}
+}
+
+// icoFile builds an .ico with one entry.
+func icoFile(w int, data []byte) []byte {
+	var b bytes.Buffer
+	binary.Write(&b, binary.LittleEndian, []uint16{0, 1, 1})
+	b.Write([]byte{byte(w), byte(w), 0, 0})
+	binary.Write(&b, binary.LittleEndian, []uint16{1, 32})
+	binary.Write(&b, binary.LittleEndian, []uint32{uint32(len(data)), 22})
+	b.Write(data)
+	return b.Bytes()
+}
+
+// dib builds a bottom-up BMP (as in .ico) of w×w pixels; px gives the colour index or BGRA per pixel.
+func dib(w, bpp int, palette [][4]byte, px func(x, y int) []byte, mask func(x, y int) bool) []byte {
+	var b bytes.Buffer
+	binary.Write(&b, binary.LittleEndian, []uint32{40, uint32(w), uint32(2 * w)})
+	binary.Write(&b, binary.LittleEndian, []uint16{1, uint16(bpp)})
+	binary.Write(&b, binary.LittleEndian, []uint32{0, 0, 0, 0, uint32(len(palette)), 0})
+	for _, c := range palette {
+		b.Write(c[:])
+	}
+	stride := ((w*bpp + 31) / 32) * 4
+	for y := w - 1; y >= 0; y-- {
+		row := make([]byte, stride)
+		for x := 0; x < w; x++ {
+			v := px(x, y)
+			if bpp == 8 {
+				row[x] = v[0]
+			} else {
+				copy(row[x*bpp/8:], v)
+			}
+		}
+		b.Write(row)
+	}
+	ms := ((w + 31) / 32) * 4
+	for y := w - 1; y >= 0; y-- {
+		row := make([]byte, ms)
+		for x := 0; x < w; x++ {
+			if mask(x, y) {
+				row[x/8] |= 0x80 >> (x % 8)
+			}
+		}
+		b.Write(row)
+	}
+	return b.Bytes()
+}
+
+func TestDecodeIcon(t *testing.T) {
+	// 32-bit BMP entry with alpha: red, left half transparent
+	red := dib(16, 32, nil, func(x, y int) []byte {
+		if x < 8 {
+			return []byte{0, 0, 0, 0}
+		}
+		return []byte{0, 0, 255, 255}
+	}, func(int, int) bool { return false })
+	img, err := decodeIcon(icoFile(16, red))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c := color.NRGBAModel.Convert(img.At(12, 3)).(color.NRGBA); c != (color.NRGBA{255, 0, 0, 255}) {
+		t.Errorf("32-bit pixel %v", c)
+	}
+	if _, _, _, a := img.At(2, 3).RGBA(); a != 0 {
+		t.Error("32-bit transparent pixel")
+	}
+	// 8-bit palette entry with the AND mask: blue, top row transparent
+	blue := dib(16, 8, [][4]byte{{0, 0, 0, 0}, {255, 0, 0, 0}}, func(x, y int) []byte { return []byte{1} }, func(x, y int) bool { return y == 0 })
+	img, err = decodeIcon(icoFile(16, blue))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c := color.NRGBAModel.Convert(img.At(5, 5)).(color.NRGBA); c != (color.NRGBA{0, 0, 255, 255}) {
+		t.Errorf("8-bit pixel %v", c)
+	}
+	if _, _, _, a := img.At(5, 0).RGBA(); a != 0 {
+		t.Error("mask not applied")
+	}
+	// PNG inside the .ico, then scaled to 32×32 with transparency kept
+	src := image.NewNRGBA(image.Rect(0, 0, 64, 64))
+	for i := 0; i < 64*32; i++ {
+		src.Pix[4*i], src.Pix[4*i+3] = 200, 255 // top half opaque
+	}
+	var pb bytes.Buffer
+	png.Encode(&pb, src)
+	img, err = decodeIcon(icoFile(64, pb.Bytes()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := iconPNG(img)
+	if err != nil {
+		t.Fatal(err)
+	}
+	small, err := png.Decode(bytes.NewReader(out))
+	if err != nil || small.Bounds().Dx() != 32 {
+		t.Fatalf("scaled: %v %v", small.Bounds(), err)
+	}
+	if _, _, _, a := small.At(10, 5).RGBA(); a != 0xffff {
+		t.Error("opaque half lost")
+	}
+	if _, _, _, a := small.At(10, 25).RGBA(); a != 0 {
+		t.Error("transparent half lost")
+	}
+	for _, bad := range [][]byte{nil, []byte("<html>"), icoFile(16, []byte("short")), {0, 0, 1, 0, 200, 0}} {
+		if _, err := decodeIcon(bad); err == nil {
+			t.Errorf("must fail: %q", bad)
+		}
+	}
+	if _, err := iconPNG(image.NewNRGBA(image.Rect(0, 0, 32, 32))); err == nil {
+		t.Error("an empty icon must be rejected")
+	}
+}
+
+func TestIconHandler(t *testing.T) {
+	a := newTestApp(t, validConfig) // source a: https://a.example/rss
+	h := a.routes("/")
+	if rec := get(h, "GET", "/api/icon?s=a", nil); rec.Code != 404 {
+		t.Errorf("no icon yet: %d", rec.Code)
+	}
+	a.icons.set("a.example", []byte("\x89PNG fake"))
+	rec := get(h, "GET", "/api/icon?s=a", nil)
+	if rec.Code != 200 || rec.Header().Get("Content-Type") != "image/png" || rec.Header().Get("Content-Security-Policy") != "default-src 'none'" {
+		t.Errorf("icon: %d %v", rec.Code, rec.Header())
+	}
+	if rec := get(h, "GET", "/api/icon?s=nope", nil); rec.Code != 404 {
+		t.Error("only configured sources")
+	}
+	if b := get(h, "GET", "/api/catalog", nil).Body.String(); !strings.Contains(b, `"icon":"api/icon?s=a\u0026v=`) {
+		t.Errorf("catalog icon link: %s", b[strings.Index(b, `"sources"`):])
+	}
+	a2 := newTestApp(t, validConfig+"features: { source_icons: false }\n")
+	a2.icons.set("a.example", []byte("\x89PNG fake"))
+	if rec := get(a2.routes("/"), "GET", "/api/icon?s=a", nil); rec.Code != 404 {
+		t.Error("switched off in config")
+	}
+}
+
+func TestBaseDomain(t *testing.T) {
+	for in, want := range map[string]string{"www.nu.nl": "nu.nl", "myprivacy.dpgmedia.nl": "dpgmedia.nl", "nos.nl": "nos.nl", "feeds.nos.nl.": "nos.nl", "localhost": "localhost"} {
+		if got := baseDomain(in); got != want {
+			t.Errorf("baseDomain(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestIconServices(t *testing.T) {
+	got := iconServices("www.nu.nl")
+	if len(got) != 5 || got[0] != "https://icons.duckduckgo.com/ip3/www.nu.nl.ico" || got[1] != "https://www.google.com/s2/favicons?sz=64&domain=www.nu.nl" || got[4] != got[1]+"&retry=3" {
+		t.Errorf("services: %v", got)
+	}
+	if c, err := parseConfig([]byte(validConfig + "features: { icon_services: false }\n")); err != nil || c.Features.IconServices || !c.Features.SourceIcons {
+		t.Errorf("icon_services can be turned off separately: %v %+v", err, c.Features)
 	}
 }

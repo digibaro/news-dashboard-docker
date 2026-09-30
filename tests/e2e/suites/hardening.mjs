@@ -24,7 +24,7 @@ const watch = p => { const log = { dialogs: [], csp: [], errors: [] };
     return {
       titles: [...s.querySelectorAll('.item .t a')].map(a => ({ t: a.textContent, href: a.getAttribute('href') })),
       onAttrs: [...document.querySelectorAll('*')].filter(e => [...e.attributes].some(a => /^on/i.test(a.name))).map(e => e.tagName),
-      bad: s.querySelectorAll('script, iframe, img:not(.thumb), object, embed, svg:not(.i):not(.w)').length,
+      bad: s.querySelectorAll('script, iframe, img:not(.thumb):not(.sico), object, embed, svg:not(.i):not(.w)').length,
       src: [...s.querySelectorAll('.src span:last-child')].map(x => x.textContent)[0],
     };
   });

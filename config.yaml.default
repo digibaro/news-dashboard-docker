@@ -30,6 +30,10 @@ features:
   allow_custom_feeds: false
   show_images: true               # include feed images (https only); each visitor still opts in under Instellingen
   proxy_images: true              # serve them through /api/img (in-memory, max 50 MB): browsers never contact publishers
+  source_icons: true              # each news site's own small icon instead of a coloured dot; fetched and served by
+                                  # this server (weekly, in memory), so browsers never contact the news sites
+  icon_services: true             # when a site blocks the server (cookie wall, bot protection): ask DuckDuckGo's,
+                                  # then Google's favicon service; only the site's name is sent
   geolocation: true               # ip-api.com lookups (free tier: non-commercial use only)
 
 keys:                             # all optional; env vars override
@@ -527,7 +531,7 @@ sources:
   # --- Regionaal ---
   - { id: omroep-brabant, name: "Omroep Brabant", category: regio, url: "https://www.omroepbrabant.nl/rss", homepage: "https://www.omroepbrabant.nl", lang: nl, region: "Noord-Brabant" }
   - { id: rtv-noord,      name: "RTV Noord",      category: regio, url: "https://www.rtvnoord.nl/rss/index.xml", homepage: "https://www.rtvnoord.nl", lang: nl, region: "Groningen" }
-  - { id: rtv-oost,       name: "RTV Oost",       category: regio, url: "https://www.rtvoost.nl/rss/index.xml", homepage: "https://www.rtvoost.nl", lang: nl, region: "Overijssel" }
+  - { id: rtv-oost,       name: "RTV Oost",       category: regio, url: "https://www.rtvoost.nl/rss/index.xml", homepage: "https://www.oost.nl", lang: nl, region: "Overijssel" }
   - { id: rtv-utrecht,    name: "RTV Utrecht",    category: regio, url: "https://www.rtvutrecht.nl/rss/index.xml", homepage: "https://www.rtvutrecht.nl", lang: nl, region: "Utrecht" }
   - { id: omroep-gld,     name: "Omroep Gelderland", category: regio, url: "https://www.gld.nl/rss/index.xml", homepage: "https://www.gld.nl", lang: nl, region: "Gelderland" }
   - { id: omroep-west,    name: "Omroep West",    category: regio, url: "https://www.omroepwest.nl/rss/index.xml", homepage: "https://www.omroepwest.nl", lang: nl, region: "Zuid-Holland" }

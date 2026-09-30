@@ -1042,7 +1042,7 @@ func newTestApp(t *testing.T, cfgYAML string) *App {
 	}
 	a := &App{cfg: cfg, level: new(slog.LevelVar), started: time.Now(), news: newNewsCache(), sched: newScheduler(),
 		wx: newWeatherCaches(), threats: newStateStore(), geo: newGeoCache(100), metrics: newHTTPMetrics(),
-		alarms: newTTLCache[[]Alarm](50), air: newTTLCache[[]AirComponent](20), pollen: newTTLCache[PollenData](20), p2k: newP2KCounters(), push: newPushHub(), waste: newTTLCache[WasteResult](20), insects: newTTLCache[InsectData](20), skyClouds: newTTLCache[[]cloudPoint](20), wikiCache: newTTLCache[WikiSummary](20), solar: newTTLCache[[]SolarDay](20)}
+		alarms: newTTLCache[[]Alarm](50), air: newTTLCache[[]AirComponent](20), pollen: newTTLCache[PollenData](20), p2k: newP2KCounters(), push: newPushHub(), waste: newTTLCache[WasteResult](20), insects: newTTLCache[InsectData](20), skyClouds: newTTLCache[[]cloudPoint](20), wikiCache: newTTLCache[WikiSummary](20), solar: newTTLCache[[]SolarDay](20), icons: newIconCache()}
 	a.images = newImageProxy(func() string { return "test" })
 	a.fetcher = newFetcher(4, func() string { return "test" }, func() time.Duration { return 5 * time.Second })
 	return a

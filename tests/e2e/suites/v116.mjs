@@ -122,7 +122,8 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   if (w === 1440 && scheme === 'light') { console.log(JSON.stringify(s)); await p.locator('#panel-satellite').screenshot({ path: `${OUT}/sat-panel.png` }); }
   if (w === 360) await p.locator('#panel-satellite').screenshot({ path: `${OUT}/sat-360.png` });
   ok(s.order.startsWith('weather,satellite'), `${w} ${scheme}: Satellietbeeld right after Weer (${s.order})`);
-  ok(s.n === 2 && s.nat.every(x => x === 800) && /^Satellietbeeld van de Benelux en omgeving om \d\d:\d\d$/.test(s.alt) && s.ovAlt === '', `image + coastline overlay loaded, alt "${s.alt}"`);
+  // the image, and the coastline overlay when EUMETSAT delivered it (it is optional)
+  ok(s.n >= 1 && s.nat.every(x => x === 800) && /^Satellietbeeld van de Benelux en omgeving om \d\d:\d\d$/.test(s.alt) && (s.n === 1 || s.ovAlt === ''), `image loaded${s.n === 2 ? ' with coastline overlay' : ' (no overlay from EUMETSAT this time)'}, alt "${s.alt}"`);
   ok(/Opname \d\d:\d\d/.test(s.foot) && s.link === 'https://view.eumetsat.int/' && /geleden|min/.test(s.fresh), `footer and freshness: ${s.foot} | ${s.fresh}`);
   ok(Math.abs(s.ratio - 800 / 587) < 0.02 && s.sw <= w, `aspect ratio kept (${s.ratio.toFixed(3)}), no horizontal scroll`);
   const r = await new AxeBuilder({ page: p }).include('#panel-satellite').analyze();

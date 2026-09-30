@@ -45,6 +45,7 @@ html.i18n-pending body { visibility: hidden; } /* English: hidden until translat
   --sev-high: #b4480f;
   --sev-crit: #c01f36;
   --dot-l: 42%;
+  --ico-bg: transparent;
   --backdrop: rgb(15 17 21 / .4);
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
   --hdr: 96px;
@@ -67,6 +68,7 @@ html.i18n-pending body { visibility: hidden; } /* English: hidden until translat
     --sev-high: #ff8a4c;
     --sev-crit: #ff5d6c;
     --dot-l: 66%;
+    --ico-bg: #eceef2; /* site icons are made for light tabs */
     --backdrop: rgb(0 0 0 / .7);
     color-scheme: dark;
   }
@@ -87,6 +89,7 @@ html.i18n-pending body { visibility: hidden; } /* English: hidden until translat
   --sev-high: #ff8a4c;
   --sev-crit: #ff5d6c;
   --dot-l: 66%;
+  --ico-bg: #eceef2;
   --backdrop: rgb(0 0 0 / .7);
   color-scheme: dark;
 }
@@ -277,6 +280,7 @@ kbd.k { display: inline-block; min-width: 1.7em; padding: 1px 6px; border: 1px s
 .src { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--text-2); }
 .src span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: hsl(var(--h, 210) 60% var(--dot-l)); }
+.sico { flex: none; box-sizing: border-box; width: 16px; height: 16px; padding: 1px; border-radius: 3px; background: var(--ico-bg); object-fit: contain; }
 .item time { flex: none; white-space: nowrap; }
 .item time::before { content: "· "; }
 .item .t { margin: 0; font-size: 15px; font-weight: 600; line-height: 1.3; }
@@ -1107,6 +1111,11 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.21.0</h3>
+    <ul>
+      <li>Bij elk bericht het eigen pictogram van de nieuwssite in plaats van een gekleurde stip.</li>
+      <li>Databesparing (Instellingen → Weergave): minder vaak verversen en geen afbeeldingen; automatisch bij een trage verbinding, databesparing op je telefoon of een bijna lege batterij.</li>
+    </ul>
     <h3>Versie 1.20.0</h3>
     <ul>
       <li>De Correspondent is weer een bron (Onderzoek).</li>
@@ -1264,6 +1273,11 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.21.0</h3>
+    <ul>
+      <li>Each article shows the news site's own icon instead of a coloured dot.</li>
+      <li>Data saver (Settings → Display): refresh less often and no images; automatically on a slow connection, with data saver on your phone or a nearly empty battery.</li>
+    </ul>
     <h3>Version 1.20.0</h3>
     <ul>
       <li>De Correspondent is a source again (Investigative).</li>
@@ -1565,6 +1579,13 @@ textarea.json {
           <label><input type="radio" name="density" value="comfortable"><span>Ruim</span></label>
         </div>
       </div>
+      <div class="opt"><span id="lbl-saver">Databesparing<small id="saver-hint">Minder vaak verversen, geen afbeeldingen. Automatisch: bij databesparing van je telefoon of browser, een trage verbinding of een bijna lege batterij.</small></span>
+        <div class="seg" role="radiogroup" aria-labelledby="lbl-saver" id="saver-seg">
+          <label><input type="radio" name="saver" value="auto"><span>Automatisch</span></label>
+          <label><input type="radio" name="saver" value="on"><span>Aan</span></label>
+          <label><input type="radio" name="saver" value="off"><span>Uit</span></label>
+        </div>
+      </div>
       <label class="opt"><span>Berichten per pagina</span>
         <select id="page-size"><option value="30">30</option><option value="60">60</option><option value="100">100</option></select>
       </label>
@@ -1653,7 +1674,7 @@ const MIN = 60e3;
 const DEFAULTS = {
   v: 2, theme: 'auto', sources: null, known: [], pageSize: 60, summaries: true,
   density: 'compact', category: 'all', weather: null, threatTab: 'ips', advFilter: 'all',
-  lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, trending: true, pushTopics: null, waste: null, sports: null, sportsSeen: null, solar: null, watch: [], mute: [],
+  lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, trending: true, pushTopics: null, waste: null, sports: null, sportsSeen: null, solar: null, saver: 'auto', watch: [], mute: [],
   panels: { order: PANEL_IDS.slice(), collapsed: {}, hidden: {} },
 };
 
@@ -1692,6 +1713,35 @@ function extLink(href, text, cls) {
   const safe = safeHref(href);
   return safe ? h('a', { href: safe, target: '_blank', rel: 'noopener noreferrer', class: cls, text })
               : h('span', { class: cls, text });
+}
+// Data saver: refresh 3× less often and load no images. "auto" follows the browser's
+// Save-Data setting, a 2G connection, or a battery below 20 % that is not charging.
+let batteryLow = false;
+function saverReason() {
+  if (prefs.saver === 'on') return 'aan';
+  if (prefs.saver === 'off') return '';
+  const c = navigator.connection;
+  if (c?.saveData) return 'databesparing van je browser';
+  if (['slow-2g', '2g'].includes(c?.effectiveType)) return 'trage verbinding';
+  if (batteryLow) return 'bijna lege batterij';
+  return '';
+}
+const dataSaver = () => !!saverReason();
+function watchSaver() {
+  const changed = () => { renderMeta(); renderStream(); renderPanel('satellite'); };
+  navigator.connection?.addEventListener?.('change', changed);
+  navigator.getBattery?.().then(b => {
+    const upd = () => { const low = b.level < 0.2 && !b.charging; if (low !== batteryLow) { batteryLow = low; changed(); } };
+    b.addEventListener('levelchange', upd); b.addEventListener('chargingchange', upd); upd();
+  }).catch(() => {});
+}
+
+// The site's own icon (served by this server), or a coloured dot when it has none.
+function srcMark(id) {
+  const icon = srcById.get(id)?.icon, dot = () => h('span', { class: 'dot', style: `--h:${hue(id)}` });
+  if (!icon || dataSaver()) return dot();
+  return h('img', { class: 'sico', src: icon, alt: '', width: '16', height: '16', loading: 'lazy', decoding: 'async',
+    onerror: e => e.target.replaceWith(dot()) });
 }
 function hue(id) { // deterministic colour per source id (FNV-1a)
   let x = 2166136261;
@@ -2539,6 +2589,15 @@ const EN = {
   "Wikipedia is nu niet bereikbaar ({err}).": "Wikipedia is unreachable right now ({err}).",
   "Geen Wikipedia-artikel gevonden voor “{term}”.": "No Wikipedia article found for “{term}”.",
   "Zoeken op Wikipedia": "Search Wikipedia",
+  // 1.21: bronpictogrammen, databesparing
+  "Databesparing": "Data saver",
+  "Minder vaak verversen, geen afbeeldingen. Automatisch: bij databesparing van je telefoon of browser, een trage verbinding of een bijna lege batterij.": "Refresh less often, no images. Automatic: when your phone or browser saves data, on a slow connection or a nearly empty battery.",
+  "Automatisch": "Automatic", "Aan": "On", "Uit": "Off", "aan": "on",
+  "databesparing van je browser": "your browser's data saver", "trage verbinding": "slow connection", "bijna lege batterij": "nearly empty battery",
+  "Databesparing ({why}): minder vaak verversen, geen afbeeldingen. Wijzigen onder Instellingen → Weergave.": "Data saver ({why}): refreshing less often, no images. Change it under Settings → Display.",
+  "databesparing": "data saver",
+  "Satellietbeeld van {t} laden (± 70 kB)": "Load the satellite image of {t} (± 70 kB)",
+  "Databesparing staat aan.": "Data saver is on.",
   // 1.18: UV, straling, zonnestroom
   "laag": "low", "zeer hoog": "very high", "extreem": "extreme",
   "UV vandaag max {v} ({level}) rond {t}": "UV today up to {v} ({level}) around {t}",
@@ -2720,6 +2779,7 @@ function sanitize(p) {
     if (/^[1-9]\d{3}[A-Z]{2}$/.test(pc) && Number.isInteger(nr) && nr >= 1 && nr <= 99999 && /^[A-Za-z0-9-]*$/.test(sfx)) d.waste = { postcode: pc, number: nr, suffix: sfx, provider: prov };
   }
   if (Array.isArray(p.sports)) d.sports = p.sports.filter(x => SPORT_IDS.includes(x));
+  if (['auto', 'on', 'off'].includes(p.saver)) d.saver = p.saver;
   if (Array.isArray(p.sportsSeen)) d.sportsSeen = p.sportsSeen.filter(x => SPORT_IDS.includes(x));
   if (p.solar && typeof p.solar === 'object') {
     const kwp = Number(p.solar.kwp), tilt = Number(p.solar.tilt), az = Number(p.solar.az);
@@ -3045,7 +3105,9 @@ function renderAll() { renderWelcome(); buildChips(); renderTrending(); renderSt
 function renderMeta() {
   // freshness of the server data: the most recent successful fetch among the chosen sources
   const ts = enabledIds().map(id => status[id]?.fetched_at).filter(Boolean).map(t => new Date(t)).sort((a, b) => b - a)[0];
-  $('#news-meta').replaceChildren(ts ? freshEl(ts, 30, false) : newsUpdated ? 'bijgewerkt ' + fmt.time.format(newsUpdated) : '');
+  const why = saverReason();
+  $('#news-meta').replaceChildren(ts ? freshEl(ts, 30, false) : newsUpdated ? 'bijgewerkt ' + fmt.time.format(newsUpdated) : '',
+    why ? h('span', { class: 'saver', title: t('Databesparing ({why}): minder vaak verversen, geen afbeeldingen. Wijzigen onder Instellingen → Weergave.', { why: t(why) }), text: ' · ' + t('databesparing') }) : '');
 }
 
 function renderStream() {
@@ -3134,7 +3196,7 @@ function renderSaved() {
     h('ul', { class: 'items', 'aria-labelledby': 'd-saved' }, list.map(it => { const li = itemEl(it); li.firstElementChild.append(savedExtra(it)); return li; }))));
 }
 function itemEl(it) {
-  const isNew = newIds.has(it.id), img = prefs.images && it.image && !it.image.startsWith('http:') ? it.image : null;
+  const isNew = newIds.has(it.id), img = prefs.images && !dataSaver() && it.image && !it.image.startsWith('http:') ? it.image : null;
   const related = (it.related || []).filter(r => safeHref(r.url));
   return h('li', { class: 'item' + (isNew ? ' new' : '') + (isRead(it) ? ' read' : '') + (img ? ' has-img' : ''), 'data-id': it.id, translate: 'no' },
     h('div', null,
@@ -3146,7 +3208,7 @@ function itemEl(it) {
         ' · ', h('button', { type: 'button', class: 'covbtn', 'aria-expanded': 'false', onclick: e => toggleCoverage(e.currentTarget, it),
           text: t('Dekking ({n} bronnen)', { n: related.length + 1 }) })) : null,
       h('div', { class: 'meta' },
-        h('span', { class: 'src' }, h('span', { class: 'dot', style: `--h:${hue(it.source)}` }), h('span', { text: srcName(it.source) })),
+        h('span', { class: 'src' }, srcMark(it.source), h('span', { text: srcName(it.source) })),
         srcById.get(it.source)?.paywall ? h('span', { class: 'pw', role: 'img', title: t('Mogelijk achter een betaalmuur'), 'aria-label': t('Mogelijk achter een betaalmuur'), text: '€' }) : null,
         timeEl(it.date),
         h('button', { class: 'sh', type: 'button', 'aria-label': t('Delen: {title}', { title: it.title }), title: t('Delen'), onclick: () => shareItem(it) }, icon('share')),
@@ -5011,7 +5073,7 @@ function coverageList(it) {
     const lag = i === 0 ? t('eerst') : mins < 60 ? t('+{n} min', { n: mins }) : t('+{n} u', { n: Math.round(mins / 60) });
     return h('li', null,
       h('span', { class: 'ct', text: fmt.time.format(r.d) }),
-      h('span', { class: 'src' }, h('span', { class: 'dot', style: `--h:${hue(r.source)}` }), h('span', { text: srcName(r.source) })),
+      h('span', { class: 'src' }, srcMark(r.source), h('span', { text: srcName(r.source) })),
       h('a', { href: safeHref(r.url), target: '_blank', rel: 'noopener noreferrer', 'data-rid': r.id, text: r.title }),
       h('span', { class: 'tag plain' + (i === 0 ? ' first' : ''), text: lag }));
   }));
@@ -5246,6 +5308,7 @@ function renderInsects(body, extra) {
 }
 
 // ---------------------------------------------------------------- satellietbeeld (EUMETSAT, served by this server)
+let satWanted = false; // with data saver on: the visitor asked for the image
 async function loadSatellite() {
   try { panelData.satellite = { data: await api('api/satellite') }; }
   catch (e) { panelData.satellite = { ...(panelData.satellite || {}), error: e }; }
@@ -5260,6 +5323,11 @@ function renderSatellite(body, extra) {
   if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (satellite.enabled).' })); return; }
   if (!r.image) { body.replaceChildren(h('p', { class: 'pnote', text: r.error ? t('EUMETSAT is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: r.error }) : t('Het satellietbeeld wordt nog voor het eerst opgehaald.') })); return; }
   const when = fmt.time.format(new Date(r.time));
+  if (dataSaver() && !satWanted) {
+    body.replaceChildren(h('button', { class: 'btn', type: 'button', onclick: () => { satWanted = true; renderPanel('satellite'); },
+      text: t('Satellietbeeld van {t} laden (± 70 kB)', { t: when }) }), h('p', { class: 'pfoot', text: t('Databesparing staat aan.') }));
+    return;
+  }
   const old = body.querySelector('.satwrap');
   if (old?.dataset.src === r.image) { renderSatFoot(body, r, when); return; } // same image: keep it, no flicker
   const wrap = h('a', { class: 'satwrap', href: r.image, target: '_blank', rel: 'noopener', 'data-src': r.image, title: t('Satellietbeeld groot openen') },
@@ -5827,6 +5895,7 @@ function openSettings(target) {
   $('#opml-msg').textContent = '';
   renderPushSettings();
   $('#opt-images').checked = prefs.images;
+  for (const r of document.querySelectorAll('input[name="saver"]')) r.checked = r.value === prefs.saver;
   $('#opt-images-row').hidden = !catalog.features?.show_images;
   $('#watch-in').value = prefs.watch.join(', ');
   $('#mute-in').value = prefs.mute.join(', ');
@@ -5896,7 +5965,7 @@ function buildSourceGroups() {
     const list = h('ul', { class: 'srcs' }, srcs.map(s => h('li', { 'data-q': fold(s.name + ' ' + s.id) },
       h('label', { class: 'srow' },
         h('input', { type: 'checkbox', class: 'switch', role: 'switch', 'data-id': s.id, checked: on.has(s.id), onchange: onSourceToggle }),
-        h('span', { class: 'nm' }, h('span', { class: 'dot', style: `--h:${hue(s.id)}` }), h('span', { text: s.name, translate: 'no' })),
+        h('span', { class: 'nm' }, srcMark(s.id), h('span', { text: s.name, translate: 'no' })),
         s.lang && s.lang !== 'nl' ? h('span', { class: 'lang', text: s.lang }) : null,
         h('span', { class: 'st', 'data-id': s.id })))));
     const setAll = v => {
@@ -5988,7 +6057,8 @@ function every(ms, fn) { tasks.push({ ms, fn, last: Date.now() }); }
 function tick() {
   if (document.hidden) return;
   const now = Date.now();
-  for (const t of tasks) if (now - t.last >= t.ms) { t.last = now; Promise.resolve(t.fn()).catch(() => {}); }
+  const f = dataSaver() ? 3 : 1;
+  for (const t of tasks) if (now - t.last >= t.ms * f) { t.last = now; Promise.resolve(t.fn()).catch(() => {}); }
 }
 function saveSeen() {
   const newest = items.reduce((m, i) => Math.max(m, i.date.getTime()), 0);
@@ -6095,6 +6165,9 @@ function wire() {
   }
   for (const r of document.querySelectorAll('input[name="density"]')) {
     r.addEventListener('change', () => { applyDensity(r.value); savePrefs(); });
+  }
+  for (const r of document.querySelectorAll('input[name="saver"]')) {
+    r.addEventListener('change', () => { prefs.saver = r.value; savePrefs(); renderMeta(); renderStream(); renderPanel('satellite'); });
   }
   let qt;
   $('#q').addEventListener('input', e => { clearTimeout(qt); qt = setTimeout(() => setQuery(e.target.value), 120); });
@@ -6274,6 +6347,7 @@ async function init() {
   }
   applyAccent(catalog.accent);
   adoptNewSports();
+  watchSaver();
   for (const s of catalog.sources) srcById.set(s.id, s);
   for (const c of catalog.categories) catById.set(c.id, c);
   if (catalog.version) $('#version').textContent = t('Versie {v}.', { v: catalog.version });
