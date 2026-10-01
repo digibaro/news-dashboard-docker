@@ -356,6 +356,13 @@ func (a *App) handleSky(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	e["data"] = d
+	if cfg.Sky.Launches {
+		l := a.feedEntry("ll2:launches")
+		if v, ok := a.threats.get("ll2:launches").Data.([]Launch); ok {
+			l["items"] = v
+		}
+		e["launches"] = l
+	}
 	fe := a.feedEntry("noaa:kp")
 	if v, ok := fe["fetched_at"]; ok {
 		e["fetched_at"] = v

@@ -34,7 +34,7 @@ for (const scheme of ['light', 'dark']) {
   if (scheme === 'light') console.log(JSON.stringify({ ...t, health: t.health.slice(0, 4) }, null, 1));
   ok(/Dreigingsniveau terrorisme: [1-5] van 5 · (minimaal|beperkt|aanzienlijk|substantieel|kritiek)/.test(t.nctv) && t.nctvHref.startsWith('https://www.nctv.nl/'), `${scheme}: NCTV badge "${t.nctv}"`);
   ok(t.knmi === '(hidden)' || /^KNMI: (waarschuwingen onbekend|code )/.test(t.knmi) || /^KNMI code/.test(t.knmi), `${scheme}: KNMI badge (hidden without warnings) "${t.knmi}"`);
-  ok(t.order.join(',') === 'weather,satellite,today,waste,air,pollen,insects,sky,traffic,trains,alarms,nlalert,quakes,energy,fuel,economy,markets,sports,politics,threats,advisories,breaches,ransomware,utilities,outages,ap,health', `${scheme}: default order, Gezondheid below AP (${t.order.join(', ')})`);
+  ok(t.order.join(',') === 'weather,satellite,today,waste,air,pollen,insects,sky,traffic,trains,alarms,nlalert,quakes,world,energy,fuel,economy,markets,sports,politics,threats,advisories,breaches,ransomware,utilities,outages,ap,health', `${scheme}: default order, Gezondheid below AP (${t.order.join(', ')})`);
   ok(/\d+ files? · (.* · )?\d+ ongeval(len)? · \d+ afsluiting(en)?/.test(t.tsum) && t.jams === Math.min(8, Number(t.tsum.match(/^(\d+) file/)[1])) && !t.unknown, `${scheme}: traffic "${t.tsum}", ${t.jams} jams listed (max 8), no unknown roads`);
   ok(t.shields.every(s => /shield (a:A\d+|n:N\d+|x:)/.test(s)), `${scheme}: road shields ${t.shields.join(' ')}`);
   ok(t.outs.length === 7 && t.outs.every(r => /(werkt normaal|verstoring|storing|status onbekend)/.test(r)), `${scheme}: 7 providers with status`);
@@ -80,8 +80,8 @@ for (const scheme of ['light', 'dark']) {
 
 // Saved panel orders: 1.1 (no new panels), 1.2.0 (Gezondheid above AP) and a deliberate v2 choice
 for (const [label, saved, want] of [
-  ['1.1 order', { order: ['ap', 'weather', 'threats', 'advisories'], collapsed: { threats: true }, hidden: {} }, 'ap,health,weather,satellite,today,waste,air,pollen,insects,sky,traffic,trains,alarms,nlalert,quakes,energy,fuel,economy,markets,sports,politics,threats,advisories,breaches,ransomware,utilities,outages'],
-  ['1.2.0 order', { order: ['weather', 'traffic', 'threats', 'advisories', 'outages', 'health', 'ap'], collapsed: {}, hidden: {} }, 'weather,satellite,today,waste,air,pollen,insects,sky,traffic,trains,alarms,nlalert,quakes,energy,fuel,economy,markets,sports,politics,threats,advisories,breaches,ransomware,utilities,outages,ap,health'],
+  ['1.1 order', { order: ['ap', 'weather', 'threats', 'advisories'], collapsed: { threats: true }, hidden: {} }, 'ap,health,weather,satellite,today,waste,air,pollen,insects,sky,traffic,trains,alarms,nlalert,quakes,world,energy,fuel,economy,markets,sports,politics,threats,advisories,breaches,ransomware,utilities,outages'],
+  ['1.2.0 order', { order: ['weather', 'traffic', 'threats', 'advisories', 'outages', 'health', 'ap'], collapsed: {}, hidden: {} }, 'weather,satellite,today,waste,air,pollen,insects,sky,traffic,trains,alarms,nlalert,quakes,world,energy,fuel,economy,markets,sports,politics,threats,advisories,breaches,ransomware,utilities,outages,ap,health'],
 ]) {
   const ctx = await ctxFor({}, { onboarded: true, panels: saved });
   const p = await ctx.newPage(); await p.goto(URL); await p.waitForSelector('#panel-traffic');

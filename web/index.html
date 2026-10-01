@@ -893,6 +893,9 @@ textarea.json {
 .sprow .m { color: var(--text-3); font-size: 12px; }
 .sprow .spnote { display: block; }
 .spsec h3 .spico { margin-right: 6px; }
+.wsec h3, .launches h3 { margin: 10px 0 4px; font-size: 12px; font-weight: 650; color: var(--text-2); text-transform: uppercase; letter-spacing: .03em; }
+.wsec:first-child h3 { margin-top: 0; }
+.tag.warn { border-color: var(--sev-crit); color: var(--sev-crit); font-weight: 650; }
 .tag.live { color: var(--sev-crit); }
 .spev .plist { margin: 2px 0 6px; }
 .wxthunder, .wxuv { margin: 6px 0 0; font-size: 13px; color: var(--text-2); }
@@ -1111,6 +1114,11 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.23.0</h3>
+    <ul>
+      <li>Vanavond aan de hemel: de volgende raketlanceringen, met aftellen.</li>
+      <li>Nieuw paneel Wereldwijd: zware aardbevingen over de hele wereld en actieve natuurrampen (orkanen, vulkanen, overstromingen, grote branden).</li>
+    </ul>
     <h3>Versie 1.22.0</h3>
     <ul>
       <li>De pictogrammen van de nieuwssites zijn na een herstart meteen zichtbaar, als de beheerder een snapshot op schijf heeft ingesteld.</li>
@@ -1281,6 +1289,11 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.23.0</h3>
+    <ul>
+      <li>Tonight's sky: the next rocket launches, with a countdown.</li>
+      <li>New panel Worldwide: strong earthquakes around the world and active natural disasters (hurricanes, volcanoes, floods, large wildfires).</li>
+    </ul>
     <h3>Version 1.22.0</h3>
     <ul>
       <li>The news sites' icons are visible right after a restart when the administrator has set up a snapshot on disk.</li>
@@ -1669,6 +1682,7 @@ const PANELS = {
   alarms: 'Alarmeringen',
   nlalert: 'NL-Alert',
   quakes: 'Aardbevingen',
+  world: 'Wereldwijd',
   energy: 'Energieprijzen',
   fuel: 'Brandstofprijzen',
   economy: 'Economie in cijfers',
@@ -2605,6 +2619,26 @@ const EN = {
   "Wikipedia is nu niet bereikbaar ({err}).": "Wikipedia is unreachable right now ({err}).",
   "Geen Wikipedia-artikel gevonden voor “{term}”.": "No Wikipedia article found for “{term}”.",
   "Zoeken op Wikipedia": "Search Wikipedia",
+  // 1.23: raketlanceringen, wereldwijd
+  "Raketlanceringen": "Rocket launches", " · lanceringen: ": " · launches: ",
+  "nu in de lucht": "in flight now", "Precieze tijd nog niet bekend": "Exact time not yet known",
+  "over {n} min": "in {n} min", "vandaag {t}": "today {t}", "morgen {t}": "tomorrow {t}",
+  "datum nog niet zeker": "date not yet certain", "uitgesteld": "on hold",
+  "Wereldwijd": "Worldwide",
+  "Het wereldoverzicht kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.": "The world overview could not be loaded ({err}). Retrying automatically.",
+  "Dit paneel staat uit in config.yaml (world.enabled).": "This panel is disabled in config.yaml (world.enabled).",
+  "Aardbevingen vanaf M{m} (7 dagen)": "Earthquakes from M{m} (7 days)",
+  "USGS is niet bereikbaar ({err}).": "USGS is unreachable ({err}).", "NASA EONET is niet bereikbaar ({err}).": "NASA EONET is unreachable ({err}).",
+  "Wordt voor het eerst opgehaald.": "Being fetched for the first time.",
+  "Geen zware aardbevingen in de afgelopen 7 dagen.": "No strong earthquakes in the past 7 days.",
+  "tsunamiwaarschuwing": "tsunami warning", "Verwachte gevolgen volgens USGS PAGER": "Expected impact according to USGS PAGER",
+  "gevolgen: {a}": "impact: {a}", "beperkt": "limited", "groot": "large", "zeer groot": "very large",
+  "Geen grote natuurrampen actief.": "No major natural disasters active.",
+  "Stormen": "Storms", "Vulkanen": "Volcanoes", "Overstromingen": "Floods", "Aardverschuivingen": "Landslides", "Grote natuurbranden": "Large wildfires",
+  "{n} km/u": "{n} km/h", "{n} ha": "{n} ha", "bijgewerkt {t}": "updated {t}",
+  " · zeeijs en kleine branden weggelaten": " · sea ice and small fires left out",
+  "USGS · aardbevingen wereldwijd": "USGS · earthquakes worldwide", "NASA EONET · natuurrampen": "NASA EONET · natural disasters",
+  "Launch Library 2 · raketlanceringen": "Launch Library 2 · rocket launches",
   // 1.21: bronpictogrammen, databesparing
   "Databesparing": "Data saver",
   "Minder vaak verversen, geen afbeeldingen. Automatisch: bij databesparing van je telefoon of browser, een trage verbinding of een bijna lege batterij.": "Refresh less often, no images. Automatic: when your phone or browser saves data, on a slow connection or a nearly empty battery.",
@@ -3332,6 +3366,7 @@ const freshOf = {
   alarms: () => { const d = panelData.alarms?.data; return d?.enabled && { ts: d.fetched_at, max: 6, stale: !!d.stale }; },
   traffic: () => { const d = panelData.traffic?.data; return d?.enabled && { ts: d.fetched_at, max: 15, stale: !!d.error }; },
   insects: () => { const d = panelData.insects?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 130, stale: !!d.error }; },
+  world: () => { const d = panelData.world?.data; return d?.enabled && d.quakes?.fetched_at && { ts: d.quakes.fetched_at, max: 65, stale: !!(d.quakes.error || d.events?.error) }; },
   satellite: () => { const d = panelData.satellite?.data; return d?.enabled && d.time && { ts: d.time, max: 75, stale: !!d.error }; },
   sky: () => { const d = panelData.sky?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 400, stale: !!d.error }; },
   sports: () => { const d = panelData.sports?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 130, stale: !!d.f1?.error }; },
@@ -3371,6 +3406,7 @@ const panelRenderers = {
   nlalert: renderNLAlert,
   insects: renderInsects,
   satellite: renderSatellite,
+  world: renderWorld,
   sky: renderSky,
   sports: renderSports,
   fuel: renderFuel,
@@ -5391,8 +5427,82 @@ function renderSky(body, extra) {
   const au = [t('geen kans'), t('alleen op een lang belichte foto'), t('kleine kans: kijk laag naar het noorden, buiten de stad'), t('goede kans: kijk naar het noorden, buiten de stad')][d.aurora];
   out.push(row('🌌', t('Noorderlicht: {s}', { s: au }), d.kp != null ? ` (Kp ${d.kp.toLocaleString(locale(), { maximumFractionDigits: 1 })})` : ''));
   if (d.meteor) out.push(row('☄️', t('Meteoren: {name}, piek {date} (tot ongeveer {n} per uur bij een donkere hemel)', { name: d.meteor.name, date: fmt.date.format(dateOnly(d.meteor.peak)), n: d.meteor.zhr })));
+  const ls = r.launches?.items;
+  if (ls?.length) out.push(h('div', { class: 'launches' }, h('h3', null, h('span', { 'aria-hidden': 'true', text: '🚀 ' }), t('Raketlanceringen')),
+    h('ul', { class: 'plist' }, ls.slice(0, 3).map(launchItem))));
   out.push(h('p', { class: 'pfoot' }, t('Berekend voor {place} · noorderlicht: ', { place: wxLocName() }), extLink('https://www.swpc.noaa.gov/', 'NOAA SWPC'),
-    t(' · bewolking: '), extLink('https://open-meteo.com/', 'Open-Meteo')));
+    t(' · bewolking: '), extLink('https://open-meteo.com/', 'Open-Meteo'),
+    ls?.length ? [t(' · lanceringen: '), extLink('https://thespacedevs.com/llapi', 'Launch Library 2')] : null));
+  body.replaceChildren(...out);
+}
+
+// Rocket launches (Launch Library 2): when, rocket and mission, who and from where.
+function launchItem(l) {
+  const at = new Date(l.time), mins = (at - Date.now()) / 6e4;
+  const when = l.status === 'flight' ? h('span', { class: 'tag live', text: t('nu in de lucht') })
+    : !l.exact ? h('span', { class: 'tag plain', title: t('Precieze tijd nog niet bekend'), text: fmt.date.format(at) })
+    : h('span', { class: 'tag plain', title: `${fmt.date.format(at)} ${fmt.time.format(at)}`,
+      text: mins < 60 ? t('over {n} min', { n: Math.max(1, Math.round(mins)) })
+        : dayKey(at) === dayKey(new Date()) ? t('vandaag {t}', { t: fmt.time.format(at) })
+        : dayKey(at) === dayKey(new Date(Date.now() + 864e5)) ? t('morgen {t}', { t: fmt.time.format(at) })
+        : `${fmt.wdm.format(at)} ${fmt.time.format(at)}` });
+  return h('li', null, when, ' ', h('b', { translate: 'no', text: l.rocket }), l.mission ? h('span', { translate: 'no', text: ' · ' + l.mission }) : null,
+    h('div', { class: 'm' }, h('span', { translate: 'no', text: [l.provider, l.place].filter(Boolean).join(' · ') }),
+      l.status === 'tbd' ? h('span', { text: t('datum nog niet zeker') }) : l.status === 'hold' ? h('span', { text: t('uitgesteld') }) : null));
+}
+
+// ---------------------------------------------------------------- wereldwijd (USGS, NASA EONET)
+async function loadWorld() {
+  if (!catalog?.world) { panelData.world = { data: { enabled: false } }; renderPanel('world'); return; }
+  try { panelData.world = { data: await api('api/world') }; }
+  catch (e) { panelData.world = { ...(panelData.world || {}), error: e }; }
+  renderPanel('world');
+}
+const COMPASS_NL = { N: 'N', NNE: 'NNO', NE: 'NO', ENE: 'ONO', E: 'O', ESE: 'OZO', SE: 'ZO', SSE: 'ZZO', S: 'Z', SSW: 'ZZW', SW: 'ZW', WSW: 'WZW', W: 'W', WNW: 'WNW', NW: 'NW', NNW: 'NNW' };
+// "80 km ENE of Tadine, New Caledonia" -> "80 km ONO van Tadine, New Caledonia" (in Dutch)
+const quakePlace = p => prefs.lang === 'en' ? p : p.replace(/^(\d+) km ([NESW]{1,3}) of (.+)$/, (m, km, dir, rest) => `${km} km ${COMPASS_NL[dir] || dir} van ${rest}`);
+// "Hurricane Rachel" -> "Orkaan Rachel", "Wildfire Hatch Grade, Walla Walla" -> "Hatch Grade, Walla Walla"
+const STORM_NL = [[/^Super Typhoon /, 'Supertyfoon '], [/^Typhoon /, 'Tyfoon '], [/^Hurricane /, 'Orkaan '], [/^Tropical Storm /, 'Tropische storm '],
+  [/^Tropical Depression /, 'Tropische depressie '], [/^(Severe )?Tropical Cyclone /, 'Tropische cycloon '], [/^Cyclone /, 'Cycloon ']];
+function eventTitle(e) {
+  let s = e.title;
+  if (e.kind === 'wildfire') s = s.replace(/^Wildfires? /, '');
+  if (e.kind === 'volcano') s = s.replace(/ Volcano\b/, '');
+  if (prefs.lang !== 'en' && e.kind === 'storm') for (const [re, nl] of STORM_NL) if (re.test(s)) { s = s.replace(re, nl); break; }
+  return s;
+}
+const WORLD_KIND = { storm: ['🌀', 'Stormen'], volcano: ['🌋', 'Vulkanen'], flood: ['🌊', 'Overstromingen'], landslide: ['⛰️', 'Aardverschuivingen'], wildfire: ['🔥', 'Grote natuurbranden'] };
+function renderWorld(body) {
+  const st = panelData.world;
+  if (!st) { body.replaceChildren(h('div', { class: 'tsk qksk', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:85%' }))); return; }
+  const r = st.data;
+  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('Het wereldoverzicht kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
+  if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (world.enabled).' })); return; }
+  const out = [], when = s => { const d = new Date(s); return `${fmt.wdm.format(d)} ${fmt.time.format(d)}`; };
+  const qs = r.quakes?.items, evs = r.events?.items;
+  const sec = (icon, title, ...kids) => h('div', { class: 'wsec' }, h('h3', null, h('span', { 'aria-hidden': 'true', text: icon + ' ' }), title), ...kids);
+  out.push(sec('🌍', t('Aardbevingen vanaf M{m} (7 dagen)', { m: (r.min_mag ?? 6).toLocaleString(locale()) }),
+    !qs ? h('p', { class: 'pnote', text: r.quakes?.error ? t('USGS is niet bereikbaar ({err}).', { err: r.quakes.error }) : t('Wordt voor het eerst opgehaald.') })
+      : !qs.length ? h('p', { class: 'pnote', text: t('Geen zware aardbevingen in de afgelopen 7 dagen.') })
+      : h('ul', { class: 'plist' }, qs.slice(0, 5).map(q => h('li', null,
+        h('span', { class: 'mag ' + magClass(q.mag), text: 'M' + q.mag.toLocaleString(locale(), { minimumFractionDigits: 1 }) }), ' ',
+        h('span', { translate: 'no' }, extLink(q.url, quakePlace(q.place))),
+        h('div', { class: 'm' }, h('span', { text: when(q.time) }), h('span', { text: t('diepte {d} km', { d: q.depth_km }) }),
+          q.tsunami ? h('span', { class: 'tag warn', text: t('tsunamiwaarschuwing') }) : null,
+          q.alert && q.alert !== 'green' ? h('span', { class: 'tag plain', title: t('Verwachte gevolgen volgens USGS PAGER'), text: t('gevolgen: {a}', { a: t(q.alert === 'yellow' ? 'beperkt' : q.alert === 'orange' ? 'groot' : 'zeer groot') }) }) : null))))));
+  if (!evs) out.push(h('p', { class: 'pnote', text: r.events?.error ? t('NASA EONET is niet bereikbaar ({err}).', { err: r.events.error }) : t('Wordt voor het eerst opgehaald.') }));
+  else if (!evs.length) out.push(h('p', { class: 'pnote', text: t('Geen grote natuurrampen actief.') }));
+  else for (const kind of ['storm', 'volcano', 'flood', 'landslide', 'wildfire']) {
+    const list = evs.filter(e => e.kind === kind);
+    if (!list.length) continue;
+    out.push(sec(WORLD_KIND[kind][0], t(WORLD_KIND[kind][1]), h('ul', { class: 'plist' }, list.slice(0, 4).map(e => h('li', null,
+      h('span', { translate: 'no' }, e.url ? extLink(e.url, eventTitle(e)) : eventTitle(e)),
+      h('div', { class: 'm' }, e.wind_kmh ? h('span', { text: t('{n} km/u', { n: e.wind_kmh }) }) : null,
+        e.area_ha ? h('span', { text: t('{n} ha', { n: e.area_ha.toLocaleString(locale()) }) }) : null,
+        h('span', { text: t('bijgewerkt {t}', { t: when(e.time) }) })))))));
+  }
+  out.push(h('p', { class: 'pfoot' }, t('Bronnen: '), extLink('https://earthquake.usgs.gov/', 'USGS'), ' · ', extLink('https://eonet.gsfc.nasa.gov/', 'NASA EONET'),
+    t(' · zeeijs en kleine branden weggelaten')));
   body.replaceChildren(...out);
 }
 
@@ -5638,7 +5748,7 @@ function wireMobileViews() {
 function refreshView(v) {
   const panels = () => [loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(), loadBreaches(), loadOutages(), loadHealthPanel(),
     loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(),
-    loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar()];
+    loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar(), loadWorld()];
   const jobs = v === 'news' ? [loadNews({ replace: true }), loadTrending()] : v === 'panels' ? panels() : [loadNews({ replace: true }), ...panels()];
   return Promise.allSettled(jobs);
 }
@@ -6374,7 +6484,7 @@ async function init() {
   if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
   await Promise.allSettled([loadNews({ replace: true }), loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(),
     loadBreaches(), loadOutages(), loadHealthPanel(), loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(), loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadTrending(), initPush(),
-    loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar()]);
+    loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar(), loadWorld()]);
   kioskFit(); // the header and top bar have their final height now
   panelFromHash(); // e.g. a push notification that opens #panel-waste
   // intervals from config.yaml (refresh:), in seconds; defaults if the server is older
@@ -6407,6 +6517,7 @@ async function init() {
   every(R('amber', 5), loadAmber);
   every(R('sky', 30), loadSky);
   every(R('satellite', 10), loadSatellite);
+  every(R('world', 30), loadWorld);
   every(R('radiation', 30), loadRadiation);
   every(R('solar', 60), loadSolar);
   every(R('sports', 30), loadSports);

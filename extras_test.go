@@ -1366,3 +1366,78 @@ func TestFileInDir(t *testing.T) {
 		t.Errorf("folders in config.yaml: %+v %v", cfg.Cache, err)
 	}
 }
+
+func TestWorld(t *testing.T) {
+	now := time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)
+	ms := func(d time.Duration) int64 { return now.Add(-d).UnixMilli() }
+	usgs := fmt.Sprintf(`{"type":"FeatureCollection","features":[
+	 {"properties":{"mag":6.6,"place":"80 km ENE of Tadine, New Caledonia","time":%d,"url":"https://earthquake.usgs.gov/x","tsunami":1,"alert":"yellow","type":"earthquake"},"geometry":{"coordinates":[168,-21,10.4]}},
+	 {"properties":{"mag":5.6,"place":"Costa Rica","time":%d,"type":"earthquake"},"geometry":{"coordinates":[0,0,8]}},
+	 {"properties":{"mag":7.1,"place":"too old","time":%d,"type":"earthquake"},"geometry":{"coordinates":[0,0,8]}},
+	 {"properties":{"mag":6.2,"place":"Alaska","time":%d,"alert":"<script>","type":"earthquake"},"geometry":{"coordinates":[0,0,35]}}]}`,
+		ms(6*24*time.Hour), ms(time.Hour), ms(8*24*time.Hour), ms(2*time.Hour))
+	q, err := parseUSGS([]byte(usgs), 6, now)
+	if err != nil || len(q) != 2 || q[0].Place != "Alaska" || q[1].Mag != 6.6 || !q[1].Tsunami || q[1].Alert != "yellow" || q[1].DepthKm != 10 || q[0].Alert != "" {
+		t.Errorf("usgs: %+v %v", q, err)
+	}
+	if _, err := parseUSGS([]byte(`{"type":"Feature"}`), 6, now); err == nil {
+		t.Error("usgs: not a feed")
+	}
+
+	date := func(d time.Duration) string { return now.Add(-d).Format(time.RFC3339) }
+	eonet := fmt.Sprintf(`{"events":[
+	 {"title":"Hurricane Rachel","categories":[{"id":"severeStorms"}],"sources":[{"url":"https://www.nhc.noaa.gov/"}],"geometry":[{"magnitudeValue":60,"magnitudeUnit":"kts","date":"%s"},{"magnitudeValue":90,"magnitudeUnit":"kts","date":"%s"}]},
+	 {"title":"Tropical Storm Old","categories":[{"id":"severeStorms"}],"geometry":[{"magnitudeValue":40,"magnitudeUnit":"kts","date":"%s"}]},
+	 {"title":"Wildfire Small, Texas","categories":[{"id":"wildfires"}],"geometry":[{"magnitudeValue":510,"magnitudeUnit":"acres","date":"%s"}]},
+	 {"title":"Wildfire Big, Washington","categories":[{"id":"wildfires"}],"geometry":[{"magnitudeValue":10000,"magnitudeUnit":"acres","date":"%s"}]},
+	 {"title":"Iceberg A23a","categories":[{"id":"seaLakeIce"}],"geometry":[{"magnitudeValue":100,"magnitudeUnit":"NM^2","date":"%s"}]},
+	 {"title":"Etna Volcano, Italy","categories":[{"id":"volcanoes"}],"geometry":[{"date":"%s"}]},
+	 {"title":"Tropical Storm Choi-wan","categories":[{"id":"severeStorms"}],"geometry":[{"magnitudeValue":50,"magnitudeUnit":"kts","date":"%s"}]}]}`,
+		date(30*time.Hour), date(6*time.Hour), date(5*24*time.Hour), date(time.Hour), date(2*time.Hour), date(time.Hour), date(3*24*time.Hour), date(3*time.Hour))
+	ev, err := parseEONET([]byte(eonet), 2000, now)
+	var got []string
+	for _, e := range ev {
+		got = append(got, fmt.Sprintf("%s:%s:%d:%d", e.Kind, e.Title, e.WindKmh, e.AreaHa))
+	}
+	if err != nil || strings.Join(got, "|") != "storm:Hurricane Rachel:167:0|storm:Tropical Storm Choi-wan:93:0|volcano:Etna Volcano, Italy:0:0|wildfire:Wildfire Big, Washington:0:4047" {
+		t.Errorf("eonet: %v %v", got, err)
+	}
+	if ev[0].URL != "https://www.nhc.noaa.gov/" {
+		t.Errorf("source link: %q", ev[0].URL)
+	}
+
+	ll := fmt.Sprintf(`{"results":[
+	 {"name":"Falcon 9 Block 5 | Crew-13","net":"%s","status":{"abbrev":"Success"}},
+	 {"name":"Falcon 9 Block 5 | Transporter 18","net":"%s","status":{"abbrev":"In Flight"},"launch_service_provider":{"name":"SpaceX","abbrev":"SpX"},"rocket":{"configuration":{"name":"Falcon 9"}},"mission":{"name":"Transporter 18"},"pad":{"location":{"name":"Vandenberg SFB, CA, USA"}},"net_precision":{"name":"Minute"}},
+	 {"name":"Long March 12 | Unknown Payload","net":"%s","status":{"abbrev":"Go"},"launch_service_provider":{"name":"China Aerospace Science and Technology Corporation","abbrev":"CASC"},"net_precision":{"name":"Day"}},
+	 {"name":"Ariane 6 | Galileo L14","net":"%s","status":{"abbrev":"TBC"},"launch_service_provider":{"name":"Arianespace"}}]}`,
+		now.Add(-3*time.Hour).Format(time.RFC3339), now.Add(-30*time.Minute).Format(time.RFC3339), now.Add(48*time.Hour).Format(time.RFC3339), now.Add(30*24*time.Hour).Format(time.RFC3339))
+	ls, err := parseLaunches([]byte(ll), now)
+	if err != nil || len(ls) != 3 {
+		t.Fatalf("launches: %+v %v", ls, err)
+	}
+	if l := ls[0]; l.Status != "flight" || l.Rocket != "Falcon 9" || l.Mission != "Transporter 18" || l.Provider != "SpaceX" || !l.Exact || l.Place != "Vandenberg SFB, CA, USA" {
+		t.Errorf("in flight: %+v", l)
+	}
+	if l := ls[1]; l.Provider != "CASC" || l.Exact || l.Rocket != "Long March 12" {
+		t.Errorf("long provider name and day precision: %+v", l)
+	}
+	if l := ls[2]; l.Status != "tbd" || l.Mission != "Galileo L14" {
+		t.Errorf("tbc: %+v", l)
+	}
+
+	a := newTestApp(t, validConfig)
+	a.threats.ok("usgs:world", q, "", "")
+	a.threats.ok("eonet:events", ev, "", "")
+	a.threats.ok("ll2:launches", ls, "", "")
+	h := a.routes("/")
+	if b := get(h, "GET", "/api/world", nil).Body.String(); !strings.Contains(b, `"place":"Alaska"`) || !strings.Contains(b, `"wind_kmh":167`) || !strings.Contains(b, `"min_mag":6`) {
+		t.Errorf("world handler: %s", b)
+	}
+	if b := get(h, "GET", "/api/sky", nil).Body.String(); !strings.Contains(b, `"launches":`) || !strings.Contains(b, `"mission":"Transporter 18"`) {
+		t.Errorf("sky handler: %s", b[:min(len(b), 300)])
+	}
+	if _, err := parseConfig([]byte(validConfig + "world: { quake_min_mag: 3 }\n")); err == nil {
+		t.Error("quake_min_mag below the feed's 4.5 must be rejected")
+	}
+}

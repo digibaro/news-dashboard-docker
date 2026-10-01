@@ -136,7 +136,7 @@ async function leftovers(p, root = 'body') {
 // 4. C) Refresh intervals come from config.yaml.
 {
   const r = await (await fetch(URL + 'api/catalog')).json();
-  ok(r.refresh?.news === 300 && r.refresh?.alarms === 120 && Object.keys(r.refresh).length === 33 && r.refresh.breaches === 1800, `catalog refresh: ${JSON.stringify(r.refresh)}`);
+  ok(r.refresh?.news === 300 && r.refresh?.alarms === 120 && Object.keys(r.refresh).length === 34 && r.refresh.breaches === 1800, `catalog refresh: ${JSON.stringify(r.refresh)}`);
   ok(r.categories.find(c => c.id === 'be')?.name_en === 'Belgium' && r.presets.find(x => x.id === 'kort')?.name_en === 'Quick overview', 'English names from config.yaml');
 }
 

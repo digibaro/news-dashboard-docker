@@ -20,6 +20,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Luchtkwaliteit:** the air quality index (1–11) and NO₂, PM2.5, PM10 and O₃ from the nearest Luchtmeetnet station. The place is chosen per visitor (default: their weather location). Below it the **radiation** (gamma dose rate) at the nearest RIVM station, with the national range; when several stations measure raised levels, a notice appears in the top bar and a push message can go out.
 - **Hooikoorts:** the pollen forecast (grass, birch, alder, mugwort, ragweed) for 3 days at the visitor's air-quality place, with indicative levels.
 - **Aardbevingen:** earthquakes in and around the Netherlands from KNMI in the last 31 days, with magnitude, depth and induced (gas extraction) events marked.
+- **Wereldwijd:** big earthquakes worldwide (M6+, last 7 days, with tsunami warning and expected impact) from USGS, and active natural disasters from NASA EONET: hurricanes and typhoons (with wind speed), volcanic eruptions, floods and large wildfires (sea ice and small fires left out).
 - **Kritieke infrastructuur:** current electricity and gas outages at Liander and Stedin (place, status, expected repair time, customers affected), planned work and outages resolved in the last 24 h.
 - **AMBER Alert and Vermist Kind Alert:** while a child is being searched for, a prominent banner at the top with the name, description, photo and "call 112" (a Vermist Kind Alert only for visitors whose weather location lies in its area), plus a push notification. Source: the police's Burgernet open API.
 - **NL-Alert:** active and recent NL-Alerts (last 31 days), marked when the visitor's weather location lies inside the alert area.
@@ -27,7 +28,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **UV index** in the Weer panel: the highest UV of the next 24 hours, when, and sun-protection advice from UV 3.
 - **Zonnestroom** in Energieprijzen: the expected yield of your solar panels today and tomorrow, and the sunniest 3 hours. Each visitor enters kWp, direction and tilt under Instellingen.
 - **Satellietbeeld:** the latest Meteosat image of the Benelux from EUMETSAT, every 10 minutes: true colour by day, clouds and city lights at night, with coastlines and borders. The server fetches it and serves it itself.
-- **Vanavond aan de hemel:** when it gets dark, the moon, the planets you can see tonight (when and in which direction), the chance of northern lights, the clouds and active meteor showers.
+- **Vanavond aan de hemel:** when it gets dark, the moon, the planets you can see tonight (when and in which direction), the chance of northern lights, the clouds and active meteor showers, and the next rocket launches (Launch Library 2).
 - **Teken en muggen:** an estimate of tick and mosquito activity for 3 days, from the weather.
 - **Sportagenda:** Formula 1 (next race with qualifying, last podium, standings) and the important races and tournaments of road cycling (classics, grand tours, EK, WK), mountain biking (EK, WK), athletics (NK, EK, WK, big marathons) and football (EK and WK only): per sport what is on now and the next three, with matching headlines while an event is on. Visitors choose their sports.
 - **Brandstofprijzen:** the national average recommended pump price (GLA) for Euro95, diesel and LPG, with the change since yesterday.
@@ -167,7 +168,7 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 | `fetch` | `user_agent` (**put your site and e-mail here**), default refresh `interval`, `timeout`, `max_concurrent` (max 2 per host is fixed) |
 | `cache` | `max_items_per_source`, `max_age`, `snapshot_path` (empty = no disk writes, see below), `icon_cache_path` (only the site icons; ~85 KB, written about weekly) |
 | `features` | `show_images` (keep feed images), `proxy_images` (serve them through `/api/img`, see below), `source_icons` (the news sites' own icons, default on), `icon_services` (fallback to DuckDuckGo's and Google's favicon services for sites that block the server, default on), `geolocation` (ip-api lookups), `allow_custom_feeds` (reserved, see below) |
-| `refresh` | how often an open browser tab asks the server for new data, per panel: `news`, `alerts`, `weather`, `today`, `air`, `pollen`, `traffic`, `trains`, `alarms`, `quakes`, `nlalert`, `energy`, `fuel`, `economy`, `markets`, `waste`, `trending`, `amber`, `insects`, `sky`, `sports`, `satellite`, `radiation`, `solar`, `politics`, `threats`, `advisories`, `breaches`, `ransomware`, `utilities`, `outages`, `ap`, `health` (1m–24h, see below) |
+| `refresh` | how often an open browser tab asks the server for new data, per panel: `news`, `alerts`, `weather`, `today`, `air`, `pollen`, `traffic`, `trains`, `alarms`, `quakes`, `nlalert`, `energy`, `fuel`, `economy`, `markets`, `waste`, `trending`, `amber`, `insects`, `sky`, `sports`, `satellite`, `radiation`, `solar`, `world`, `politics`, `threats`, `advisories`, `breaches`, `ransomware`, `utilities`, `outages`, `ap`, `health` (1m–24h, see below) |
 | `keys` | `abusech_auth_key` (optional), `ns_api_key` (Treinstoringen) |
 | `energy` | Energieprijzen: `enabled`, `url`, `interval` (min. 15m), `vat` (0.21), `electricity_extra` / `gas_extra` (€ added per kWh / m³, e.g. energy tax and markup; default 0) |
 | `air` | Luchtkwaliteit: `enabled`, `base` (Luchtmeetnet API), `stations_url` (RIVM station list, CSV), `interval` (min. 15m) |
@@ -182,10 +183,11 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 | `trending` | Trending words above the news: `enabled` (computed from the news cache, no extra requests); `wikipedia`: `enabled` (default true), `url` (default `https://nl.wikipedia.org`), a short summary per topic, only for current trending terms, cached 24 h per term |
 | `radiation` | Straling in Luchtkwaliteit: `enabled`, `url` (BfS open WFS with EURDEP data), `interval` (default 60m, min. 15m), `alert_usv` (default 0.3) and `alert_stations` (default 3): "raised" when at least that many stations measure at least that dose rate |
 | `solar` | Zonnestroom in Energieprijzen: `enabled`, `url` (Open-Meteo forecast), `kwp` (default 0: visitors enter their own panels; above 0 a default for everyone), `tilt` (default 35), `azimuth` (0 south, -90 east, 90 west) |
+| `world` | Wereldwijd: `enabled`, `usgs_url` (a USGS GeoJSON summary feed, default M4.5+ of the past week), `eonet_url` (NASA EONET v3), `quake_min_mag` (default 6), `fire_min_ha` (wildfires from this size, default 2000), `interval` (default 30m, min. 10m) |
 | `satellite` | Satellietbeeld: `enabled`, `url` (EUMETSAT GeoServer), `layer` (default `mtg_fd:rgb_geocolour`; e.g. `msg_fes:ir108` for infrared), `interval` (default 10m, min. 5m) |
 | `amber` | AMBER Alert and Vermist Kind Alert: `enabled`, `url` (Burgernet Landactiehost; the test feed `.../api/test/alerts` cycles through test messages), `interval` (default 5m, min. 1m) |
 | `insects` | Teken en muggen: `enabled`, `url` (Open-Meteo forecast) |
-| `sky` | Vanavond aan de hemel: `enabled`, `kp_url` (NOAA SWPC), `clouds_url` (Open-Meteo) |
+| `sky` | Vanavond aan de hemel: `enabled`, `kp_url` (NOAA SWPC), `clouds_url` (Open-Meteo), `launches` (default true) and `launches_url` (Launch Library 2; free tier 15 requests per hour, fetched hourly) |
 | `sports` | Sportagenda: `enabled`, `sports` (`f1`, `road`, `mtb`, `athletics`, `football`; visitors choose among these), `f1_url` (Jolpica), `interval` (default 1h, min. 15m), `events` (races and tournaments: `sport` road/mtb/athletics/football, `name`, `start`, `end`, `place`, `url`, `note` (an extra line), `tentative` (dates not yet confirmed), `keywords` for matching headlines) |
 | `ui` | `accent`: accent colour for all visitors, e.g. `"#00a4dc"` (empty = the default blue); adjusted automatically to a readable shade in light and dark mode |
 | `push` | Push notifications (off by default): `enabled`, `subject` (`mailto:` or https contact), `vapid_private_key` (or `NDB_VAPID_PRIVATE_KEY`), `max_subscriptions` (default 50), `quake_min_mag` (2.5), `breaking_sources` (6; 0 = off), `waste_hour` (19; -1 = off). See [Push notifications](#push-notifications). |
@@ -252,6 +254,7 @@ There are two separate rates:
 | AMBER Alert | 5m | 5m (almost always an empty list) |
 | Straling | 30m | 60m (hourly values, a few hours delayed) |
 | Zonnestroom | 60m | on demand, cached 1h per ~10 km, tilt and direction |
+| Wereldwijd | 30m | 30m (USGS and EONET); launches hourly |
 | Satellietbeeld | 10m | 10m (EUMETSAT publishes every 10 min, ~25–30 min after the scan; the image is only downloaded when it is new) |
 | Teken en muggen | 60m | on demand, cached 1h per ~10 km |
 | Vanavond aan de hemel | 30m | computed on request; Kp forecast 3h, clouds cached 1h per ~10 km |
@@ -580,6 +583,9 @@ The server fetches everything; browsers only talk to the dashboard itself.
 | [EUMETSAT](https://view.eumetsat.int/) | Satellietbeeld | The EUMETView WMS (GeoServer), no key: the newest time from the layer's GetCapabilities, then one GetMap image of the Benelux; coastlines and borders (Natural Earth) as a separate transparent PNG, refreshed weekly. Credited as "© EUMETSAT"; check the [EUMETSAT data policy](https://www.eumetsat.int/eumetsat-data-licensing) for your kind of use. |
 | [RIVM Nationaal Meetnet Radioactiviteit](https://www.rivm.nl/nationaal-meetnet-radioactiviteit) via [EURDEP](https://remon.jrc.ec.europa.eu/) | Straling | The gamma dose rate (µSv/h, hourly averages) of ~150 Dutch stations, from the open WFS of the German Bundesamt für Strahlenschutz (`imis.bfs.de/ogc/opendata`, layer `eurdep_latestValue`; no key, no fees). Indicative only; official warnings come through NL-Alert and the government. |
 | [Open-Meteo](https://open-meteo.com/) | UV, Zonnestroom | `uv_index` (hourly) in the weather request; `global_tilted_irradiance` for the solar estimate (kWh = irradiation × kWp × 0.8 performance ratio; no shade, no snow). |
+| [USGS](https://earthquake.usgs.gov/earthquakes/feed/) | Wereldwijd: aardbevingen | GeoJSON summary feeds, public domain (US government); every 30 minutes. |
+| [NASA EONET](https://eonet.gsfc.nasa.gov/) | Wereldwijd: natuurrampen | Earth Observatory Natural Event Tracker v3, open, no key; storms with a position in the last 3 days, wildfires from `fire_min_ha`. Each event links to its source (NHC, JTWC, IRWIN, …). |
+| [Launch Library 2](https://thespacedevs.com/llapi) (The Space Devs) | Hemel: raketlanceringen | Open API, free tier 15 requests per hour per IP; the server asks once an hour. |
 | [Wikipedia](https://nl.wikipedia.org/) | Trending: uitleg | REST API (`/api/rest_v1/page/summary`, `/w/rest.php/v1/search/page`), no key. Only for current trending terms; disambiguation pages are skipped, and a search hit is used only if its title holds every word of the term plus at most one more. Text CC BY-SA 4.0, credited in the card. |
 | [Burgernet](https://www.burgernet.nl/amberalert) (police) | AMBER Alert, Vermist Kind Alert | The open API "Landactiehost" (`services.burgernet.nl/landactiehost/api/v1/alerts`, JSON, no key), documented in *Technische koppelingen Burgernet/AMBER Alert berichten* v1.1. AlertLevel 10 = AMBER Alert (national), 5 = Vermist Kind Alert (a circle); a Cancel closes the alert. The photo is shown via this server's image proxy. |
 | [NL-Alert](https://actueel.nl-alert.nl/) | NL-Alert | The public JSON API behind actueel.nl-alert.nl (`api.public-warning.app`), no key. Alerts include their broadcast areas; "in jouw omgeving" is a point-in-polygon check on the server with the visitor's weather location. |
@@ -707,6 +713,7 @@ All JSON responses:
 | `GET /api/insects?lat=&lon=` | Teken en muggen: 3 `days` with `ticks` and `mosquito` levels 0–3 (an estimate) |
 | `GET /api/sky?lat=&lon=` | Vanavond aan de hemel: sunset, dark, dawn, `moon` (phase, rise, set), `planets` (from, until, best time, altitude, direction), `kp` and `aurora` (0–3), `clouds`, `meteor` |
 | `GET /api/sports` | Sportagenda: `f1` (next race with sessions, last podium, standings) and `events` (per sport the current or just-finished events and the next three, with `note`, `tentative` and `headlines`) |
+| `GET /api/world` | Wereldwijd: `quakes.items` (mag, place, time, depth_km, tsunami, alert, url) and `events.items` (kind storm/volcano/flood/landslide/wildfire, title, time, wind_kmh, area_ha, url) |
 | `GET /api/icon?s=` | A news site's icon (32×32 PNG) for a configured source; the catalog lists the link per source (`icon`) once the icon is there |
 | `GET /api/trending` | Trending: up to 8 `terms` with the number of `sources` in the last 3 hours |
 | `GET /api/wiki?term=` | Wikipedia summary for a current trending term: `summary` (`found`, `title`, `description`, `extract`, `url`, `thumb` via `api/img`) and a `search` link; 404 for other terms |
@@ -738,7 +745,7 @@ go run . -config config.yaml         # http://127.0.0.1:8080
 go run . -check-feeds                # verify all feeds
 ```
 
-**Browser tests** (`tests/e2e`): 28 Playwright suites with more than 900 checks of the real page in Chromium: layout on desktop and phone, light and dark, Dutch and English, accessibility (axe), keyboard use, the top bar, every panel, push settings, and hostile feeds (XSS, bad links). `run.sh` builds the binary, writes test configurations derived from `config.yaml.default`, starts five servers (default, mock KNMI warnings, hostile feed, push on, accent colour) and runs the suites; a failing suite is retried once, because the servers fetch the real feeds. GitHub Actions runs them on every push to `main` and on pull requests (workflow *E2E*).
+**Browser tests** (`tests/e2e`): 29 Playwright suites with almost 1,000 checks of the real page in Chromium: layout on desktop and phone, light and dark, Dutch and English, accessibility (axe), keyboard use, the top bar, every panel, push settings, and hostile feeds (XSS, bad links). `run.sh` builds the binary, writes test configurations derived from `config.yaml.default`, starts five servers (default, mock KNMI warnings, hostile feed, push on, accent colour) and runs the suites; a failing suite is retried once, because the servers fetch the real feeds. GitHub Actions runs them on every push to `main` and on pull requests (workflow *E2E*).
 
 ```sh
 cd tests/e2e && npm ci && npx playwright install --with-deps chromium
@@ -781,6 +788,11 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.23.0
+- **Raketlanceringen** in Vanavond aan de hemel: the next three launches with countdown, rocket, mission, organisation and launch site, "nu in de lucht" during a flight (Launch Library 2, open).
+- **New panel Wereldwijd** (after Aardbevingen): big earthquakes worldwide from USGS (M6+, last 7 days, with tsunami warning and USGS PAGER impact), and active natural disasters from NASA EONET: hurricanes and typhoons with wind speed, volcanic eruptions, floods and large wildfires. Storm names and distances in Dutch ("Orkaan Rachel", "80 km ONO van …").
+- New config section `world`, `sky.launches` / `sky.launches_url`, refresh key `world`.
 
 ### 1.22.0
 - **Site icons survive a restart:** set `cache.icon_cache_path` (or `NDB_ICON_CACHE_PATH`) to keep only the icons on disk (~85 KB, written about weekly), without writing the news; with `cache.snapshot_path` the icons go to `<snapshot>.icons.json`. They load at startup, so they are visible immediately instead of after 1–2 minutes, and the weekly refresh continues from the stored fetch times. With Docker, uncomment the new optional warm-start lines and the `./data` volume in `docker-compose.yml`.

@@ -1739,6 +1739,19 @@ func (a *App) threatJobs(cfg *Config) []Job {
 	if cfg.Satellite.Enabled {
 		jobs = append(jobs, Job{Key: satKey, Sig: cfg.Satellite.URL + " " + cfg.Satellite.Layer, Interval: cfg.Satellite.Interval.D(), Run: a.satelliteJob})
 	}
+	if cfg.Sky.Enabled && cfg.Sky.Launches {
+		jobs = append(jobs, Job{Key: "ll2:launches", Sig: cfg.Sky.LaunchesURL, Interval: time.Hour,
+			Run: a.fetchJob("ll2:launches", func() string { return a.config().Sky.LaunchesURL }, "application/json", nil,
+				func(b []byte) (any, error) { return parseLaunches(b, time.Now()) }, nil)})
+	}
+	if w := cfg.World; w.Enabled {
+		jobs = append(jobs, Job{Key: "usgs:world", Sig: fmt.Sprint(w.USGSURL, w.QuakeMinMag), Interval: w.Interval.D(),
+			Run: a.fetchJob("usgs:world", func() string { return a.config().World.USGSURL }, "application/json", nil,
+				func(b []byte) (any, error) { return parseUSGS(b, w.QuakeMinMag, time.Now()) }, nil)})
+		jobs = append(jobs, Job{Key: "eonet:events", Sig: fmt.Sprint(w.EONETURL, w.FireMinHa), Interval: w.Interval.D(),
+			Run: a.fetchJob("eonet:events", func() string { return a.config().World.EONETURL }, "application/json", nil,
+				func(b []byte) (any, error) { return parseEONET(b, w.FireMinHa, time.Now()) }, nil)})
+	}
 	if cfg.Sky.Enabled {
 		jobs = append(jobs, Job{Key: "noaa:kp", Sig: cfg.Sky.KpURL, Interval: 3 * time.Hour,
 			Run: a.fetchJob("noaa:kp", func() string { return a.config().Sky.KpURL }, "application/json", nil,

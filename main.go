@@ -407,10 +407,21 @@ type Config struct {
 	} `yaml:"insects"`
 	// Sky: Vanavond aan de hemel panel (computed; NOAA Kp forecast, Open-Meteo clouds).
 	Sky struct {
-		Enabled   bool   `yaml:"enabled"`
-		KpURL     string `yaml:"kp_url"`
-		CloudsURL string `yaml:"clouds_url"`
+		Enabled     bool   `yaml:"enabled"`
+		KpURL       string `yaml:"kp_url"`
+		CloudsURL   string `yaml:"clouds_url"`
+		Launches    bool   `yaml:"launches"`     // the next rocket launches (Launch Library 2)
+		LaunchesURL string `yaml:"launches_url"` // free tier: 15 requests per hour; fetched hourly
 	} `yaml:"sky"`
+	// World: Wereldwijd panel (big earthquakes from USGS, natural events from NASA EONET).
+	World struct {
+		Enabled     bool     `yaml:"enabled"`
+		USGSURL     string   `yaml:"usgs_url"`      // a GeoJSON summary feed (M4.5+ of the past week)
+		EONETURL    string   `yaml:"eonet_url"`     // EONET v3 events
+		QuakeMinMag float64  `yaml:"quake_min_mag"` // default 6
+		FireMinHa   float64  `yaml:"fire_min_ha"`   // wildfires from this size (hectares); default 2000
+		Interval    Duration `yaml:"interval"`
+	} `yaml:"world"`
 	// Sports: Sportagenda panel (F1 via Jolpica; championships from events).
 	Sports struct {
 		Enabled  bool         `yaml:"enabled"`
@@ -521,6 +532,9 @@ func defaultConfig() *Config {
 	c.Radiation.AlertUSv, c.Radiation.AlertStations = 0.3, 3
 	c.Solar.Enabled, c.Solar.URL, c.Solar.Tilt = true, "https://api.open-meteo.com/v1/forecast", 35
 	c.Sky.Enabled, c.Sky.KpURL, c.Sky.CloudsURL = true, "https://services.swpc.noaa.gov/products/noaa-planetary-k-index-forecast.json", "https://api.open-meteo.com/v1/forecast"
+	c.Sky.Launches, c.Sky.LaunchesURL = true, "https://ll.thespacedevs.com/2.3.0/launches/upcoming/?limit=10"
+	c.World.Enabled, c.World.USGSURL, c.World.EONETURL = true, "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson", "https://eonet.gsfc.nasa.gov/api/v3/events?status=open&days=30"
+	c.World.QuakeMinMag, c.World.FireMinHa, c.World.Interval = 6, 2000, Duration(30*time.Minute)
 	c.Sports.Enabled, c.Sports.Sports, c.Sports.F1URL, c.Sports.Interval = true, []string{"f1", "road", "mtb", "athletics", "football"}, "https://api.jolpi.ca/ergast/f1", Duration(time.Hour)
 	c.Push.MaxSubscriptions, c.Push.QuakeMinMag, c.Push.BreakingSources, c.Push.WasteHour = 50, 2.5, 6, 19
 	c.Threats.Enabled = true
@@ -615,7 +629,7 @@ var defaultRefresh = map[string]time.Duration{
 	"pollen": 60 * time.Minute, "utilities": 5 * time.Minute, "quakes": 15 * time.Minute,
 	"economy": 60 * time.Minute, "markets": 5 * time.Minute,
 	"nlalert": 2 * time.Minute, "fuel": 60 * time.Minute, "waste": 60 * time.Minute, "trending": 10 * time.Minute,
-	"insects": 60 * time.Minute, "sky": 30 * time.Minute, "sports": 30 * time.Minute, "amber": 5 * time.Minute, "satellite": 10 * time.Minute, "radiation": 30 * time.Minute, "solar": 60 * time.Minute,
+	"insects": 60 * time.Minute, "sky": 30 * time.Minute, "sports": 30 * time.Minute, "amber": 5 * time.Minute, "satellite": 10 * time.Minute, "radiation": 30 * time.Minute, "solar": 60 * time.Minute, "world": 30 * time.Minute,
 	"health": 30 * time.Minute,
 }
 
@@ -625,7 +639,7 @@ func (c *Config) validate() error {
 			continue // a removed panel: ignored, configWarnings mentions it
 		}
 		if _, ok := defaultRefresh[k]; !ok {
-			return fmt.Errorf("refresh.%s: unknown panel (known: news, weather, alerts, traffic, alarms, energy, air, trains, politics, today, ransomware, pollen, utilities, quakes, economy, markets, nlalert, fuel, waste, trending, insects, sky, sports, amber, satellite, radiation, solar, threats, advisories, breaches, outages, ap, health)", k)
+			return fmt.Errorf("refresh.%s: unknown panel (known: news, weather, alerts, traffic, alarms, energy, air, trains, politics, today, ransomware, pollen, utilities, quakes, economy, markets, nlalert, fuel, waste, trending, insects, sky, sports, amber, satellite, radiation, solar, world, threats, advisories, breaches, outages, ap, health)", k)
 		}
 		if v.D() < time.Minute || v.D() > 24*time.Hour {
 			return fmt.Errorf("refresh.%s: %s is outside 1m..24h", k, v.D())
@@ -838,8 +852,11 @@ func (c *Config) validate() error {
 	if c.Insects.Enabled && !httpsURL(c.Insects.URL) {
 		fail("insects.url must be an https URL")
 	}
-	if c.Sky.Enabled && (!httpsURL(c.Sky.KpURL) || !httpsURL(c.Sky.CloudsURL)) {
-		fail("sky: kp_url and clouds_url must be https URLs")
+	if c.Sky.Enabled && (!httpsURL(c.Sky.KpURL) || !httpsURL(c.Sky.CloudsURL) || (c.Sky.Launches && !httpsURL(c.Sky.LaunchesURL))) {
+		fail("sky: kp_url, clouds_url and launches_url must be https URLs")
+	}
+	if w := c.World; w.Enabled && (!httpsURL(w.USGSURL) || !httpsURL(w.EONETURL) || w.QuakeMinMag < 4.5 || w.QuakeMinMag > 9 || w.FireMinHa < 0 || w.Interval.D() < 10*time.Minute) {
+		fail("world: usgs_url and eonet_url must be https URLs, quake_min_mag 4.5-9, fire_min_ha at least 0, interval at least 10m")
 	}
 	if sp := &c.Sports; sp.Enabled {
 		if sp.Interval.D() < 15*time.Minute || !httpsURL(sp.F1URL) || len(sp.Sports) == 0 || len(sp.Events) > 100 {
@@ -1464,6 +1481,7 @@ func (a *App) routes(basePath string) http.Handler {
 	handle("GET /api/amber", a.handleAmber)
 	handle("GET /api/wiki", a.handleWiki)
 	handle("GET /api/icon", a.handleIcon)
+	handle("GET /api/world", a.handleWorld)
 	handle("GET /api/radiation", a.handleRadiation)
 	handle("GET /api/solar", a.handleSolar)
 	handle("GET /api/satellite", a.handleSatellite)
@@ -1695,6 +1713,7 @@ func (a *App) handleCatalog(w http.ResponseWriter, r *http.Request) {
 		"solar":            map[string]any{"enabled": cfg.Solar.Enabled, "kwp": cfg.Solar.KWp, "tilt": cfg.Solar.Tilt, "az": cfg.Solar.Azimuth},
 		"trending_wiki":    cfg.Trending.Enabled && cfg.Trending.Wikipedia.Enabled,
 		"sky":              cfg.Sky.Enabled,
+		"world":            cfg.World.Enabled,
 		"sports":           map[string]any{"enabled": cfg.Sports.Enabled, "sports": cfg.Sports.Sports},
 		"accent":           cfg.UI.Accent,
 		"alarms":           map[string]any{"enabled": cfg.Alarms.Enabled, "city": cfg.Alarms.City},
@@ -1917,11 +1936,18 @@ func (a *App) otherFeeds(cfg *Config) []FeedStatus {
 	if cfg.Satellite.Enabled {
 		add(satKey, "EUMETSAT · satellietbeeld", "daily")
 	}
+	if cfg.World.Enabled {
+		add("usgs:world", "USGS · aardbevingen wereldwijd", "daily")
+		add("eonet:events", "NASA EONET · natuurrampen", "daily")
+	}
 	if cfg.Radiation.Enabled {
 		add(radKey, "RIVM via EURDEP · straling", "daily")
 	}
 	if cfg.Sky.Enabled {
 		add("noaa:kp", "NOAA SWPC · noorderlichtverwachting", "daily")
+		if cfg.Sky.Launches {
+			add("ll2:launches", "Launch Library 2 · raketlanceringen", "daily")
+		}
 	}
 	if cfg.Sports.Enabled && slices.Contains(cfg.Sports.Sports, "f1") {
 		add("f1:jolpica", "Jolpica · Formule 1", "daily")
