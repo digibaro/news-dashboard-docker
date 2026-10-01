@@ -2,7 +2,8 @@
 #   cp docker-compose.yml.default docker-compose.yml
 # docker-compose.yml is not tracked by git, so `git pull` never overwrites your changes.
 # Start with:  docker compose pull && docker compose up -d      (or build it yourself, see below)
-# The container filesystem is read-only and nothing is written at runtime (no volumes needed).
+# The container filesystem is read-only and nothing is written at runtime (no volumes needed),
+# unless you turn on the optional warm start below.
 services:
   nieuwsdashboard:
     # Two ways to install or update; whichever you ran last is what runs:
@@ -41,9 +42,17 @@ services:
       # trust its X-Forwarded-For so rate limits apply per visitor, not to everyone at once.
       NDB_TRUSTED_PROXIES: "${NDB_TRUSTED_PROXIES:-127.0.0.1,::1,172.16.0.0/12}"
       NDB_METRICS: "${NDB_METRICS:-false}"      # true = expose /metrics (Prometheus)
+      # Optional warm start, uncomment one or both lines and the ./data volume below, and create the
+      # folder for the container's user (uid 65532) first:  mkdir -p data && sudo chown 65532:65532 data
+      # These override cache.icon_cache_path / cache.snapshot_path in config.yaml.
+      #   icons only (~85 KB, written about weekly):
+      # NDB_ICON_CACHE_PATH: /data/icons.json
+      #   news and push subscriptions too (news every 30 min and on stop, ~0.5 MB each):
+      # NDB_SNAPSHOT_PATH: /data/cache.json.gz
     volumes:
       # create it first:  cp config.yaml.default config.yaml   (not tracked by git)
       - ./config.yaml:/app/config.yaml:ro
+      # - ./data:/data                # optional warm start, see NDB_ICON_CACHE_PATH / NDB_SNAPSHOT_PATH above
     logging:
       driver: json-file
       options: { max-size: "5m", max-file: "2" }

@@ -33,6 +33,7 @@ import (
 	"net/netip"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"slices"
@@ -166,6 +167,7 @@ type Config struct {
 		MaxItemsPerSource int      `yaml:"max_items_per_source"`
 		MaxAge            Duration `yaml:"max_age"`
 		SnapshotPath      string   `yaml:"snapshot_path"`
+		IconCachePath     string   `yaml:"icon_cache_path"` // only the site icons (rare, small writes); default <snapshot_path>.icons.json
 	} `yaml:"cache"`
 	Features struct {
 		AllowCustomFeeds bool `yaml:"allow_custom_feeds"`
@@ -539,6 +541,20 @@ func loadConfig(path string) (*Config, error) {
 	return parseConfig(b)
 }
 
+// fileInDir: a path that ends with "/" or names an existing folder gets name appended.
+func fileInDir(p, name string) string {
+	if p == "" {
+		return p
+	}
+	if strings.HasSuffix(p, "/") {
+		return filepath.Join(p, name)
+	}
+	if st, err := os.Stat(p); err == nil && st.IsDir() {
+		return filepath.Join(p, name)
+	}
+	return p
+}
+
 func parseConfig(b []byte) (*Config, error) {
 	c := defaultConfig()
 	dec := yaml.NewDecoder(bytes.NewReader(b))
@@ -564,6 +580,10 @@ func (c *Config) applyEnv() {
 	set(&c.Server.LogLevel, "NDB_LOG_LEVEL")
 	set(&c.Fetch.UserAgent, "NDB_USER_AGENT")
 	set(&c.Cache.SnapshotPath, "NDB_SNAPSHOT_PATH")
+	set(&c.Cache.IconCachePath, "NDB_ICON_CACHE_PATH")
+	// a folder is fine too: the file then gets its usual name inside it
+	c.Cache.SnapshotPath = fileInDir(c.Cache.SnapshotPath, "cache.json.gz")
+	c.Cache.IconCachePath = fileInDir(c.Cache.IconCachePath, "icons.json")
 	set(&c.Keys.AbusechAuthKey, "ABUSECH_AUTH_KEY")
 	set(&c.Keys.NSAPIKey, "NS_API_KEY")
 	set(&c.Waste.HomeAssistant.Token, "NDB_HA_TOKEN")
@@ -1232,6 +1252,14 @@ func run(cfgPath string) error {
 			slog.Info("snapshot loaded", "path", p, "sources", n)
 		}
 	}
+	if p := iconsPathFor(cfg); p != "" {
+		if n, err := a.loadIcons(p); err != nil && !errors.Is(err, os.ErrNotExist) {
+			slog.Warn("icon cache load failed", "path", p, "err", err)
+		} else if err == nil && n > 0 {
+			slog.Info("icon cache loaded", "path", p, "icons", n)
+		}
+	}
+	checkWritable(cfg)
 	a.applyConfig(cfg)
 	a.loadPushState()
 

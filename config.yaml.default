@@ -24,7 +24,15 @@ fetch:
 cache:
   max_items_per_source: 50
   max_age: 72h
-  snapshot_path: ""               # empty = zero disk writes; e.g. /var/lib/nieuwsdashboard/cache.json.gz
+  # Optional disk writes (empty = none). In Docker the matching variable in docker-compose.yml, when set,
+  # overrides the setting here. A folder works too: the file then gets its usual name inside it.
+  snapshot_path: ""               # news snapshot every 30 min and on stop (~0.5 MB each), plus push subscriptions
+                                  # and icons; e.g. /var/lib/nieuwsdashboard/cache.json.gz
+                                  # Docker: NDB_SNAPSHOT_PATH (e.g. /data/cache.json.gz)
+  icon_cache_path: ""             # only the site icons, so they show right after a restart: ~85 KB, written only
+                                  # when they change (about weekly); e.g. /var/lib/nieuwsdashboard/icons.json.
+                                  # Empty with snapshot_path set: <snapshot_path>.icons.json
+                                  # Docker: NDB_ICON_CACHE_PATH (e.g. /data/icons.json)
 
 features:
   allow_custom_feeds: false

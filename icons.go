@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"image"
@@ -13,6 +14,8 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -45,8 +48,9 @@ type iconEntry struct {
 }
 
 type iconCache struct {
-	mu sync.RWMutex
-	m  map[string]iconEntry // host -> icon
+	mu    sync.RWMutex
+	m     map[string]iconEntry // host -> icon
+	dirty bool                 // changed since the last write to disk
 }
 
 func newIconCache() *iconCache { return &iconCache{m: map[string]iconEntry{}} }
@@ -62,6 +66,148 @@ func (c *iconCache) set(host string, png []byte) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.m[host] = iconEntry{png: png, at: time.Now()}
+	c.dirty = true
+}
+
+// ---------------------------------------------------------------------------
+// Persistence, so the icons are there right after a restart: cache.icon_cache_path,
+// or <snapshot_path>.icons.json when only the news snapshot is on. Only good icons
+// are kept, with the time they were fetched, so the weekly refresh simply
+// continues; the file (~85 KB) is written only when the icons changed. The icon
+// cache alone never writes the news to disk.
+
+type iconSnapshot struct {
+	Version int                    `json:"version"`
+	Icons   map[string]iconSnapEnt `json:"icons"`
+}
+
+type iconSnapEnt struct {
+	PNG []byte    `json:"png"` // base64 in the JSON
+	At  time.Time `json:"at"`
+}
+
+func iconsPathFor(cfg *Config) string {
+	switch {
+	case cfg.Cache.IconCachePath != "":
+		return cfg.Cache.IconCachePath
+	case cfg.Cache.SnapshotPath != "":
+		return cfg.Cache.SnapshotPath + ".icons.json"
+	}
+	return ""
+}
+
+func (a *App) iconsPath() string { return iconsPathFor(a.config()) }
+
+// checkWritable tells at startup when a folder for the snapshot or the icon cache
+// cannot be written, instead of failing quietly on the first write later. In
+// Docker the app runs as uid 65532 (distroless "nonroot").
+func checkWritable(cfg *Config) {
+	from := func(env string) string { // where a path setting comes from: an environment variable wins over config.yaml
+		if os.Getenv(env) != "" {
+			return env
+		}
+		return "config.yaml"
+	}
+	switch {
+	case cfg.Cache.SnapshotPath != "":
+		slog.Info("disk writes: news snapshot every 30 min and on stop, push subscriptions and icons",
+			"snapshot", cfg.Cache.SnapshotPath, "snapshot_from", from("NDB_SNAPSHOT_PATH"), "icons", iconsPathFor(cfg))
+	case cfg.Cache.IconCachePath != "":
+		slog.Info("disk writes: only the site icons (no news snapshot)", "icons", cfg.Cache.IconCachePath, "icons_from", from("NDB_ICON_CACHE_PATH"))
+	}
+	for _, p := range []string{cfg.Cache.SnapshotPath, iconsPathFor(cfg)} {
+		if p == "" {
+			continue
+		}
+		if err := dirWritable(filepath.Dir(p)); err != nil {
+			slog.Error("folder not writable: nothing will be stored there", "path", p, "uid", os.Getuid(), "err", err,
+				"fix", fmt.Sprintf("make the folder writable for uid %d, e.g. on the host: sudo chown %d:%d <folder>", os.Getuid(), os.Getuid(), os.Getgid()))
+		}
+	}
+}
+
+func dirWritable(dir string) error {
+	f, err := os.CreateTemp(dir, ".write-test-*")
+	if err != nil {
+		return err
+	}
+	name := f.Name()
+	f.Close()
+	return os.Remove(name)
+}
+
+// saveIcons writes the icons when they changed (atomically: temporary file, then rename).
+func (a *App) saveIcons() error {
+	path := a.iconsPath()
+	c := a.icons
+	c.mu.Lock()
+	if path == "" || !c.dirty {
+		c.mu.Unlock()
+		return nil
+	}
+	snap := iconSnapshot{Version: 1, Icons: map[string]iconSnapEnt{}}
+	for host, e := range c.m {
+		if e.png != nil {
+			snap.Icons[host] = iconSnapEnt{PNG: e.png, At: e.at.UTC()}
+		}
+	}
+	c.dirty = false
+	c.mu.Unlock()
+	b, err := json.Marshal(snap)
+	if err == nil {
+		err = writeFileAtomic(path, b, 0o644)
+	}
+	if err != nil {
+		c.mu.Lock()
+		c.dirty = true
+		c.mu.Unlock()
+	}
+	return err
+}
+
+// loadIcons restores the icons from disk (path: <snapshot>.icons.json); anything
+// that is not a PNG or claims a future fetch time is skipped.
+func (a *App) loadIcons(path string) (int, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return 0, err
+	}
+	var snap iconSnapshot
+	if err := json.Unmarshal(b, &snap); err != nil {
+		return 0, err
+	}
+	n := 0
+	c := a.icons
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for host, e := range snap.Icons {
+		if !bytes.HasPrefix(e.PNG, []byte("\x89PNG\r\n\x1a\n")) || len(e.PNG) > 64<<10 || e.At.After(time.Now().Add(time.Hour)) || host == "" {
+			continue
+		}
+		c.m[host] = iconEntry{png: e.PNG, at: e.At}
+		n++
+	}
+	return n, nil
+}
+
+func writeFileAtomic(path string, b []byte, mode os.FileMode) error {
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".tmp-*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmp.Name())
+	if _, err := tmp.Write(b); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Chmod(mode); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmp.Name(), path)
 }
 
 // iconSite: the site of a source, from its homepage (else its feed address).
@@ -415,6 +561,9 @@ func (a *App) iconJob(ctx context.Context) error {
 		}(host, site)
 	}
 	wg.Wait()
+	if err := a.saveIcons(); err != nil {
+		slog.Error("icon cache write failed", "path", a.iconsPath(), "err", err)
+	}
 	return nil
 }
 

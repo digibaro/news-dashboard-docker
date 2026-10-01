@@ -165,7 +165,7 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 |---|---|
 | `server` | `listen` address, `base_path` (e.g. `/nieuws/` for a subfolder), `trusted_proxies` (whose `X-Forwarded-For` is believed), `log_level`, `metrics` (Prometheus endpoint, default off) |
 | `fetch` | `user_agent` (**put your site and e-mail here**), default refresh `interval`, `timeout`, `max_concurrent` (max 2 per host is fixed) |
-| `cache` | `max_items_per_source`, `max_age`, `snapshot_path` (empty = no disk writes, see below) |
+| `cache` | `max_items_per_source`, `max_age`, `snapshot_path` (empty = no disk writes, see below), `icon_cache_path` (only the site icons; ~85 KB, written about weekly) |
 | `features` | `show_images` (keep feed images), `proxy_images` (serve them through `/api/img`, see below), `source_icons` (the news sites' own icons, default on), `icon_services` (fallback to DuckDuckGo's and Google's favicon services for sites that block the server, default on), `geolocation` (ip-api lookups), `allow_custom_feeds` (reserved, see below) |
 | `refresh` | how often an open browser tab asks the server for new data, per panel: `news`, `alerts`, `weather`, `today`, `air`, `pollen`, `traffic`, `trains`, `alarms`, `quakes`, `nlalert`, `energy`, `fuel`, `economy`, `markets`, `waste`, `trending`, `amber`, `insects`, `sky`, `sports`, `satellite`, `radiation`, `solar`, `politics`, `threats`, `advisories`, `breaches`, `ransomware`, `utilities`, `outages`, `ap`, `health` (1m–24h, see below) |
 | `keys` | `abusech_auth_key` (optional), `ns_api_key` (Treinstoringen) |
@@ -214,6 +214,7 @@ Environment variables override the file, so Docker users rarely need to edit it:
 | `NDB_LOG_LEVEL` | `server.log_level` |
 | `NDB_USER_AGENT` | `fetch.user_agent` |
 | `NDB_SNAPSHOT_PATH` | `cache.snapshot_path` |
+| `NDB_ICON_CACHE_PATH` | `cache.icon_cache_path` |
 | `ABUSECH_AUTH_KEY` | `keys.abusech_auth_key` |
 | `NS_API_KEY` | `keys.ns_api_key` |
 | `NDB_TRUSTED_PROXIES` | `server.trusted_proxies` (comma-separated IPs/CIDRs) |
@@ -512,7 +513,7 @@ Then keep your port and network changes in `docker-compose.override.yml`, copy t
 
 **Coming from 1.5.1** (which used `docker-compose.yaml`): your `docker-compose.yaml` keeps working and stays ignored. To follow the new name, run `mv docker-compose.yaml docker-compose.yml`.
 
-A restart starts with an empty cache, which fills within about 30 seconds. If you want the news to be there immediately after a restart, see *snapshot* below.
+A restart starts with an empty cache, which fills within about 30 seconds (the site icons within 2 minutes). If you want the news and icons to be there immediately after a restart, see *snapshot* below; with Docker, uncomment the warm-start lines in `docker-compose.yml`.
 
 ---
 
@@ -613,7 +614,9 @@ A URL sets the mode for that visit only, without changing the saved choice: `htt
 - **Nothing is written to disk** at runtime by default. Caches are in memory, and logs go to stdout/stderr (journald or `docker logs`).
   - Checked with `strace` during a 5-minute run: no file was opened for writing.
   - Checked with `docker diff`: the running container's filesystem stays unchanged.
-- **Optional warm-start snapshot:** set `cache.snapshot_path` (e.g. `/var/lib/nieuwsdashboard/cache.json.gz` and uncomment `StateDirectory=` in the unit). The server then writes one gzip JSON file at most every 30 minutes and on shutdown, and loads it at startup. This is the only code path that writes to disk.
+- **Optional warm-start snapshot:** set `cache.snapshot_path` (e.g. `/var/lib/nieuwsdashboard/cache.json.gz` and uncomment `StateDirectory=` in the unit). The server then writes one gzip JSON file at most every 30 minutes and on shutdown, and loads it at startup. Next to it, `<snapshot>.push.json` keeps the push subscriptions and `<snapshot>.icons.json` the site icons. These are the only code paths that write to disk.
+- **Icons only:** to have the site icons right after a restart without writing the news to disk, set only `cache.icon_cache_path` (e.g. `/var/lib/nieuwsdashboard/icons.json`): one ~85 KB file, written only when the icons change (about weekly), against ~0.5 MB every 30 minutes for the news snapshot.
+- **With Docker:** uncomment `NDB_ICON_CACHE_PATH` and/or `NDB_SNAPSHOT_PATH` and the `./data` volume in `docker-compose.yml`, after `mkdir -p data && sudo chown 65532:65532 data` (the container runs as uid 65532). If a folder is not writable, the log says so at startup.
 - **No cookies, no trackers, no external fonts or scripts.**
   - The Content-Security-Policy only allows the page's own origin, plus `https:` images when `show_images` is on.
   - Feed titles and summaries are stripped of all HTML on the server and rendered as text in the browser.
@@ -778,6 +781,11 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.22.0
+- **Site icons survive a restart:** set `cache.icon_cache_path` (or `NDB_ICON_CACHE_PATH`) to keep only the icons on disk (~85 KB, written about weekly), without writing the news; with `cache.snapshot_path` the icons go to `<snapshot>.icons.json`. They load at startup, so they are visible immediately instead of after 1–2 minutes, and the weekly refresh continues from the stored fetch times. With Docker, uncomment the new optional warm-start lines and the `./data` volume in `docker-compose.yml`.
+- **Startup check:** when the folder for the snapshot or the icon cache is not writable (in Docker: not owned by uid 65532), the log says so at startup with the `chown` fix, instead of failing quietly at the first write.
+- Browser tests: the Internationaal chip check waits for its article count (it failed on slower test machines).
 
 ### 1.21.1
 - **Fix: a category with slow sources looked empty with many sources on.** The page loads the 300 newest articles; with all ~85 sources chosen, those cover only the last hours, so investigative outlets (a few pieces a week) never made it in and "Onderzoek" showed no articles. Every chosen source now also keeps its 10 newest articles (`per_source=10`), so its category and chip count stay filled; with the default sources this changes almost nothing.

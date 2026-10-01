@@ -14,6 +14,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"image"
 	"image/color"
@@ -25,6 +26,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -1265,5 +1267,102 @@ func TestTopUpPerSource(t *testing.T) {
 	}
 	if b := get(h, "GET", "/api/news?sources=a,b&limit=10&group=0&per_source=4", nil).Body.String(); strings.Count(b, `"source":"b"`) != 4 {
 		t.Errorf("per_source=4: %d from the slow source", strings.Count(b, `"source":"b"`))
+	}
+}
+
+// With cache.snapshot_path the icons survive a restart, with their fetch time.
+func TestIconSnapshot(t *testing.T) {
+	dir := t.TempDir()
+	cfg := validConfig + "cache: { snapshot_path: \"" + dir + "/cache.json.gz\" }\n"
+	a := newTestApp(t, cfg)
+	png := []byte("\x89PNG\r\n\x1a\nfake icon")
+	a.icons.set("a.example", png)
+	a.icons.set("broken.example", nil) // no icon: not stored
+	if err := a.saveIcons(); err != nil {
+		t.Fatal(err)
+	}
+	st, err := os.Stat(dir + "/cache.json.gz.icons.json")
+	if err != nil || st.Mode().Perm() != 0o644 {
+		t.Fatalf("file: %v %v", st, err)
+	}
+	if err := a.saveIcons(); err != nil { // nothing changed: no write
+		t.Fatal(err)
+	}
+	b := newTestApp(t, cfg)
+	n, err := b.loadIcons(dir + "/cache.json.gz.icons.json")
+	if err != nil || n != 1 {
+		t.Fatalf("load: %d %v", n, err)
+	}
+	e, ok := b.icons.get("a.example")
+	orig, _ := a.icons.get("a.example")
+	if !ok || !bytes.Equal(e.png, png) || !e.at.Equal(orig.at.UTC()) {
+		t.Errorf("restored %+v", e)
+	}
+	if _, ok := b.icons.get("broken.example"); ok {
+		t.Error("failed sites are not restored (they are retried)")
+	}
+	if rec := get(b.routes("/"), "GET", "/api/icon?s=a", nil); rec.Code != 200 {
+		t.Errorf("served after a restart: %d", rec.Code)
+	}
+	// a damaged or foreign file is skipped
+	os.WriteFile(dir+"/bad.json", []byte(`{"version":1,"icons":{"x.example":{"png":"PHNjcmlwdD4=","at":"2026-01-01T00:00:00Z"}}}`), 0o644)
+	if n, err := b.loadIcons(dir + "/bad.json"); err != nil || n != 0 {
+		t.Errorf("non-PNG data must be skipped: %d %v", n, err)
+	}
+	if _, err := b.loadIcons(dir + "/missing.json"); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("missing file: %v", err)
+	}
+	// without snapshot_path nothing is written
+	c := newTestApp(t, validConfig)
+	c.icons.set("a.example", png)
+	if err := c.saveIcons(); err != nil || c.iconsPath() != "" {
+		t.Error("no path, no write")
+	}
+}
+
+// The icon cache can be on without the news snapshot (less disk wear).
+func TestIconCachePath(t *testing.T) {
+	for _, c := range []struct{ yaml, want string }{
+		{"", ""},
+		{"cache: { snapshot_path: /d/cache.json.gz }\n", "/d/cache.json.gz.icons.json"},
+		{"cache: { icon_cache_path: /d/icons.json }\n", "/d/icons.json"},
+		{"cache: { snapshot_path: /d/cache.json.gz, icon_cache_path: /e/icons.json }\n", "/e/icons.json"},
+	} {
+		cfg, err := parseConfig([]byte(validConfig + c.yaml))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := iconsPathFor(cfg); got != c.want {
+			t.Errorf("%q: %q, want %q", c.yaml, got, c.want)
+		}
+	}
+	t.Setenv("NDB_ICON_CACHE_PATH", "/env/icons.json")
+	if cfg, _ := parseConfig([]byte(validConfig)); iconsPathFor(cfg) != "/env/icons.json" || cfg.Cache.SnapshotPath != "" {
+		t.Error("NDB_ICON_CACHE_PATH alone: icons only, no news snapshot")
+	}
+	dir := t.TempDir()
+	if err := dirWritable(dir); err != nil {
+		t.Errorf("writable: %v", err)
+	}
+	ro := filepath.Join(dir, "ro")
+	os.Mkdir(ro, 0o555)
+	if os.Getuid() != 0 && dirWritable(ro) == nil {
+		t.Error("a read-only folder must be reported")
+	}
+	if entries, _ := os.ReadDir(dir); len(entries) != 1 {
+		t.Errorf("the test file must be removed: %v", entries)
+	}
+}
+
+func TestFileInDir(t *testing.T) {
+	dir := t.TempDir()
+	for in, want := range map[string]string{"": "", dir: dir + "/icons.json", "/x/y/": "/x/y/icons.json", dir + "/icons.json": dir + "/icons.json", "/no/such/file.json": "/no/such/file.json"} {
+		if got := fileInDir(in, "icons.json"); got != want {
+			t.Errorf("fileInDir(%q) = %q, want %q", in, got, want)
+		}
+	}
+	cfg, err := parseConfig([]byte(validConfig + "cache: { icon_cache_path: \"" + dir + "\", snapshot_path: \"" + dir + "/\" }\n"))
+	if err != nil || cfg.Cache.IconCachePath != dir+"/icons.json" || cfg.Cache.SnapshotPath != dir+"/cache.json.gz" {
+		t.Errorf("folders in config.yaml: %+v %v", cfg.Cache, err)
 	}
 }

@@ -69,6 +69,8 @@ const chips = p => p.$$eval('#chips .chip', cs => cs.map(c => c.textContent.trim
   const [req] = await Promise.all([p.waitForRequest(r => r.url().includes('api/news?')), p.keyboard.press('Escape')]);
   ok(req.url().includes('bbc-world') && req.url().includes('guardian-world'), 'A: choosing Internationaal enables its sources');
   await p.waitForSelector('#chips [data-cat="world"]');
+  // the count follows when the reloaded news arrives (slower on a busy test machine)
+  await p.waitForFunction(() => /\d/.test(document.querySelector('#chips [data-cat="world"]')?.textContent || ''), null, { timeout: 15000 }).catch(() => {});
   ok(/^Internationaal\s*\d+/.test(await p.textContent('#chips [data-cat="world"]')), 'A: the Internationaal chip appears with items');
   await ctx.close();
 }
