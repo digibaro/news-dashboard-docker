@@ -13,7 +13,7 @@ const LAUNCHES = [
   { rocket: 'Ariane 6', mission: 'Galileo L14', provider: 'Arianespace', place: 'Guiana Space Centre', time: iso(20 * 864e5), exact: false, status: 'tbd' },
   { rocket: 'Nuri', mission: 'NeonSat-2', provider: 'KARI', place: 'Naro Space Center, South Korea', time: iso(30 * 864e5), exact: true, status: 'go' },
 ];
-const WORLD = { enabled: true, min_mag: 6,
+const WORLD = { enabled: true, min_mag: 6, days: 3,
   quakes: { fetched_at: iso(0), items: [
     { mag: 7.4, place: '80 km ENE of Tadine, New Caledonia', time: iso(-3 * 36e5), depth_km: 10, tsunami: true, alert: 'orange', url: 'https://earthquake.usgs.gov/x' },
     { mag: 6.1, place: 'southern Mid-Atlantic Ridge', time: iso(-2 * 864e5), depth_km: 15, url: 'https://earthquake.usgs.gov/y' }] },
@@ -53,7 +53,7 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   });
   if (w === 1440 && scheme === 'light') { console.log(JSON.stringify(wd.items)); await p.locator('#panel-world').screenshot({ path: `${OUT}/world.png` }); await p.locator('#panel-sky').screenshot({ path: `${OUT}/sky-launches.png` }); }
   ok(wd.order.indexOf('world') === wd.order.indexOf('quakes') + 1, `Wereldwijd right after Aardbevingen (${wd.order.slice(wd.order.indexOf('quakes'), wd.order.indexOf('quakes') + 2)})`);
-  ok(wd.secs.join('|') === '🌍 Aardbevingen vanaf M6 (7 dagen)|🌀 Stormen|🌋 Vulkanen|🔥 Grote natuurbranden', `sections: ${wd.secs.join(' | ')}`);
+  ok(wd.secs.join('|') === '🌍 Aardbevingen vanaf M6 (3 dagen)|🌀 Stormen|🌋 Vulkanen|🔥 Grote natuurbranden', `sections: ${wd.secs.join(' | ')}`);
   ok(/^M7,4 80 km ONO van Tadine, New Caledonia/.test(wd.items[0]) && /tsunamiwaarschuwing/.test(wd.items[0]) && /gevolgen: groot/.test(wd.items[0]), `quake in Dutch with tsunami warning: ${wd.items[0]}`);
   ok(/^Orkaan Rachel167 km\/u/.test(wd.items[2]) && /^Supertyfoon Choi-wan250 km\/u/.test(wd.items[3]) && /^Etna, Italy/.test(wd.items[4]) && /^Hatch Grade, Walla Walla, Washington4\.047 ha/.test(wd.items[5]),
     `storms, volcano and fire: ${wd.items.slice(2).map(x => x.slice(0, 32)).join(' | ')}`);
@@ -67,7 +67,7 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   const [ctx, p] = await open(1440, { lang: 'en' });
   await p.waitForSelector('#panel-world .wsec li');
   const t = await p.textContent('#panel-world');
-  ok(/Hurricane Rachel167 km\/h/.test(t) && /80 km ENE of Tadine/.test(t) && /Earthquakes from M6 \(7 days\)/.test(t) && /tsunami warning/.test(t), 'English panel');
+  ok(/Hurricane Rachel167 km\/h/.test(t) && /80 km ENE of Tadine/.test(t) && /Earthquakes from M6 \(3 days\)/.test(t) && /tsunami warning/.test(t), 'English panel');
   ok(/Rocket launches/.test(await p.textContent('#panel-sky')) && /in flight now/.test(await p.textContent('#panel-sky')), 'English launches');
   await ctx.close();
 }
@@ -75,10 +75,10 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 }, serviceWorkers: 'block' });
   await ctx.addInitScript(() => localStorage.setItem('ndb:prefs', JSON.stringify({ v: 2, onboarded: true })));
   const p = await ctx.newPage();
-  await p.route('**/api/world*', r => r.fulfill({ json: { enabled: true, min_mag: 6, quakes: { fetched_at: iso(0), items: [] }, events: { error: 'HTTP 503' } } }));
+  await p.route('**/api/world*', r => r.fulfill({ json: { enabled: true, min_mag: 6, days: 3, quakes: { fetched_at: iso(0), items: [] }, events: { error: 'HTTP 503' } } }));
   await p.goto(BASEURL); await p.waitForSelector('#panel-world .pnote');
   const t = await p.textContent('#panel-world');
-  ok(/Geen zware aardbevingen in de afgelopen 7 dagen/.test(t) && /NASA EONET is niet bereikbaar \(HTTP 503\)/.test(t), `empty and error states: ${t.slice(0, 120)}`);
+  ok(/Geen zware aardbevingen in de afgelopen 3 dagen/.test(t) && /NASA EONET is niet bereikbaar \(HTTP 503\)/.test(t), `empty and error states: ${t.slice(0, 120)}`);
   await ctx.close();
 }
 { // live data from this server (no fixtures)

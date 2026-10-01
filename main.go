@@ -420,6 +420,7 @@ type Config struct {
 		EONETURL    string   `yaml:"eonet_url"`     // EONET v3 events
 		QuakeMinMag float64  `yaml:"quake_min_mag"` // default 6
 		FireMinHa   float64  `yaml:"fire_min_ha"`   // wildfires from this size (hectares); default 2000
+		Days        int      `yaml:"days"`          // the panel's period: quakes and events of the last days (1-7); default 3
 		Interval    Duration `yaml:"interval"`
 	} `yaml:"world"`
 	// Sports: Sportagenda panel (F1 via Jolpica; championships from events).
@@ -534,7 +535,7 @@ func defaultConfig() *Config {
 	c.Sky.Enabled, c.Sky.KpURL, c.Sky.CloudsURL = true, "https://services.swpc.noaa.gov/products/noaa-planetary-k-index-forecast.json", "https://api.open-meteo.com/v1/forecast"
 	c.Sky.Launches, c.Sky.LaunchesURL = true, "https://ll.thespacedevs.com/2.3.0/launches/upcoming/?limit=10"
 	c.World.Enabled, c.World.USGSURL, c.World.EONETURL = true, "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson", "https://eonet.gsfc.nasa.gov/api/v3/events?status=open&days=30"
-	c.World.QuakeMinMag, c.World.FireMinHa, c.World.Interval = 6, 2000, Duration(30*time.Minute)
+	c.World.QuakeMinMag, c.World.FireMinHa, c.World.Days, c.World.Interval = 6, 2000, 3, Duration(30*time.Minute)
 	c.Sports.Enabled, c.Sports.Sports, c.Sports.F1URL, c.Sports.Interval = true, []string{"f1", "road", "mtb", "athletics", "football"}, "https://api.jolpi.ca/ergast/f1", Duration(time.Hour)
 	c.Push.MaxSubscriptions, c.Push.QuakeMinMag, c.Push.BreakingSources, c.Push.WasteHour = 50, 2.5, 6, 19
 	c.Threats.Enabled = true
@@ -855,8 +856,8 @@ func (c *Config) validate() error {
 	if c.Sky.Enabled && (!httpsURL(c.Sky.KpURL) || !httpsURL(c.Sky.CloudsURL) || (c.Sky.Launches && !httpsURL(c.Sky.LaunchesURL))) {
 		fail("sky: kp_url, clouds_url and launches_url must be https URLs")
 	}
-	if w := c.World; w.Enabled && (!httpsURL(w.USGSURL) || !httpsURL(w.EONETURL) || w.QuakeMinMag < 4.5 || w.QuakeMinMag > 9 || w.FireMinHa < 0 || w.Interval.D() < 10*time.Minute) {
-		fail("world: usgs_url and eonet_url must be https URLs, quake_min_mag 4.5-9, fire_min_ha at least 0, interval at least 10m")
+	if w := c.World; w.Enabled && (!httpsURL(w.USGSURL) || !httpsURL(w.EONETURL) || w.QuakeMinMag < 4.5 || w.QuakeMinMag > 9 || w.FireMinHa < 0 || w.Days < 1 || w.Days > 7 || w.Interval.D() < 10*time.Minute) {
+		fail("world: usgs_url and eonet_url must be https URLs, quake_min_mag 4.5-9, fire_min_ha at least 0, days 1-7, interval at least 10m")
 	}
 	if sp := &c.Sports; sp.Enabled {
 		if sp.Interval.D() < 15*time.Minute || !httpsURL(sp.F1URL) || len(sp.Sports) == 0 || len(sp.Events) > 100 {

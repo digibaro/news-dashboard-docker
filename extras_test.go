@@ -1376,11 +1376,14 @@ func TestWorld(t *testing.T) {
 	 {"properties":{"mag":7.1,"place":"too old","time":%d,"type":"earthquake"},"geometry":{"coordinates":[0,0,8]}},
 	 {"properties":{"mag":6.2,"place":"Alaska","time":%d,"alert":"<script>","type":"earthquake"},"geometry":{"coordinates":[0,0,35]}}]}`,
 		ms(6*24*time.Hour), ms(time.Hour), ms(8*24*time.Hour), ms(2*time.Hour))
-	q, err := parseUSGS([]byte(usgs), 6, now)
+	if q3, _ := parseUSGS([]byte(usgs), 6, 3, now); len(q3) != 1 || q3[0].Place != "Alaska" {
+		t.Errorf("3 days: the 6-day-old quake must be left out: %+v", q3)
+	}
+	q, err := parseUSGS([]byte(usgs), 6, 7, now)
 	if err != nil || len(q) != 2 || q[0].Place != "Alaska" || q[1].Mag != 6.6 || !q[1].Tsunami || q[1].Alert != "yellow" || q[1].DepthKm != 10 || q[0].Alert != "" {
 		t.Errorf("usgs: %+v %v", q, err)
 	}
-	if _, err := parseUSGS([]byte(`{"type":"Feature"}`), 6, now); err == nil {
+	if _, err := parseUSGS([]byte(`{"type":"Feature"}`), 6, 7, now); err == nil {
 		t.Error("usgs: not a feed")
 	}
 
@@ -1394,7 +1397,10 @@ func TestWorld(t *testing.T) {
 	 {"title":"Etna Volcano, Italy","categories":[{"id":"volcanoes"}],"geometry":[{"date":"%s"}]},
 	 {"title":"Tropical Storm Choi-wan","categories":[{"id":"severeStorms"}],"geometry":[{"magnitudeValue":50,"magnitudeUnit":"kts","date":"%s"}]}]}`,
 		date(30*time.Hour), date(6*time.Hour), date(5*24*time.Hour), date(time.Hour), date(2*time.Hour), date(time.Hour), date(3*24*time.Hour), date(3*time.Hour))
-	ev, err := parseEONET([]byte(eonet), 2000, now)
+	if e1, _ := parseEONET([]byte(eonet), 2000, 1, now); len(e1) != 3 { // 1 day: Etna (3 days ago) drops out
+		t.Errorf("1 day: %d events", len(e1))
+	}
+	ev, err := parseEONET([]byte(eonet), 2000, 3, now)
 	var got []string
 	for _, e := range ev {
 		got = append(got, fmt.Sprintf("%s:%s:%d:%d", e.Kind, e.Title, e.WindKmh, e.AreaHa))
@@ -1436,6 +1442,9 @@ func TestWorld(t *testing.T) {
 	}
 	if b := get(h, "GET", "/api/sky", nil).Body.String(); !strings.Contains(b, `"launches":`) || !strings.Contains(b, `"mission":"Transporter 18"`) {
 		t.Errorf("sky handler: %s", b[:min(len(b), 300)])
+	}
+	if _, err := parseConfig([]byte(validConfig + "world: { days: 8 }\n")); err == nil {
+		t.Error("days above the feed's 7 must be rejected")
 	}
 	if _, err := parseConfig([]byte(validConfig + "world: { quake_min_mag: 3 }\n")); err == nil {
 		t.Error("quake_min_mag below the feed's 4.5 must be rejected")

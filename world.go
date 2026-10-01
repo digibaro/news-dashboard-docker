@@ -29,8 +29,8 @@ type WorldQuake struct {
 }
 
 // parseUSGS reads a USGS GeoJSON summary feed: quakes of at least minMag in the
-// last 7 days, newest first, at most 8.
-func parseUSGS(body []byte, minMag float64, now time.Time) ([]WorldQuake, error) {
+// last days, newest first, at most 8.
+func parseUSGS(body []byte, minMag float64, days int, now time.Time) ([]WorldQuake, error) {
 	var fc struct {
 		Type     string `json:"type"`
 		Features []struct {
@@ -61,7 +61,7 @@ func parseUSGS(body []byte, minMag float64, now time.Time) ([]WorldQuake, error)
 			continue
 		}
 		t := time.UnixMilli(p.Time).UTC()
-		if now.Sub(t) > 7*24*time.Hour {
+		if now.Sub(t) > time.Duration(days)*24*time.Hour {
 			continue
 		}
 		q := WorldQuake{Mag: math.Round(*p.Mag*10) / 10, Place: truncate(plainText(p.Place), 100), Time: t, Tsunami: p.Tsunami == 1, URL: safeURL(p.URL, nil)}
@@ -91,11 +91,11 @@ type WorldEvent struct {
 
 var eonetKinds = map[string]string{"severeStorms": "storm", "volcanoes": "volcano", "wildfires": "wildfire", "floods": "flood", "landslides": "landslide"}
 
-// parseEONET keeps the events that are news: storms seen in the last 3 days,
-// volcanoes, floods and landslides, and wildfires of at least minFireHa hectares.
-// Sea ice, small fires and the rest are left out. Storms first (strongest first),
-// then by kind and date; at most 10.
-func parseEONET(body []byte, minFireHa float64, now time.Time) ([]WorldEvent, error) {
+// parseEONET keeps the events that are news and were updated in the last days:
+// storms, volcanoes, floods, landslides, and wildfires of at least minFireHa
+// hectares. Sea ice, small fires and the rest are left out. Storms first
+// (strongest first), then by kind and date; at most 10.
+func parseEONET(body []byte, minFireHa float64, days int, now time.Time) ([]WorldEvent, error) {
 	var d struct {
 		Events []struct {
 			Title      string `json:"title"`
@@ -130,7 +130,7 @@ func parseEONET(body []byte, minFireHa float64, now time.Time) ([]WorldEvent, er
 		}
 		g := e.Geometry[len(e.Geometry)-1]
 		t, err := time.Parse(time.RFC3339, g.Date)
-		if err != nil {
+		if err != nil || now.Sub(t) > time.Duration(days)*24*time.Hour { // not updated recently: probably over
 			continue
 		}
 		ev := WorldEvent{Kind: kind, Title: truncate(plainText(e.Title), 90), Time: t.UTC()}
@@ -143,9 +143,6 @@ func parseEONET(body []byte, minFireHa float64, now time.Time) ([]WorldEvent, er
 		}
 		switch kind {
 		case "storm":
-			if now.Sub(t) > 3*24*time.Hour { // no recent position: probably over
-				continue
-			}
 			if g.Mag != nil && unit == "kts" {
 				ev.WindKmh = int(math.Round(*g.Mag * 1.852))
 			}
@@ -163,10 +160,6 @@ func parseEONET(body []byte, minFireHa float64, now time.Time) ([]WorldEvent, er
 				continue
 			}
 			ev.AreaHa = int(math.Round(ha))
-		default:
-			if now.Sub(t) > 30*24*time.Hour {
-				continue
-			}
 		}
 		out = append(out, ev)
 	}
@@ -301,5 +294,5 @@ func (a *App) handleWorld(w http.ResponseWriter, r *http.Request) {
 	if v, ok := a.threats.get("eonet:events").Data.([]WorldEvent); ok {
 		ev["items"] = v
 	}
-	writeJSON(w, r, http.StatusOK, 300, map[string]any{"enabled": true, "min_mag": cfg.World.QuakeMinMag, "quakes": q, "events": ev})
+	writeJSON(w, r, http.StatusOK, 300, map[string]any{"enabled": true, "min_mag": cfg.World.QuakeMinMag, "days": cfg.World.Days, "quakes": q, "events": ev})
 }

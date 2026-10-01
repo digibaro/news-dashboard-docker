@@ -1114,6 +1114,10 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.23.1</h3>
+    <ul>
+      <li>Wereldwijd toont de afgelopen 3 dagen.</li>
+    </ul>
     <h3>Versie 1.23.0</h3>
     <ul>
       <li>Vanavond aan de hemel: de volgende raketlanceringen, met aftellen.</li>
@@ -1289,6 +1293,10 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.23.1</h3>
+    <ul>
+      <li>Worldwide shows the past 3 days.</li>
+    </ul>
     <h3>Version 1.23.0</h3>
     <ul>
       <li>Tonight's sky: the next rocket launches, with a countdown.</li>
@@ -2627,13 +2635,13 @@ const EN = {
   "Wereldwijd": "Worldwide",
   "Het wereldoverzicht kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.": "The world overview could not be loaded ({err}). Retrying automatically.",
   "Dit paneel staat uit in config.yaml (world.enabled).": "This panel is disabled in config.yaml (world.enabled).",
-  "Aardbevingen vanaf M{m} (7 dagen)": "Earthquakes from M{m} (7 days)",
+  "Aardbevingen vanaf M{m} ({n} dagen)": "Earthquakes from M{m} ({n} days)",
   "USGS is niet bereikbaar ({err}).": "USGS is unreachable ({err}).", "NASA EONET is niet bereikbaar ({err}).": "NASA EONET is unreachable ({err}).",
   "Wordt voor het eerst opgehaald.": "Being fetched for the first time.",
-  "Geen zware aardbevingen in de afgelopen 7 dagen.": "No strong earthquakes in the past 7 days.",
+  "Geen zware aardbevingen in de afgelopen {n} dagen.": "No strong earthquakes in the past {n} days.",
   "tsunamiwaarschuwing": "tsunami warning", "Verwachte gevolgen volgens USGS PAGER": "Expected impact according to USGS PAGER",
   "gevolgen: {a}": "impact: {a}", "beperkt": "limited", "groot": "large", "zeer groot": "very large",
-  "Geen grote natuurrampen actief.": "No major natural disasters active.",
+  "Geen grote natuurrampen in de afgelopen {n} dagen.": "No major natural disasters in the past {n} days.",
   "Stormen": "Storms", "Vulkanen": "Volcanoes", "Overstromingen": "Floods", "Aardverschuivingen": "Landslides", "Grote natuurbranden": "Large wildfires",
   "{n} km/u": "{n} km/h", "{n} ha": "{n} ha", "bijgewerkt {t}": "updated {t}",
   " · zeeijs en kleine branden weggelaten": " · sea ice and small fires left out",
@@ -5481,9 +5489,10 @@ function renderWorld(body) {
   const out = [], when = s => { const d = new Date(s); return `${fmt.wdm.format(d)} ${fmt.time.format(d)}`; };
   const qs = r.quakes?.items, evs = r.events?.items;
   const sec = (icon, title, ...kids) => h('div', { class: 'wsec' }, h('h3', null, h('span', { 'aria-hidden': 'true', text: icon + ' ' }), title), ...kids);
-  out.push(sec('🌍', t('Aardbevingen vanaf M{m} (7 dagen)', { m: (r.min_mag ?? 6).toLocaleString(locale()) }),
+  const days = r.days ?? 3;
+  out.push(sec('🌍', t('Aardbevingen vanaf M{m} ({n} dagen)', { m: (r.min_mag ?? 6).toLocaleString(locale()), n: days }),
     !qs ? h('p', { class: 'pnote', text: r.quakes?.error ? t('USGS is niet bereikbaar ({err}).', { err: r.quakes.error }) : t('Wordt voor het eerst opgehaald.') })
-      : !qs.length ? h('p', { class: 'pnote', text: t('Geen zware aardbevingen in de afgelopen 7 dagen.') })
+      : !qs.length ? h('p', { class: 'pnote', text: t('Geen zware aardbevingen in de afgelopen {n} dagen.', { n: days }) })
       : h('ul', { class: 'plist' }, qs.slice(0, 5).map(q => h('li', null,
         h('span', { class: 'mag ' + magClass(q.mag), text: 'M' + q.mag.toLocaleString(locale(), { minimumFractionDigits: 1 }) }), ' ',
         h('span', { translate: 'no' }, extLink(q.url, quakePlace(q.place))),
@@ -5491,7 +5500,7 @@ function renderWorld(body) {
           q.tsunami ? h('span', { class: 'tag warn', text: t('tsunamiwaarschuwing') }) : null,
           q.alert && q.alert !== 'green' ? h('span', { class: 'tag plain', title: t('Verwachte gevolgen volgens USGS PAGER'), text: t('gevolgen: {a}', { a: t(q.alert === 'yellow' ? 'beperkt' : q.alert === 'orange' ? 'groot' : 'zeer groot') }) }) : null))))));
   if (!evs) out.push(h('p', { class: 'pnote', text: r.events?.error ? t('NASA EONET is niet bereikbaar ({err}).', { err: r.events.error }) : t('Wordt voor het eerst opgehaald.') }));
-  else if (!evs.length) out.push(h('p', { class: 'pnote', text: t('Geen grote natuurrampen actief.') }));
+  else if (!evs.length) out.push(h('p', { class: 'pnote', text: t('Geen grote natuurrampen in de afgelopen {n} dagen.', { n: days }) }));
   else for (const kind of ['storm', 'volcano', 'flood', 'landslide', 'wildfire']) {
     const list = evs.filter(e => e.kind === kind);
     if (!list.length) continue;
