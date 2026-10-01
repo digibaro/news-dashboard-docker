@@ -321,6 +321,7 @@ sky:
   clouds_url: "https://api.open-meteo.com/v1/forecast"
   launches: true                  # the next rocket launches, from Launch Library 2 (The Space Devs, open)
   launches_url: "https://ll.thespacedevs.com/2.3.0/launches/upcoming/?limit=10"  # free: 15 requests/hour; fetched hourly
+  launches_hours: 24              # only launches in the coming hours (1-720); flights under way always
 
 # Wereldwijd: big earthquakes worldwide (USGS) and active natural events (NASA EONET: hurricanes and
 # typhoons, volcanic eruptions, large wildfires, floods). Both open, no key. Sea ice and small fires are left out.
@@ -329,7 +330,7 @@ world:
   usgs_url: "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson"
   eonet_url: "https://eonet.gsfc.nasa.gov/api/v3/events?status=open&days=30"
   quake_min_mag: 6                # quakes from this magnitude (the feed has M4.5+)
-  days: 3                         # the panel's period: quakes and events of the last days (1-7)
+  hours: 24                       # the panel's period: quakes and events of the last hours (1-168)
   fire_min_ha: 2000               # wildfires from this size in hectares
   interval: 30m                   # min. 10m
 

@@ -1368,7 +1368,7 @@ func TestFileInDir(t *testing.T) {
 }
 
 func TestWorld(t *testing.T) {
-	now := time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)
+	now := time.Now().UTC() // the handlers filter against the real clock
 	ms := func(d time.Duration) int64 { return now.Add(-d).UnixMilli() }
 	usgs := fmt.Sprintf(`{"type":"FeatureCollection","features":[
 	 {"properties":{"mag":6.6,"place":"80 km ENE of Tadine, New Caledonia","time":%d,"url":"https://earthquake.usgs.gov/x","tsunami":1,"alert":"yellow","type":"earthquake"},"geometry":{"coordinates":[168,-21,10.4]}},
@@ -1376,14 +1376,14 @@ func TestWorld(t *testing.T) {
 	 {"properties":{"mag":7.1,"place":"too old","time":%d,"type":"earthquake"},"geometry":{"coordinates":[0,0,8]}},
 	 {"properties":{"mag":6.2,"place":"Alaska","time":%d,"alert":"<script>","type":"earthquake"},"geometry":{"coordinates":[0,0,35]}}]}`,
 		ms(6*24*time.Hour), ms(time.Hour), ms(8*24*time.Hour), ms(2*time.Hour))
-	if q3, _ := parseUSGS([]byte(usgs), 6, 3, now); len(q3) != 1 || q3[0].Place != "Alaska" {
-		t.Errorf("3 days: the 6-day-old quake must be left out: %+v", q3)
+	if q3, _ := parseUSGS([]byte(usgs), 6, 72, now); len(q3) != 1 || q3[0].Place != "Alaska" {
+		t.Errorf("72 hours: the 6-day-old quake must be left out: %+v", q3)
 	}
-	q, err := parseUSGS([]byte(usgs), 6, 7, now)
+	q, err := parseUSGS([]byte(usgs), 6, 168, now)
 	if err != nil || len(q) != 2 || q[0].Place != "Alaska" || q[1].Mag != 6.6 || !q[1].Tsunami || q[1].Alert != "yellow" || q[1].DepthKm != 10 || q[0].Alert != "" {
 		t.Errorf("usgs: %+v %v", q, err)
 	}
-	if _, err := parseUSGS([]byte(`{"type":"Feature"}`), 6, 7, now); err == nil {
+	if _, err := parseUSGS([]byte(`{"type":"Feature"}`), 6, 168, now); err == nil {
 		t.Error("usgs: not a feed")
 	}
 
@@ -1396,11 +1396,11 @@ func TestWorld(t *testing.T) {
 	 {"title":"Iceberg A23a","categories":[{"id":"seaLakeIce"}],"geometry":[{"magnitudeValue":100,"magnitudeUnit":"NM^2","date":"%s"}]},
 	 {"title":"Etna Volcano, Italy","categories":[{"id":"volcanoes"}],"geometry":[{"date":"%s"}]},
 	 {"title":"Tropical Storm Choi-wan","categories":[{"id":"severeStorms"}],"geometry":[{"magnitudeValue":50,"magnitudeUnit":"kts","date":"%s"}]}]}`,
-		date(30*time.Hour), date(6*time.Hour), date(5*24*time.Hour), date(time.Hour), date(2*time.Hour), date(time.Hour), date(3*24*time.Hour), date(3*time.Hour))
-	if e1, _ := parseEONET([]byte(eonet), 2000, 1, now); len(e1) != 3 { // 1 day: Etna (3 days ago) drops out
-		t.Errorf("1 day: %d events", len(e1))
+		date(30*time.Hour), date(6*time.Hour), date(5*24*time.Hour), date(time.Hour), date(2*time.Hour), date(time.Hour), date(70*time.Hour), date(3*time.Hour))
+	if e1, _ := parseEONET([]byte(eonet), 2000, 24, now); len(e1) != 3 { // 24 hours: Etna (3 days ago) drops out
+		t.Errorf("24 hours: %d events", len(e1))
 	}
-	ev, err := parseEONET([]byte(eonet), 2000, 3, now)
+	ev, err := parseEONET([]byte(eonet), 2000, 72, now)
 	var got []string
 	for _, e := range ev {
 		got = append(got, fmt.Sprintf("%s:%s:%d:%d", e.Kind, e.Title, e.WindKmh, e.AreaHa))
@@ -1443,8 +1443,23 @@ func TestWorld(t *testing.T) {
 	if b := get(h, "GET", "/api/sky", nil).Body.String(); !strings.Contains(b, `"launches":`) || !strings.Contains(b, `"mission":"Transporter 18"`) {
 		t.Errorf("sky handler: %s", b[:min(len(b), 300)])
 	}
-	if _, err := parseConfig([]byte(validConfig + "world: { days: 8 }\n")); err == nil {
-		t.Error("days above the feed's 7 must be rejected")
+	if _, err := parseConfig([]byte(validConfig + "world: { hours: 169 }\n")); err == nil {
+		t.Error("hours above the feed's week must be rejected")
+	}
+	for in, want := range map[string]int{"": 24, "world: { days: 3 }\n": 72, "world: { hours: 12, days: 3 }\n": 12} {
+		if c, err := parseConfig([]byte(validConfig + in)); err != nil || c.World.Hours != want {
+			t.Errorf("%q: hours %d, want %d (%v)", in, c.World.Hours, want, err)
+		}
+	}
+	// launches: the coming 24 hours, and a flight under way
+	soon := []Launch{{Mission: "flight", Status: "flight", Time: now.Add(-2 * time.Hour)}, {Mission: "in 3h", Status: "go", Time: now.Add(3 * time.Hour)},
+		{Mission: "in 30h", Status: "go", Time: now.Add(30 * time.Hour)}, {Mission: "long ago", Status: "go", Time: now.Add(-3 * time.Hour)}}
+	var names []string
+	for _, l := range upcomingLaunches(soon, 24, now) {
+		names = append(names, l.Mission)
+	}
+	if strings.Join(names, ",") != "flight,in 3h" {
+		t.Errorf("upcoming 24h: %v", names)
 	}
 	if _, err := parseConfig([]byte(validConfig + "world: { quake_min_mag: 3 }\n")); err == nil {
 		t.Error("quake_min_mag below the feed's 4.5 must be rejected")

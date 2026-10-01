@@ -29,8 +29,8 @@ type WorldQuake struct {
 }
 
 // parseUSGS reads a USGS GeoJSON summary feed: quakes of at least minMag in the
-// last days, newest first, at most 8.
-func parseUSGS(body []byte, minMag float64, days int, now time.Time) ([]WorldQuake, error) {
+// last hours, newest first, at most 8.
+func parseUSGS(body []byte, minMag float64, hours int, now time.Time) ([]WorldQuake, error) {
 	var fc struct {
 		Type     string `json:"type"`
 		Features []struct {
@@ -61,7 +61,7 @@ func parseUSGS(body []byte, minMag float64, days int, now time.Time) ([]WorldQua
 			continue
 		}
 		t := time.UnixMilli(p.Time).UTC()
-		if now.Sub(t) > time.Duration(days)*24*time.Hour {
+		if now.Sub(t) > time.Duration(hours)*time.Hour {
 			continue
 		}
 		q := WorldQuake{Mag: math.Round(*p.Mag*10) / 10, Place: truncate(plainText(p.Place), 100), Time: t, Tsunami: p.Tsunami == 1, URL: safeURL(p.URL, nil)}
@@ -74,8 +74,8 @@ func parseUSGS(body []byte, minMag float64, days int, now time.Time) ([]WorldQua
 		out = append(out, q)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Time.After(out[j].Time) })
-	if len(out) > 8 {
-		out = out[:8]
+	if len(out) > 20 {
+		out = out[:20]
 	}
 	return out, nil
 }
@@ -91,11 +91,11 @@ type WorldEvent struct {
 
 var eonetKinds = map[string]string{"severeStorms": "storm", "volcanoes": "volcano", "wildfires": "wildfire", "floods": "flood", "landslides": "landslide"}
 
-// parseEONET keeps the events that are news and were updated in the last days:
+// parseEONET keeps the events that are news and were updated in the last hours:
 // storms, volcanoes, floods, landslides, and wildfires of at least minFireHa
 // hectares. Sea ice, small fires and the rest are left out. Storms first
-// (strongest first), then by kind and date; at most 10.
-func parseEONET(body []byte, minFireHa float64, days int, now time.Time) ([]WorldEvent, error) {
+// (strongest first), then by kind and date; at most 40 (the panel shows 4 per kind).
+func parseEONET(body []byte, minFireHa float64, hours int, now time.Time) ([]WorldEvent, error) {
 	var d struct {
 		Events []struct {
 			Title      string `json:"title"`
@@ -130,7 +130,7 @@ func parseEONET(body []byte, minFireHa float64, days int, now time.Time) ([]Worl
 		}
 		g := e.Geometry[len(e.Geometry)-1]
 		t, err := time.Parse(time.RFC3339, g.Date)
-		if err != nil || now.Sub(t) > time.Duration(days)*24*time.Hour { // not updated recently: probably over
+		if err != nil || now.Sub(t) > time.Duration(hours)*time.Hour { // not updated recently: probably over
 			continue
 		}
 		ev := WorldEvent{Kind: kind, Title: truncate(plainText(e.Title), 90), Time: t.UTC()}
@@ -177,8 +177,8 @@ func parseEONET(body []byte, minFireHa float64, days int, now time.Time) ([]Worl
 		}
 		return a.Time.After(b.Time)
 	})
-	if len(out) > 10 {
-		out = out[:10]
+	if len(out) > 40 {
+		out = out[:40]
 	}
 	return out, nil
 }
@@ -273,7 +273,7 @@ func parseLaunches(body []byte, now time.Time) ([]Launch, error) {
 		}
 		l.Exact = r.Precision == nil || strings.EqualFold(r.Precision.Name, "Minute") || strings.EqualFold(r.Precision.Name, "Second") || strings.EqualFold(r.Precision.Name, "Hour")
 		out = append(out, l)
-		if len(out) == 4 {
+		if len(out) == 8 {
 			break
 		}
 	}
@@ -294,5 +294,34 @@ func (a *App) handleWorld(w http.ResponseWriter, r *http.Request) {
 	if v, ok := a.threats.get("eonet:events").Data.([]WorldEvent); ok {
 		ev["items"] = v
 	}
-	writeJSON(w, r, http.StatusOK, 300, map[string]any{"enabled": true, "min_mag": cfg.World.QuakeMinMag, "days": cfg.World.Days, "quakes": q, "events": ev})
+	// filter again at request time: the data is fetched every 30 minutes
+	hours := time.Duration(cfg.World.Hours) * time.Hour
+	if v, ok := q["items"].([]WorldQuake); ok {
+		q["items"] = keepRecent(v, func(x WorldQuake) time.Time { return x.Time }, hours)
+	}
+	if v, ok := ev["items"].([]WorldEvent); ok {
+		ev["items"] = keepRecent(v, func(x WorldEvent) time.Time { return x.Time }, hours)
+	}
+	writeJSON(w, r, http.StatusOK, 300, map[string]any{"enabled": true, "min_mag": cfg.World.QuakeMinMag, "hours": cfg.World.Hours, "quakes": q, "events": ev})
+}
+
+func keepRecent[T any](list []T, at func(T) time.Time, within time.Duration) []T {
+	out := []T{}
+	for _, x := range list {
+		if time.Since(at(x)) <= within {
+			out = append(out, x)
+		}
+	}
+	return out
+}
+
+// upcomingLaunches: launches in the coming hours, and any flight under way.
+func upcomingLaunches(list []Launch, hours int, now time.Time) []Launch {
+	out := []Launch{}
+	for _, l := range list {
+		if l.Status == "flight" || (!l.Time.Before(now.Add(-time.Hour)) && l.Time.Sub(now) <= time.Duration(hours)*time.Hour) {
+			out = append(out, l)
+		}
+	}
+	return out
 }

@@ -359,8 +359,9 @@ func (a *App) handleSky(w http.ResponseWriter, r *http.Request) {
 	if cfg.Sky.Launches {
 		l := a.feedEntry("ll2:launches")
 		if v, ok := a.threats.get("ll2:launches").Data.([]Launch); ok {
-			l["items"] = v
+			l["items"] = upcomingLaunches(v, cfg.Sky.LaunchesHours, time.Now())
 		}
+		l["hours"] = cfg.Sky.LaunchesHours
 		e["launches"] = l
 	}
 	fe := a.feedEntry("noaa:kp")
