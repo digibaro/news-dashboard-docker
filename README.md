@@ -25,7 +25,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **AMBER Alert and Vermist Kind Alert:** while a child is being searched for, a prominent banner at the top with the name, description, photo and "call 112" (a Vermist Kind Alert only for visitors whose weather location lies in its area), plus a push notification. Source: the police's Burgernet open API.
 - **NL-Alert:** active and recent NL-Alerts (last 31 days), marked when the visitor's weather location lies inside the alert area.
 - **Afvalkalender:** the next waste collection days. Each visitor sets an own address (postcode and house number) under Instellingen, like the places for alarms and air quality; the server finds the provider that knows it among 51 built-in providers (municipal calendars, Ximmio, Amsterdam, HVC, RD4, ROVA and more; 60 with the optional app providers such as Mijn Afvalwijzer). An optional default address can also come from an iCal link or Home Assistant.
-- **UV index** in the Weer panel: the highest UV of the next 24 hours, when, and sun-protection advice from UV 3.
+- **UV index** in the Weer panel: the highest UV of the next 24 hours and when.
 - **Zonnestroom** in Energieprijzen: the expected yield of your solar panels today and tomorrow, and the sunniest 3 hours. Each visitor enters kWp, direction and tilt under Instellingen.
 - **Satellietbeeld:** the latest Meteosat image of the Benelux from EUMETSAT, every 10 minutes: true colour by day, clouds and city lights at night, with coastlines and borders. The server fetches it and serves it itself.
 - **Vanavond aan de hemel:** when it gets dark, the moon, the planets you can see tonight (when and in which direction), the chance of northern lights, the clouds and active meteor showers, and the next rocket launches (Launch Library 2).
@@ -788,6 +788,10 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.23.3
+- **Weer:** the UV line only shows the value, the WHO category and the time; the sun-protection advice is gone.
+- **Satellietbeeld:** the caption only says when the image was taken (and credits EUMETSAT).
 
 ### 1.23.2
 - **Raketlanceringen** only shows launches in the coming 24 hours (and a flight under way); without any, one short line says so (`sky.launches_hours`).

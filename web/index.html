@@ -1114,6 +1114,10 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.23.3</h3>
+    <ul>
+      <li>Weer: de UV-regel toont alleen nog de waarde en het tijdstip, zonder advies. Satellietbeeld: kortere onderschrift.</li>
+    </ul>
     <h3>Versie 1.23.2</h3>
     <ul>
       <li>Raketlanceringen: alleen de komende 24 uur. Wereldwijd: alleen de afgelopen 24 uur.</li>
@@ -1297,6 +1301,10 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.23.3</h3>
+    <ul>
+      <li>Weather: the UV line only shows the value and the time, without advice. Satellite image: shorter caption.</li>
+    </ul>
     <h3>Version 1.23.2</h3>
     <ul>
       <li>Rocket launches: only the coming 24 hours. Worldwide: only the past 24 hours.</li>
@@ -2619,7 +2627,7 @@ const EN = {
   "Het satellietbeeld wordt nog voor het eerst opgehaald.": "The satellite image is being fetched for the first time.",
   "Satellietbeeld groot openen": "Open the satellite image full size",
   "Satellietbeeld van de Benelux en omgeving om {t}": "Satellite image of the Benelux and surroundings at {t}",
-  "Opname {t} · overdag echte kleuren, ’s nachts wolken en stadslichten · ": "Taken {t} · true colour by day, clouds and city lights at night · ",
+  "Opname {t} · ": "Taken {t} · ",
   "EUMETSAT · satellietbeeld": "EUMETSAT · satellite image",
   "Mogelijk achter een betaalmuur": "May be behind a paywall",
   "Tip: bron:nos, \"exacte woorden\" en -woord werken ook.": "Tip: source:nos, \"exact words\" and -word work too.",
@@ -2669,10 +2677,6 @@ const EN = {
   "laag": "low", "zeer hoog": "very high", "extreem": "extreme",
   "UV vandaag max {v} ({level}) rond {t}": "UV today up to {v} ({level}) around {t}",
   "UV morgen max {v} ({level}) rond {t}": "UV tomorrow up to {v} ({level}) around {t}",
-  "smeer je in als je langer buiten bent": "use sunscreen if you are outside for long",
-  "smeer je in en zoek tussen 12 en 15 uur de schaduw op": "use sunscreen and stay in the shade between 12:00 and 15:00",
-  "vermijd de zon rond het middaguur en smeer je goed in": "avoid the midday sun and use plenty of sunscreen",
-  "blijf rond het middaguur uit de zon": "stay out of the midday sun",
   "Straling: {v} µSv/u · {state}": "Radiation: {v} µSv/h · {state}",
   "verhoogd": "raised", "normaal": "normal",
   " · verhoogd op {n} meetposten elders": " · raised at {n} stations elsewhere",
@@ -5334,13 +5338,12 @@ async function pushTest() {
 
 // ---------------------------------------------------------------- onweer (weather panel)
 const THUNDER_NL = ['geen kans', 'kleine kans', 'matige kans', 'grote kans'];
-// UV: the highest value in the next 24 hours (WHO categories); advice from 3 (matig).
+// UV: the highest value in the next 24 hours, with its WHO category.
 const UV_NL = ['laag', 'matig', 'hoog', 'zeer hoog', 'extreem'];
-const UV_ADVICE = ['', 'smeer je in als je langer buiten bent', 'smeer je in en zoek tussen 12 en 15 uur de schaduw op', 'vermijd de zon rond het middaguur en smeer je goed in', 'blijf rond het middaguur uit de zon'];
 function uvLine(uv) {
   const pk = new Date(uv.peak * 1000), today = dayKey(pk) === dayKey(new Date());
   const txt = t(today ? 'UV vandaag max {v} ({level}) rond {t}' : 'UV morgen max {v} ({level}) rond {t}', { v: Math.round(uv.max), level: t(UV_NL[uv.level]), t: fmt.time.format(pk) });
-  return h('p', { class: 'wxuv lv' + uv.level }, h('span', { 'aria-hidden': 'true', text: '☀ ' }), uv.level ? txt + ' · ' + t(UV_ADVICE[uv.level]) : txt);
+  return h('p', { class: 'wxuv lv' + uv.level }, h('span', { 'aria-hidden': 'true', text: '☀ ' }), txt);
 }
 function thunderLine(th) {
   const when = th.level && th.peak ? t(', vooral rond {t}', { t: fmt.time.format(new Date(th.peak * 1000)) }) : '';
@@ -5407,7 +5410,7 @@ function renderSatellite(body, extra) {
   renderSatFoot(body, r, when);
 }
 function renderSatFoot(body, r, when) {
-  body.querySelector('.pfoot').replaceChildren(t('Opname {t} · overdag echte kleuren, ’s nachts wolken en stadslichten · ', { t: when }),
+  body.querySelector('.pfoot').replaceChildren(t('Opname {t} · ', { t: when }),
     extLink('https://view.eumetsat.int/', '© EUMETSAT'));
 }
 
