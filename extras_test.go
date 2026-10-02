@@ -1465,3 +1465,29 @@ func TestWorld(t *testing.T) {
 		t.Error("quake_min_mag below the feed's 4.5 must be rejected")
 	}
 }
+
+func TestFireRisk(t *testing.T) {
+	body, err := os.ReadFile("testdata/natuurbrandrisico.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rs, err := parseFireRisk(body)
+	if err != nil || len(rs) != 25 {
+		t.Fatalf("regions: %d %v", len(rs), err)
+	}
+	ph := map[string]int{}
+	for _, r := range rs {
+		ph[r.Region] = r.Phase
+	}
+	if ph["Fryslân"] != 1 || ph["Kennemerland"] != 2 || ph["Noord-Holland-Noord"] != 2 || ph["Zaanstreek-Waterland"] != 0 {
+		t.Errorf("phases: %v", ph)
+	}
+	if _, err := parseFireRisk([]byte(`<html><div class="risk">Utrecht<div class="risk-phase">Fase 1</div></div></html>`)); err == nil {
+		t.Error("a page with too few regions (changed layout) must be an error")
+	}
+	a := newTestApp(t, validConfig)
+	a.threats.ok("brandweer:firerisk", rs, "", "")
+	if b := get(a.routes("/"), "GET", "/api/world", nil).Body.String(); !strings.Contains(b, `"region":"Kennemerland","phase":2`) || !strings.Contains(b, `"url":"https://www.brandweer.nl/natuurbrandrisico/"`) {
+		t.Errorf("world handler: %s", b[:min(len(b), 400)])
+	}
+}

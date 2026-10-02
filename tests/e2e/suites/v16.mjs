@@ -42,7 +42,7 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   }));
   if (w === 1440 && scheme === 'light') console.log(JSON.stringify(t, null, 1));
   ok(t.bar.join() === [t.knmiShown && 'ab-knmi', 'ab-p2k', t.nlActive && 'ab-nl', 'ab-nctv'].filter(Boolean).join() && !(t.knmiShown && /geen waarschuwingen/.test(t.knmiText)), `${w} ${scheme}: top bar KNMI → Alarmeringen → (NL-Alert only when active) → Dreigingsniveau (${t.bar})`);
-  ok(t.order.join() === 'weather,satellite,today,waste,air,pollen,insects,sky,traffic,trains,alarms,nlalert,quakes,world,energy,fuel,economy,markets,sports,politics,threats,advisories,breaches,ransomware,utilities,outages,ap,health', `${w} ${scheme}: panel order ${t.order.join(',')}`);
+  ok(t.order.join() === 'weather,satellite,today,waste,air,pollen,insects,sky,traffic,trains,alarms,nlalert,quakes,energy,fuel,economy,markets,sports,politics,threats,advisories,breaches,ransomware,utilities,outages,ap,health', `${w} ${scheme}: panel order ${t.order.join(',')}`);
   ok(t.heads.energy === 'Energieprijzen' && t.heads.air === 'Luchtkwaliteit' && t.heads.trains === 'Treinstoringen' && t.heads.politics === 'Politiek vandaag', 'panel names');
   ok(/^€\s?-?\d+,\d\d$/.test(t.price) && t.bars >= 23 && t.bars <= 50 && t.nowBar === 1, `energy: now ${t.price}, ${t.bars} hourly bars, current hour marked`);
   ok(/Goedkoopste 3 uur: (morgen )?\d\d:\d\d–\d\d:\d\d/.test(t.cheap || ''), `energy: ${t.cheap}`);

@@ -167,7 +167,7 @@ const chips = p => p.$$eval('#chips .chip', cs => cs.map(c => c.textContent.trim
     const body = e.id.startsWith('p-') && document.querySelector('#' + e.id.replace('-fresh', '-body'));
     return e.id + ': ' + (e.textContent || (body?.querySelector('.pnote') ? '(no data: ' + body.querySelector('.pnote').textContent.slice(0, 50) + ')' : ''));
   }));
-  ok(fr.length === 29 && fr.filter(t => !t.startsWith('p-trains-fresh') && !t.startsWith('p-waste-fresh')).every(t => /bijgewerkt (zojuist|\d+ min geleden)|\(no data: /.test(t)), `G: every panel shows its data age (trains: none without an NS key; waste: none without an address): ${fr.join(' | ')}`);
+  ok(fr.length === 28 && fr.filter(t => !t.startsWith('p-trains-fresh') && !t.startsWith('p-waste-fresh')).every(t => /bijgewerkt (zojuist|\d+ min geleden)|\(no data: /.test(t)), `G: every panel shows its data age (trains: none without an NS key; waste: none without an address): ${fr.join(' | ')}`);
   await ctx.close();
   const s2 = await fresh({}, { onboarded: true });
   await s2.p.route('**/api/weather*', async route => { const r = await route.fetch(); const d = await r.json(); d.updated = new Date(Date.now() - 2 * 3600e3).toISOString(); await route.fulfill({ response: r, json: d }); });

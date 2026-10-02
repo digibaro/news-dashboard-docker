@@ -331,6 +331,8 @@ world:
   eonet_url: "https://eonet.gsfc.nasa.gov/api/v3/events?status=open&days=30"
   quake_min_mag: 6                # quakes from this magnitude (the feed has M4.5+)
   hours: 24                       # the panel's period: quakes and events of the last hours (1-168)
+  fire_risk: true                 # natuurbrandrisico per safety region (Brandweer Nederland); no open API, the
+  fire_risk_url: "https://www.brandweer.nl/natuurbrandrisico/"   # public page is read once an hour
   fire_min_ha: 2000               # wildfires from this size in hectares
   interval: 30m                   # min. 10m
 

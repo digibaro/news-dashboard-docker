@@ -80,7 +80,7 @@ const state = p => p.evaluate(() => ({
   const ctx = await ctxFor({ v: 2, onboarded: true, panels: { order: ['weather', 'traffic', 'threats', 'advisories', 'outages', 'ap', 'health'], collapsed: {}, hidden: {} } });
   const p = await ctx.newPage(); await p.goto(URL); await p.waitForSelector('#panel-alarms');
   const order = await p.$$eval('.panel', ps => ps.map(x => x.id.replace('panel-', '')));
-  ok(order.join(',') === 'weather,satellite,today,waste,air,pollen,insects,sky,traffic,trains,alarms,nlalert,quakes,world,energy,fuel,economy,markets,sports,politics,threats,advisories,breaches,ransomware,utilities,outages,ap,health', `saved 1.2.1 order gets Alarmeringen after Verkeer (${order.join(', ')})`);
+  ok(order.join(',') === 'weather,satellite,today,waste,air,pollen,insects,sky,traffic,trains,alarms,nlalert,quakes,energy,fuel,economy,markets,sports,politics,threats,advisories,breaches,ransomware,utilities,outages,ap,health', `saved 1.2.1 order gets Alarmeringen after Verkeer (${order.join(', ')})`);
   await ctx.close();
 }
 {

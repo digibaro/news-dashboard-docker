@@ -422,6 +422,8 @@ type Config struct {
 		QuakeMinMag float64  `yaml:"quake_min_mag"` // default 6
 		FireMinHa   float64  `yaml:"fire_min_ha"`   // wildfires from this size (hectares); default 2000
 		Hours       int      `yaml:"hours"`         // the panel's period: quakes and events of the last hours (1-168); default 24
+		FireRisk    bool     `yaml:"fire_risk"`     // natuurbrandrisico per safety region in the Netherlands (brandweer.nl)
+		FireRiskURL string   `yaml:"fire_risk_url"` // the public page; read hourly
 		Days        int      `yaml:"days"`          // 1.23.1, replaced by hours; still read (days × 24) when hours is not set
 		Interval    Duration `yaml:"interval"`
 	} `yaml:"world"`
@@ -538,6 +540,7 @@ func defaultConfig() *Config {
 	c.Sky.Launches, c.Sky.LaunchesURL, c.Sky.LaunchesHours = true, "https://ll.thespacedevs.com/2.3.0/launches/upcoming/?limit=10", 24
 	c.World.Enabled, c.World.USGSURL, c.World.EONETURL = true, "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson", "https://eonet.gsfc.nasa.gov/api/v3/events?status=open&days=30"
 	c.World.QuakeMinMag, c.World.FireMinHa, c.World.Interval = 6, 2000, Duration(30*time.Minute)
+	c.World.FireRisk, c.World.FireRiskURL = true, "https://www.brandweer.nl/natuurbrandrisico/"
 	c.Sports.Enabled, c.Sports.Sports, c.Sports.F1URL, c.Sports.Interval = true, []string{"f1", "road", "mtb", "athletics", "football"}, "https://api.jolpi.ca/ergast/f1", Duration(time.Hour)
 	c.Push.MaxSubscriptions, c.Push.QuakeMinMag, c.Push.BreakingSources, c.Push.WasteHour = 50, 2.5, 6, 19
 	c.Threats.Enabled = true
@@ -866,6 +869,9 @@ func (c *Config) validate() error {
 	}
 	if w := c.World; w.Enabled && (!httpsURL(w.USGSURL) || !httpsURL(w.EONETURL) || w.QuakeMinMag < 4.5 || w.QuakeMinMag > 9 || w.FireMinHa < 0 || w.Hours < 1 || w.Hours > 168 || w.Interval.D() < 10*time.Minute) {
 		fail("world: usgs_url and eonet_url must be https URLs, quake_min_mag 4.5-9, fire_min_ha at least 0, hours 1-168, interval at least 10m")
+	}
+	if c.World.Enabled && c.World.FireRisk && !httpsURL(c.World.FireRiskURL) {
+		fail("world.fire_risk_url must be an https URL")
 	}
 	if c.Sky.Launches && (c.Sky.LaunchesHours < 1 || c.Sky.LaunchesHours > 720) {
 		fail("sky.launches_hours must be 1-720")
@@ -1951,6 +1957,9 @@ func (a *App) otherFeeds(cfg *Config) []FeedStatus {
 	if cfg.World.Enabled {
 		add("usgs:world", "USGS · aardbevingen wereldwijd", "daily")
 		add("eonet:events", "NASA EONET · natuurrampen", "daily")
+		if cfg.World.FireRisk {
+			add("brandweer:firerisk", "Brandweer · natuurbrandrisico", "daily")
+		}
 	}
 	if cfg.Radiation.Enabled {
 		add(radKey, "RIVM via EURDEP · straling", "daily")

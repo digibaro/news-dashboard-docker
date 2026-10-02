@@ -20,7 +20,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Luchtkwaliteit:** the air quality index (1–11) and NO₂, PM2.5, PM10 and O₃ from the nearest Luchtmeetnet station. The place is chosen per visitor (default: their weather location). Below it the **radiation** (gamma dose rate) at the nearest RIVM station, with the national range; when several stations measure raised levels, a notice appears in the top bar and a push message can go out.
 - **Hooikoorts:** the pollen forecast (grass, birch, alder, mugwort, ragweed) for 3 days at the visitor's air-quality place, with indicative levels.
 - **Aardbevingen:** earthquakes in and around the Netherlands from KNMI in the last 31 days, with magnitude, depth and induced (gas extraction) events marked.
-- **Wereldwijd:** big earthquakes worldwide (M6+, last 24 hours, with tsunami warning and expected impact) from USGS, and active natural disasters from NASA EONET: hurricanes and typhoons (with wind speed), volcanic eruptions, floods and large wildfires (sea ice and small fires left out).
+- **Aardbevingen en natuurrampen:** two tabs. **Nederland**: earthquakes from KNMI (31 days), the KNMI wind warning when there is one, and the natuurbrandrisico phase per safety region (Brandweer Nederland). **Wereld**: big earthquakes from USGS (M6+, last 24 hours, with tsunami warning and expected impact) and active natural disasters from NASA EONET (hurricanes and typhoons with wind speed, volcanic eruptions, floods, large wildfires). A summary line above the tabs; the panel remembers the chosen tab.
 - **Kritieke infrastructuur:** current electricity and gas outages at Liander and Stedin (place, status, expected repair time, customers affected), planned work and outages resolved in the last 24 h.
 - **AMBER Alert and Vermist Kind Alert:** while a child is being searched for, a prominent banner at the top with the name, description, photo and "call 112" (a Vermist Kind Alert only for visitors whose weather location lies in its area), plus a push notification. Source: the police's Burgernet open API.
 - **NL-Alert:** active and recent NL-Alerts (last 31 days), marked when the visitor's weather location lies inside the alert area.
@@ -183,7 +183,7 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 | `trending` | Trending words above the news: `enabled` (computed from the news cache, no extra requests); `wikipedia`: `enabled` (default true), `url` (default `https://nl.wikipedia.org`), a short summary per topic, only for current trending terms, cached 24 h per term |
 | `radiation` | Straling in Luchtkwaliteit: `enabled`, `url` (BfS open WFS with EURDEP data), `interval` (default 60m, min. 15m), `alert_usv` (default 0.3) and `alert_stations` (default 3): "raised" when at least that many stations measure at least that dose rate |
 | `solar` | Zonnestroom in Energieprijzen: `enabled`, `url` (Open-Meteo forecast), `kwp` (default 0: visitors enter their own panels; above 0 a default for everyone), `tilt` (default 35), `azimuth` (0 south, -90 east, 90 west) |
-| `world` | Wereldwijd: `enabled`, `usgs_url` (a USGS GeoJSON summary feed, default M4.5+ of the past week), `eonet_url` (NASA EONET v3), `quake_min_mag` (default 6), `fire_min_ha` (wildfires from this size, default 2000), `hours` (the panel's period, 1–168, default 24; the older `days` still works), `interval` (default 30m, min. 10m) |
+| `world` | The Wereld tab and natuurbrandrisico of Aardbevingen en natuurrampen: `enabled`, `usgs_url` (a USGS GeoJSON summary feed, default M4.5+ of the past week), `eonet_url` (NASA EONET v3), `quake_min_mag` (default 6), `fire_min_ha` (wildfires from this size, default 2000), `hours` (the Wereld tab's period, 1–168, default 24; the older `days` still works), `fire_risk` (default true) and `fire_risk_url` (natuurbrandrisico, read hourly from brandweer.nl), `interval` (default 30m, min. 10m) |
 | `satellite` | Satellietbeeld: `enabled`, `url` (EUMETSAT GeoServer), `layer` (default `mtg_fd:rgb_geocolour`; e.g. `msg_fes:ir108` for infrared), `interval` (default 10m, min. 5m) |
 | `amber` | AMBER Alert and Vermist Kind Alert: `enabled`, `url` (Burgernet Landactiehost; the test feed `.../api/test/alerts` cycles through test messages), `interval` (default 5m, min. 1m) |
 | `insects` | Teken en muggen: `enabled`, `url` (Open-Meteo forecast) |
@@ -585,6 +585,7 @@ The server fetches everything; browsers only talk to the dashboard itself.
 | [Open-Meteo](https://open-meteo.com/) | UV, Zonnestroom | `uv_index` (hourly) in the weather request; `global_tilted_irradiance` for the solar estimate (kWh = irradiation × kWp × 0.8 performance ratio; no shade, no snow). |
 | [USGS](https://earthquake.usgs.gov/earthquakes/feed/) | Wereldwijd: aardbevingen | GeoJSON summary feeds, public domain (US government); every 30 minutes. |
 | [NASA EONET](https://eonet.gsfc.nasa.gov/) | Wereldwijd: natuurrampen | Earth Observatory Natural Event Tracker v3, open, no key; storms with a position in the last 3 days, wildfires from `fire_min_ha`. Each event links to its source (NHC, JTWC, IRWIN, …). |
+| [Brandweer Nederland](https://www.brandweer.nl/natuurbrandrisico/) | Natuurbrandrisico | The current phase per safety region. There is **no open API**: the list on the public page is read once an hour (robots.txt allows it). If the page layout changes, the block shows that the site is unreachable until this is adapted. |
 | [Launch Library 2](https://thespacedevs.com/llapi) (The Space Devs) | Hemel: raketlanceringen | Open API, free tier 15 requests per hour per IP; the server asks once an hour. |
 | [Wikipedia](https://nl.wikipedia.org/) | Trending: uitleg | REST API (`/api/rest_v1/page/summary`, `/w/rest.php/v1/search/page`), no key. Only for current trending terms; disambiguation pages are skipped, and a search hit is used only if its title holds every word of the term plus at most one more. Text CC BY-SA 4.0, credited in the card. |
 | [Burgernet](https://www.burgernet.nl/amberalert) (police) | AMBER Alert, Vermist Kind Alert | The open API "Landactiehost" (`services.burgernet.nl/landactiehost/api/v1/alerts`, JSON, no key), documented in *Technische koppelingen Burgernet/AMBER Alert berichten* v1.1. AlertLevel 10 = AMBER Alert (national), 5 = Vermist Kind Alert (a circle); a Cancel closes the alert. The photo is shown via this server's image proxy. |
@@ -713,7 +714,7 @@ All JSON responses:
 | `GET /api/insects?lat=&lon=` | Teken en muggen: 3 `days` with `ticks` and `mosquito` levels 0–3 (an estimate) |
 | `GET /api/sky?lat=&lon=` | Vanavond aan de hemel: sunset, dark, dawn, `moon` (phase, rise, set), `planets` (from, until, best time, altitude, direction), `kp` and `aurora` (0–3), `clouds`, `meteor` |
 | `GET /api/sports` | Sportagenda: `f1` (next race with sessions, last podium, standings) and `events` (per sport the current or just-finished events and the next three, with `note`, `tentative` and `headlines`) |
-| `GET /api/world` | Wereldwijd: `quakes.items` (mag, place, time, depth_km, tsunami, alert, url) and `events.items` (kind storm/volcano/flood/landslide/wildfire, title, time, wind_kmh, area_ha, url) |
+| `GET /api/world` | Aardbevingen en natuurrampen (Wereld and natuurbrandrisico): `fire_risk.regions` (region, phase; 0 = unknown), `quakes.items` (mag, place, time, depth_km, tsunami, alert, url) and `events.items` (kind storm/volcano/flood/landslide/wildfire, title, time, wind_kmh, area_ha, url) |
 | `GET /api/icon?s=` | A news site's icon (32×32 PNG) for a configured source; the catalog lists the link per source (`icon`) once the icon is there |
 | `GET /api/trending` | Trending: up to 8 `terms` with the number of `sources` in the last 3 hours |
 | `GET /api/wiki?term=` | Wikipedia summary for a current trending term: `summary` (`found`, `title`, `description`, `extract`, `url`, `thumb` via `api/img`) and a `search` link; 404 for other terms |
@@ -788,6 +789,10 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.24.0
+- **Aardbevingen en natuurrampen:** the Aardbevingen and Wereldwijd panels are now one panel with two tabs. **Nederland**: earthquakes (KNMI, 31 days), the KNMI wind warning when there is one, and **natuurbrandrisico** per safety region (new, from brandweer.nl: the regions in phase 2, otherwise "overal fase 1"). **Wereld**: the former Wereldwijd content. A summary line above the tabs ("Nederland: rustig · Wereld: 3 stormen"); the chosen tab is remembered. Visitors' panel order, collapsed state and visibility carry over.
+- Config: `world.fire_risk` and `world.fire_risk_url`.
 
 ### 1.23.3
 - **Weer:** the UV line only shows the value, the WHO category and the time; the sun-protection advice is gone.

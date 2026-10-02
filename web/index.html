@@ -896,6 +896,10 @@ textarea.json {
 .wsec h3, .launches h3 { margin: 10px 0 4px; font-size: 12px; font-weight: 650; color: var(--text-2); text-transform: uppercase; letter-spacing: .03em; }
 .wsec:first-child h3 { margin-top: 0; }
 .tag.warn { border-color: var(--sev-crit); color: var(--sev-crit); font-weight: 650; }
+.tag.fire2 { border-color: var(--sev-high); color: var(--sev-high); font-weight: 650; }
+.tag.fire3, .tag.fire4 { border-color: var(--sev-crit); color: var(--sev-crit); font-weight: 650; }
+.hzsum { margin: 0 0 6px; font-size: 13px; line-height: 1.45; }
+.fnote { font-size: 12px; color: var(--text-3); margin: 2px 0 0; }
 .tag.live { color: var(--sev-crit); }
 .spev .plist { margin: 2px 0 6px; }
 .wxthunder, .wxuv { margin: 6px 0 0; font-size: 13px; color: var(--text-2); }
@@ -1114,6 +1118,10 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.24.0</h3>
+    <ul>
+      <li>Aardbevingen en Wereldwijd zijn samen één paneel, Aardbevingen en natuurrampen, met de tabbladen Nederland en Wereld. Nieuw bij Nederland: de windwaarschuwing van het KNMI en het natuurbrandrisico per regio.</li>
+    </ul>
     <h3>Versie 1.23.3</h3>
     <ul>
       <li>Weer: de UV-regel toont alleen nog de waarde en het tijdstip, zonder advies. Satellietbeeld: kortere onderschrift.</li>
@@ -1301,6 +1309,10 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.24.0</h3>
+    <ul>
+      <li>Earthquakes and Worldwide are now one panel, Earthquakes and natural disasters, with the tabs Netherlands and World. New under Netherlands: the KNMI wind warning and the wildfire risk per region.</li>
+    </ul>
     <h3>Version 1.23.3</h3>
     <ul>
       <li>Weather: the UV line only shows the value and the time, without advice. Satellite image: shorter caption.</li>
@@ -1705,8 +1717,7 @@ const PANELS = {
   trains: 'Treinstoringen',
   alarms: 'Alarmeringen',
   nlalert: 'NL-Alert',
-  quakes: 'Aardbevingen',
-  world: 'Wereldwijd',
+  quakes: 'Aardbevingen en natuurrampen',
   energy: 'Energieprijzen',
   fuel: 'Brandstofprijzen',
   economy: 'Economie in cijfers',
@@ -1728,7 +1739,7 @@ const MIN = 60e3;
 const DEFAULTS = {
   v: 2, theme: 'auto', sources: null, known: [], pageSize: 60, summaries: true,
   density: 'compact', category: 'all', weather: null, threatTab: 'ips', advFilter: 'all',
-  lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, trending: true, pushTopics: null, waste: null, sports: null, sportsSeen: null, solar: null, saver: 'auto', watch: [], mute: [],
+  lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, trending: true, pushTopics: null, waste: null, sports: null, sportsSeen: null, solar: null, saver: 'auto', hazardTab: 'nl', watch: [], mute: [],
   panels: { order: PANEL_IDS.slice(), collapsed: {}, hidden: {} },
 };
 
@@ -2664,6 +2675,22 @@ const EN = {
   " · zeeijs en kleine branden weggelaten": " · sea ice and small fires left out",
   "USGS · aardbevingen wereldwijd": "USGS · earthquakes worldwide", "NASA EONET · natuurrampen": "NASA EONET · natural disasters",
   "Launch Library 2 · raketlanceringen": "Launch Library 2 · rocket launches",
+  // 1.24: aardbevingen en natuurrampen
+  "Aardbevingen en natuurrampen": "Earthquakes and natural disasters",
+  "Nederland: ": "Netherlands: ", "Wereld: ": "World: ", "Nederland of de wereld": "Netherlands or the world", "Wereld": "World",
+  "rustig": "quiet", "1 zware beving": "1 strong earthquake", "{n} zware bevingen": "{n} strong earthquakes", "1 storm": "1 storm", "{n} stormen": "{n} storms",
+  "1 andere ramp": "1 other disaster", "{n} andere rampen": "{n} other disasters",
+  "1 beving vandaag": "1 earthquake today", "{n} bevingen vandaag": "{n} earthquakes today", "windwaarschuwing": "wind warning",
+  "natuurbrandrisico fase 2 in 1 regio": "wildfire risk phase 2 in 1 region", "natuurbrandrisico fase 2 in {n} regio’s": "wildfire risk phase 2 in {n} regions",
+  "Aardbevingen ({n} dagen)": "Earthquakes ({n} days)", "Storm": "Storm", "Natuurbrandrisico": "Wildfire risk", "fase {n}": "phase {n}",
+  "Overal fase 1: geen extra risico.": "Phase 1 everywhere: no extra risk.",
+  "Fase 2: langere tijd droog, wees extra voorzichtig met vuur. ": "Phase 2: dry for some time, be extra careful with fire. ",
+  "{n} regio’s onbekend. ": "{n} regions unknown. ", "Kaart en uitleg (brandweer)": "Map and explanation (fire service)",
+  "De brandweer-site is niet bereikbaar ({err}).": "The fire service site is unreachable ({err}).",
+  "KNMI-waarschuwingen nu niet beschikbaar.": "KNMI warnings are not available right now.",
+  "KNMI: wind in {areas}": "KNMI: wind in {areas}", "details bij Weer": "details under Weather", "Geen windwaarschuwing van het KNMI.": "No wind warning from KNMI.",
+  "Het wereldoverzicht staat uit in config.yaml (world.enabled).": "The world overview is disabled in config.yaml (world.enabled).",
+  "Brandweer · natuurbrandrisico": "Fire service · wildfire risk",
   // 1.21: bronpictogrammen, databesparing
   "Databesparing": "Data saver",
   "Minder vaak verversen, geen afbeeldingen. Automatisch: bij databesparing van je telefoon of browser, een trage verbinding of een bijna lege batterij.": "Refresh less often, no images. Automatic: when your phone or browser saves data, on a slow connection or a nearly empty battery.",
@@ -2851,6 +2878,7 @@ function sanitize(p) {
   }
   if (Array.isArray(p.sports)) d.sports = p.sports.filter(x => SPORT_IDS.includes(x));
   if (['auto', 'on', 'off'].includes(p.saver)) d.saver = p.saver;
+  if (['nl', 'world'].includes(p.hazardTab)) d.hazardTab = p.hazardTab;
   if (Array.isArray(p.sportsSeen)) d.sportsSeen = p.sportsSeen.filter(x => SPORT_IDS.includes(x));
   if (p.solar && typeof p.solar === 'object') {
     const kwp = Number(p.solar.kwp), tilt = Number(p.solar.tilt), az = Number(p.solar.az);
@@ -2887,6 +2915,8 @@ function sanitize(p) {
     for (const k of ['collapsed', 'hidden']) {
       if (pp[k] && typeof pp[k] === 'object') for (const id of PANEL_IDS) if (pp[k][id] === true) d.panels[k][id] = true;
     }
+    // 1.24: Wereldwijd joined Aardbevingen; whoever kept Wereldwijd visible keeps the combined panel visible
+    if (d.panels.hidden.quakes && Array.isArray(pp.order) && pp.order.includes('world') && pp.hidden?.world !== true) delete d.panels.hidden.quakes;
   }
   return d;
 }
@@ -3387,7 +3417,6 @@ const freshOf = {
   alarms: () => { const d = panelData.alarms?.data; return d?.enabled && { ts: d.fetched_at, max: 6, stale: !!d.stale }; },
   traffic: () => { const d = panelData.traffic?.data; return d?.enabled && { ts: d.fetched_at, max: 15, stale: !!d.error }; },
   insects: () => { const d = panelData.insects?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 130, stale: !!d.error }; },
-  world: () => { const d = panelData.world?.data; return d?.enabled && d.quakes?.fetched_at && { ts: d.quakes.fetched_at, max: 65, stale: !!(d.quakes.error || d.events?.error) }; },
   satellite: () => { const d = panelData.satellite?.data; return d?.enabled && d.time && { ts: d.time, max: 75, stale: !!d.error }; },
   sky: () => { const d = panelData.sky?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 400, stale: !!d.error }; },
   sports: () => { const d = panelData.sports?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 130, stale: !!d.f1?.error }; },
@@ -3427,14 +3456,13 @@ const panelRenderers = {
   nlalert: renderNLAlert,
   insects: renderInsects,
   satellite: renderSatellite,
-  world: renderWorld,
   sky: renderSky,
   sports: renderSports,
   fuel: renderFuel,
   waste: renderWaste,
   markets: renderMarkets,
   utilities: renderUtilities,
-  quakes: renderQuakes,
+  quakes: renderHazards,
   trains: renderTrains,
   politics: renderPolitics,
   health: renderHealth,
@@ -3899,9 +3927,11 @@ function renderAdvisories(body, extra) {
 }
 
 // ---------------------------------------------------------------- top bar (NCTV, KNMI)
+let alertsData = null; // also used by the storm block in Aardbevingen en natuurrampen
 async function loadAlerts() {
   let d;
   try { d = await api('api/alerts'); } catch { d = { failed: true }; }
+  alertsData = d; queueMicrotask(() => renderPanel('quakes'));
   const on = catalog?.alerts || {};
   const bar = $('#alertbar');
   bar.hidden = !on.nctv && !on.knmi && !catalog?.nlalert;
@@ -4731,7 +4761,7 @@ function renderQuakes(body) {
   if (qs.length) {
     out.push(h('p', { class: 'eline' }, h('b', { text: String(qs.length) }), t(qs.length === 1 ? ' beving in de afgelopen {n} dagen' : ' bevingen in de afgelopen {n} dagen', { n: RECENT_DAYS }),
       strongest ? [t(' · sterkste: '), h('b', { text: magText(strongest) }), ` ${strongest.place} (${fmt.short.format(new Date(strongest.time))})`] : null));
-    out.push(h('ul', { class: 'plist' }, qs.slice(0, 6).map(q => h('li', null,
+    out.push(h('ul', { class: 'plist qlist' }, qs.slice(0, 6).map(q => h('li', null,
       h('span', { class: 'mag ' + magClass(q.mag), text: magText(q) }), h('span', { translate: 'no' }, extLink(q.url, q.place)),
       h('div', { class: 'm' }, h('span', { text: `${fmt.short.format(new Date(q.time))} ${fmt.time.format(new Date(q.time))}` }), h('span', { text: t('diepte {d} km', { d: q.depth_km.toLocaleString(locale()) }) }),
         q.induced ? h('span', { class: 'tag plain', title: t('Veroorzaakt door menselijke activiteit, zoals gaswinning'), text: t('geïnduceerd') }) : null)))));
@@ -5474,10 +5504,10 @@ function launchItem(l) {
 
 // ---------------------------------------------------------------- wereldwijd (USGS, NASA EONET)
 async function loadWorld() {
-  if (!catalog?.world) { panelData.world = { data: { enabled: false } }; renderPanel('world'); return; }
+  if (!catalog?.world) { panelData.world = { data: { enabled: false } }; renderPanel('quakes'); return; }
   try { panelData.world = { data: await api('api/world') }; }
   catch (e) { panelData.world = { ...(panelData.world || {}), error: e }; }
-  renderPanel('world');
+  renderPanel('quakes');
 }
 const COMPASS_NL = { N: 'N', NNE: 'NNO', NE: 'NO', ENE: 'ONO', E: 'O', ESE: 'OZO', SE: 'ZO', SSE: 'ZZO', S: 'Z', SSW: 'ZZW', SW: 'ZW', WSW: 'WZW', W: 'W', WNW: 'WNW', NW: 'NW', NNW: 'NNW' };
 // "80 km ENE of Tadine, New Caledonia" -> "80 km ONO van Tadine, New Caledonia" (in Dutch)
@@ -5493,12 +5523,13 @@ function eventTitle(e) {
   return s;
 }
 const WORLD_KIND = { storm: ['🌀', 'Stormen'], volcano: ['🌋', 'Vulkanen'], flood: ['🌊', 'Overstromingen'], landslide: ['⛰️', 'Aardverschuivingen'], wildfire: ['🔥', 'Grote natuurbranden'] };
-function renderWorld(body) {
+// The "Wereld" tab: big earthquakes and active natural events worldwide.
+function worldBlocks() {
   const st = panelData.world;
-  if (!st) { body.replaceChildren(h('div', { class: 'tsk qksk', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:85%' }))); return; }
+  if (!st) return [h('div', { class: 'tsk qksk', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:85%' }))];
   const r = st.data;
-  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('Het wereldoverzicht kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
-  if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (world.enabled).' })); return; }
+  if (!r) return [h('p', { class: 'pnote', text: t('Het wereldoverzicht kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })];
+  if (!r.enabled) return [h('p', { class: 'pnote', text: 'Het wereldoverzicht staat uit in config.yaml (world.enabled).' })];
   const out = [], when = s => { const d = new Date(s); return `${fmt.wdm.format(d)} ${fmt.time.format(d)}`; };
   const qs = r.quakes?.items, evs = r.events?.items;
   const sec = (icon, title, ...kids) => h('div', { class: 'wsec' }, h('h3', null, h('span', { 'aria-hidden': 'true', text: icon + ' ' }), title), ...kids);
@@ -5525,7 +5556,68 @@ function renderWorld(body) {
   }
   out.push(h('p', { class: 'pfoot' }, t('Bronnen: '), extLink('https://earthquake.usgs.gov/', 'USGS'), ' · ', extLink('https://eonet.gsfc.nasa.gov/', 'NASA EONET'),
     t(' · zeeijs en kleine branden weggelaten')));
-  body.replaceChildren(...out);
+  return out;
+}
+// one line per tab for the summary above the tabs
+function worldSummary() {
+  const r = panelData.world?.data;
+  if (!r?.enabled) return null;
+  const q = (r.quakes?.items || []).length, ev = r.events?.items || [], storms = ev.filter(e => e.kind === 'storm').length, other = ev.length - storms;
+  const parts = [q ? t(q === 1 ? '1 zware beving' : '{n} zware bevingen', { n: q }) : null, storms ? t(storms === 1 ? '1 storm' : '{n} stormen', { n: storms }) : null,
+    other ? t(other === 1 ? '1 andere ramp' : '{n} andere rampen', { n: other }) : null].filter(Boolean);
+  return r.quakes?.items || r.events?.items ? (parts.length ? parts.join(', ') : t('rustig')) : null;
+}
+
+// ---------------------------------------------------------------- aardbevingen en natuurrampen (Nederland | Wereld)
+function fireRiskBlock() {
+  const fr = panelData.world?.data?.fire_risk;
+  if (!fr) return null;
+  const rs = fr.regions;
+  const head = h('h3', null, h('span', { 'aria-hidden': 'true', text: '🔥 ' }), t('Natuurbrandrisico'));
+  if (!rs) return h('div', { class: 'wsec' }, head, h('p', { class: 'pnote', text: fr.error ? t('De brandweer-site is niet bereikbaar ({err}).', { err: fr.error }) : t('Wordt voor het eerst opgehaald.') }));
+  const up = rs.filter(x => x.phase >= 2).sort((a, b) => b.phase - a.phase || a.region.localeCompare(b.region, 'nl'));
+  const unknown = rs.filter(x => !x.phase).length;
+  return h('div', { class: 'wsec' }, head,
+    up.length ? h('ul', { class: 'plist' }, up.map(x => h('li', null, h('span', { class: 'tag fire' + x.phase, text: t('fase {n}', { n: x.phase }) }), ' ', h('span', { translate: 'no', text: x.region }))))
+      : h('p', { class: 'eline', text: t('Overal fase 1: geen extra risico.') }),
+    h('p', { class: 'm fnote' }, up.length ? t('Fase 2: langere tijd droog, wees extra voorzichtig met vuur. ') : '', unknown ? t('{n} regio’s onbekend. ', { n: unknown }) : '',
+      extLink(fr.url || 'https://www.brandweer.nl/natuurbrandrisico/', t('Kaart en uitleg (brandweer)'))));
+}
+function stormBlock() {
+  const k = alertsData?.knmi?.status;
+  if (!catalog?.alerts?.knmi || !alertsData) return null;
+  const wind = k && k.level !== 'none' && (k.types || []).some(x => /wind|storm/i.test(x));
+  return h('div', { class: 'wsec' }, h('h3', null, h('span', { 'aria-hidden': 'true', text: '🌀 ' }), t('Storm')),
+    !k ? h('p', { class: 'pnote', text: t('KNMI-waarschuwingen nu niet beschikbaar.') })
+      : wind ? h('p', { class: 'eline' }, h('span', { class: 'tag lvl-' + k.level, text: `code ${tr(LEVEL_NL[k.level])}` }), ' ',
+        t('KNMI: wind in {areas}', { areas: k.areas.slice(0, 4).join(', ') + (k.areas.length > 4 ? ' e.a.' : '') }), ' · ', h('a', { href: '#panel-weather', text: t('details bij Weer') }))
+      : h('p', { class: 'eline', text: t('Geen windwaarschuwing van het KNMI.') }));
+}
+function nlSummary() {
+  const qs = (panelData.quakes?.data?.quakes || []).filter(q => Date.now() - new Date(q.time) <= 864e5);
+  const k = alertsData?.knmi?.status, wind = k && k.level !== 'none' && (k.types || []).some(x => /wind|storm/i.test(x));
+  const fire = (panelData.world?.data?.fire_risk?.regions || []).filter(x => x.phase >= 2).length;
+  const parts = [qs.length ? t(qs.length === 1 ? '1 beving vandaag' : '{n} bevingen vandaag', { n: qs.length }) : null, wind ? t('windwaarschuwing') : null,
+    fire ? t(fire === 1 ? 'natuurbrandrisico fase 2 in 1 regio' : 'natuurbrandrisico fase 2 in {n} regio’s', { n: fire }) : null].filter(Boolean);
+  return parts.length ? parts.join(', ') : t('rustig');
+}
+function renderHazards(body) {
+  const tab = prefs.hazardTab === 'world' && catalog?.world ? 'world' : 'nl';
+  const out = [];
+  if (catalog?.world) {
+    const ws = worldSummary();
+    out.push(h('p', { class: 'hzsum' }, h('b', { text: t('Nederland: ') }), nlSummary(), ws ? [' · ', h('b', { text: t('Wereld: ') }), ws] : null));
+    out.push(h('div', { class: 'advf', role: 'group', 'aria-label': t('Nederland of de wereld') }, [['nl', 'Nederland'], ['world', 'Wereld']].map(([id, l]) =>
+      h('button', { class: 'chip', type: 'button', 'aria-pressed': String(tab === id), text: t(l),
+        onclick: () => { prefs.hazardTab = id; savePrefs(); renderPanel('quakes'); $('#panel-quakes .advf [aria-pressed="true"]')?.focus(); } }))));
+  }
+  if (tab === 'world') out.push(...worldBlocks());
+  else {
+    const qb = h('div', { class: 'wsec' }, h('h3', null, h('span', { 'aria-hidden': 'true', text: '🌍 ' }), t('Aardbevingen ({n} dagen)', { n: RECENT_DAYS })), h('div'));
+    renderQuakes(qb.lastChild);
+    out.push(qb, stormBlock(), fireRiskBlock());
+  }
+  body.replaceChildren(...out.filter(Boolean));
 }
 
 // ---------------------------------------------------------------- sportagenda

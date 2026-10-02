@@ -47,7 +47,11 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   const icons = await p.$$eval('#panel-sports .spsec h3 .spico', l => l.map(x => x.textContent + ':' + x.getAttribute('aria-hidden')));
   ok(icons.join() === '🏎️:true,🚴:true,🚵:true,🏃:true,⚽:true', `icons in front of the sports, hidden from screen readers: ${icons}`);
   const road = s.find(x => x.h === 'Wielrennen'), foot = s.find(x => x.h === 'Voetbal'), mtb = s.find(x => x.h === 'Mountainbike');
-  ok(road.evs.length === 3 && /EK wielrennen 2026/.test(road.evs[0]) && /tijdritten, wegwedstrijden/.test(road.evs[0]) && /Ronde van Lombardije 2026/.test(road.evs[1]), `road: next three, first with its note`);
+  // races on now or just ended, then the next three; compared with the API so the check holds on any date
+  const apiRoad = (await p.evaluate(() => fetch('api/sports').then(r => r.json()))).events.filter(e => e.sport === 'road');
+  ok(road.evs.length === apiRoad.length && apiRoad.filter(e => e.status === 'upcoming').length === 3
+    && apiRoad.every((e, i) => road.evs[i].includes(e.name) && (!e.note || road.evs[i].includes(e.note))) && apiRoad.some(e => e.note),
+    `road: on now plus next three, with notes: ${apiRoad.map(e => `${e.name} (${e.status})`).join(', ')}`);
   ok(foot.evs.length === 3 && /WK voetbal vrouwen 2027/.test(foot.evs[0]) && /EK voetbal 2028/.test(foot.evs[1]) && /WK voetbal 2030/.test(foot.evs[2]), 'football: WK vrouwen 2027, EK 2028, WK 2030');
   ok(/EK mountainbike 2027.*\(datum voorlopig\)/.test(mtb.evs[0]) && !/voorlopig/.test(mtb.evs[1]), 'mtb: provisional EK marked, WK not');
   // readable countdowns: days up to a month, then months, then years; the exact number of days on hover

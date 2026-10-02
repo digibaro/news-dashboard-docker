@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -302,7 +303,16 @@ func (a *App) handleWorld(w http.ResponseWriter, r *http.Request) {
 	if v, ok := ev["items"].([]WorldEvent); ok {
 		ev["items"] = keepRecent(v, func(x WorldEvent) time.Time { return x.Time }, hours)
 	}
-	writeJSON(w, r, http.StatusOK, 300, map[string]any{"enabled": true, "min_mag": cfg.World.QuakeMinMag, "hours": cfg.World.Hours, "quakes": q, "events": ev})
+	resp := map[string]any{"enabled": true, "min_mag": cfg.World.QuakeMinMag, "hours": cfg.World.Hours, "quakes": q, "events": ev}
+	if cfg.World.FireRisk {
+		fr := a.feedEntry("brandweer:firerisk")
+		if v, ok := a.threats.get("brandweer:firerisk").Data.([]FireRegion); ok {
+			fr["regions"] = v
+		}
+		fr["url"] = cfg.World.FireRiskURL
+		resp["fire_risk"] = fr
+	}
+	writeJSON(w, r, http.StatusOK, 300, resp)
 }
 
 func keepRecent[T any](list []T, at func(T) time.Time, within time.Duration) []T {
@@ -324,4 +334,43 @@ func upcomingLaunches(list []Launch, hours int, now time.Time) []Launch {
 		}
 	}
 	return out
+}
+
+// ---------------------------------------------------------------------------
+// Natuurbrandrisico: the current wildfire risk phase per safety region (25
+// veiligheidsregio's), as Brandweer Nederland publishes it on
+// brandweer.nl/natuurbrandrisico. There is no open API; the list "Alle locaties
+// & huidige fase" is read from the public page once an hour (robots.txt allows
+// it, crawl delay 10 s). Phase 1: normal; phase 2: increased risk (longer dry,
+// measures such as no open fire); 0: unknown.
+
+type FireRegion struct {
+	Region string `json:"region"`
+	Phase  int    `json:"phase"` // 0 = unknown
+}
+
+var (
+	fireRiskRe  = regexp.MustCompile(`(?s)<div class="risk">\s*([^<]{2,60}?)\s*<div class="risk-phase">\s*([^<]{1,30}?)\s*</div>`)
+	firePhaseRe = regexp.MustCompile(`(?i)^fase\s*(\d)$`)
+)
+
+func parseFireRisk(body []byte) ([]FireRegion, error) {
+	out := []FireRegion{}
+	seen := map[string]bool{}
+	for _, m := range fireRiskRe.FindAllSubmatch(body, 40) {
+		name := plainText(string(m[1]))
+		if name == "" || seen[name] {
+			continue
+		}
+		seen[name] = true
+		r := FireRegion{Region: truncate(name, 40)}
+		if p := firePhaseRe.FindStringSubmatch(strings.TrimSpace(plainText(string(m[2])))); p != nil {
+			r.Phase = int(p[1][0] - '0')
+		}
+		out = append(out, r)
+	}
+	if len(out) < 20 { // the page has 25 regions; fewer means its layout changed
+		return nil, fmt.Errorf("natuurbrandrisico: %d regions found on the page (expected 25)", len(out))
+	}
+	return out, nil
 }

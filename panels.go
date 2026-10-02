@@ -1749,6 +1749,11 @@ func (a *App) threatJobs(cfg *Config) []Job {
 		jobs = append(jobs, Job{Key: "usgs:world", Sig: fmt.Sprint(w.USGSURL, w.QuakeMinMag), Interval: w.Interval.D(),
 			Run: a.fetchJob("usgs:world", func() string { return a.config().World.USGSURL }, "application/json", nil,
 				func(b []byte) (any, error) { return parseUSGS(b, w.QuakeMinMag, 7*24, time.Now()) }, nil)})
+		if w.FireRisk {
+			jobs = append(jobs, Job{Key: "brandweer:firerisk", Sig: w.FireRiskURL, Interval: time.Hour,
+				Run: a.fetchJob("brandweer:firerisk", func() string { return a.config().World.FireRiskURL }, "text/html", nil,
+					func(b []byte) (any, error) { return parseFireRisk(b) }, nil)})
+		}
 		jobs = append(jobs, Job{Key: "eonet:events", Sig: fmt.Sprint(w.EONETURL, w.FireMinHa), Interval: w.Interval.D(),
 			Run: a.fetchJob("eonet:events", func() string { return a.config().World.EONETURL }, "application/json", nil,
 				func(b []byte) (any, error) { return parseEONET(b, w.FireMinHa, 7*24, time.Now()) }, nil)})
