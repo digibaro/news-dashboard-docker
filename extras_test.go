@@ -27,6 +27,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -1489,5 +1490,126 @@ func TestFireRisk(t *testing.T) {
 	a.threats.ok("brandweer:firerisk", rs, "", "")
 	if b := get(a.routes("/"), "GET", "/api/world", nil).Body.String(); !strings.Contains(b, `"region":"Kennemerland","phase":2`) || !strings.Contains(b, `"url":"https://www.brandweer.nl/natuurbrandrisico/"`) {
 		t.Errorf("world handler: %s", b[:min(len(b), 400)])
+	}
+}
+
+func TestWater(t *testing.T) {
+	read := func(f string) []byte {
+		b, err := os.ReadFile("testdata/" + f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return b
+	}
+	ss, err := parseWaterSectors(read("rws-sectors.json"))
+	if err != nil || len(ss) != 21 || ss[0].Name != "Bedijkte Maas" || ss[0].Code != 2 || ss[1].Code != 1 {
+		t.Fatalf("sectors: %d %v %+v", len(ss), err, ss[:min(2, len(ss))])
+	}
+	if _, err := parseWaterSectors([]byte(`{"sectors":[{"sectorName":"IJssel","statusCode":1}]}`)); err == nil {
+		t.Error("a handful of sectors (changed format) must be an error")
+	}
+	now := time.Date(2026, 10, 2, 11, 30, 0, 0, time.UTC)
+	peak, at, err := parseWaterDay(read("rws-day.json"), now)
+	if err != nil || peak != 2 || at == nil || !at.Equal(time.Date(2026, 10, 2, 11, 0, 0, 0, time.UTC)) {
+		t.Errorf("day: %d %v %v", peak, at, err)
+	}
+	keringen := read("rws-keringen.html")
+	bs, err := parseBarriers(keringen)
+	if err != nil || len(bs) != 4 || bs[0].Name != "Oosterscheldekering" || !bs[0].Open || bs[0].Status != "Geopend" || bs[2].Name != "Europoortkering (Maeslant- en Hartelkering)" {
+		t.Fatalf("barriers: %v %+v", err, bs)
+	}
+	// the Maeslantkering closing: any status other than "open" counts as closed
+	parts := strings.SplitN(string(keringen), `data-status="open"`, 4) // the third barrier is the Europoortkering
+	if len(parts) != 4 {
+		t.Fatalf("fixture: %d barrier cells", len(parts)-1)
+	}
+	third := regexp.MustCompile(`>\s*Geopend`).ReplaceAllString(parts[3][:strings.Index(parts[3], "</p>")], ">Gesloten") + parts[3][strings.Index(parts[3], "</p>"):]
+	closed := parts[0] + `data-status="open"` + parts[1] + `data-status="open"` + parts[2] + `data-status="gesloten"` + third
+	bs2, _ := parseBarriers([]byte(closed))
+	if len(bs2) != 4 || !bs2[0].Open || bs2[2].Open || bs2[2].Status != "Gesloten" {
+		t.Errorf("closed barrier: %+v", bs2)
+	}
+	if txt := parseWaterText(read("rws-waterbeeld.html")); !strings.HasPrefix(txt, "Er worden voor de komende dagen geen afwijkingen") {
+		t.Errorf("outlook: %q", txt)
+	}
+	if _, err := parseBarriers([]byte("<html>maintenance</html>")); err == nil {
+		t.Error("a page without rows must be an error")
+	}
+
+	// push: nothing for code geel; a message for oranje and a closed barrier, once per episode
+	st := WaterStatus{Sectors: ss, Barriers: bs}
+	seen := map[string]time.Time{}
+	if m := waterPush(st, seen, now, false); m != nil {
+		t.Errorf("code geel must not notify: %+v", m)
+	}
+	st.Sectors = append([]WaterSector{{ID: "ijssel", Name: "IJssel", Code: 3}}, ss...)
+	st.Barriers = bs2
+	m := waterPush(st, seen, now, false)
+	if len(m) != 1 || m[0].Topic != "water" || m[0].Title[0] != "Hoogwater: code oranje" || !strings.Contains(m[0].Body[0], "IJssel") || !strings.Contains(m[0].Body[0], "Gesloten: Europoortkering") {
+		t.Fatalf("push: %+v", m)
+	}
+	if m := waterPush(st, seen, now, false); m != nil {
+		t.Errorf("the same episode must not notify twice: %+v", m)
+	}
+	st.Sectors, st.Barriers = ss, bs
+	waterPush(st, seen, now, false)
+	if len(seen) != 0 {
+		t.Errorf("keys of finished episodes must be removed: %v", seen)
+	}
+	if m := waterPush(WaterStatus{Barriers: bs2}, seen, now, true); m != nil {
+		t.Error("the first run only records the current state")
+	}
+
+	a := newTestApp(t, validConfig)
+	a.threats.ok("rws:water", WaterStatus{Level: 2, Sectors: ss, Barriers: bs}, "", "")
+	if b := get(a.routes("/"), "GET", "/api/alerts", nil).Body.String(); !strings.Contains(b, `"water":{`) || !strings.Contains(b, `"name":"Bedijkte Maas","code":2`) || !strings.Contains(b, `"url":"https://waterberichtgeving.rws.nl/owb/"`) {
+		t.Errorf("alerts handler: %s", b[:min(len(b), 500)])
+	}
+}
+
+func TestSpaceWeather(t *testing.T) {
+	b, err := os.ReadFile("testdata/swpc-scales.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	days, err := parseSpaceScales(b)
+	if err != nil || len(days) != 4 || !days[0].Now || days[0].G != 0 || days[0].R != 0 || days[1].G != 1 || days[1].R != -1 || days[1].RProb != 10 || days[1].SProb != 1 {
+		t.Fatalf("scales: %v %+v", err, days)
+	}
+	if _, err := parseSpaceScales([]byte(`{"-1":{"DateStamp":"2026-10-01"}}`)); err == nil {
+		t.Error("no data for today must be an error")
+	}
+	f, err := os.ReadFile("testdata/swpc-flares.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fl, err := parseFlares(f, time.Date(2026, 10, 2, 11, 20, 0, 0, time.UTC))
+	if err != nil || fl == nil || fl.Class != "C1.4" {
+		t.Errorf("flare: %+v %v", fl, err)
+	}
+	if fl, _ := parseFlares(f, time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC)); fl != nil {
+		t.Errorf("no flare in the last 24 hours: %+v", fl)
+	}
+	for _, c := range [][2]string{{"X1.0", "M9.9"}, {"X10", "X9.3"}, {"M1.2", "C9.9"}, {"C1.0", "B9.9"}} {
+		if flareRank(c[0]) <= flareRank(c[1]) {
+			t.Errorf("%s should outrank %s", c[0], c[1])
+		}
+	}
+	a := newTestApp(t, validConfig)
+	a.threats.ok("noaa:space", SpaceWeather{Days: days, Flare: fl}, "", "")
+	if b := get(a.routes("/"), "GET", "/api/sky", nil).Body.String(); !strings.Contains(b, `"space":{`) || !strings.Contains(b, `"g":1`) {
+		t.Errorf("sky handler: %s", b[:min(len(b), 400)])
+	}
+}
+
+func TestKNMIHeat(t *testing.T) {
+	now := time.Date(2026, 7, 20, 12, 0, 0, 0, time.UTC)
+	ws := []WxWarning{{Level: "orange", Type: "Wind", Area: "Zeeland", Country: "nl"}, {Level: "yellow", Type: "Hitte", Area: "Limburg", Country: "nl"}}
+	s := knmiSummary(ws, now)
+	if s.Level != "orange" || s.Heat == nil || s.Heat.Level != "yellow" || !s.Heat.Active {
+		t.Errorf("heat behind a higher wind code: %+v %+v", s, s.Heat)
+	}
+	if s := knmiSummary(ws[:1], now); s.Heat != nil {
+		t.Errorf("no heat warning: %+v", s.Heat)
 	}
 }

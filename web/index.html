@@ -893,13 +893,15 @@ textarea.json {
 .sprow .m { color: var(--text-3); font-size: 12px; }
 .sprow .spnote { display: block; }
 .spsec h3 .spico { margin-right: 6px; }
-.wsec h3, .launches h3 { margin: 10px 0 4px; font-size: 12px; font-weight: 650; color: var(--text-2); text-transform: uppercase; letter-spacing: .03em; }
+.wsec h3, .launches h3, .hsmog h3, .spacew h3 { margin: 10px 0 4px; font-size: 12px; font-weight: 650; color: var(--text-2); text-transform: uppercase; letter-spacing: .03em; }
 .wsec:first-child h3 { margin-top: 0; }
 .tag.warn { border-color: var(--sev-crit); color: var(--sev-crit); font-weight: 650; }
 .tag.fire2 { border-color: var(--sev-high); color: var(--sev-high); font-weight: 650; }
 .tag.fire3, .tag.fire4 { border-color: var(--sev-crit); color: var(--sev-crit); font-weight: 650; }
 .hzsum { margin: 0 0 6px; font-size: 13px; line-height: 1.45; }
 .fnote { font-size: 12px; color: var(--text-3); margin: 2px 0 0; }
+.tag.lvl-yellow, .tag.lvl-orange, .tag.lvl-red, .tag.lvl-green { border-color: var(--lvl); border-left-width: 4px; color: var(--text); } /* yellow text would be unreadable */
+.hsmog { margin-top: 4px; }
 .tag.live { color: var(--sev-crit); }
 .spev .plist { margin: 2px 0 6px; }
 .wxthunder, .wxuv { margin: 6px 0 0; font-size: 13px; color: var(--text-2); }
@@ -1005,6 +1007,7 @@ textarea.json {
     <a class="ab" id="ab-knmi" href="https://www.knmi.nl/nederland-nu/weer/waarschuwingen" target="_blank" rel="noopener noreferrer"><span class="d" aria-hidden="true"></span><span>KNMI: …</span></a>
     <a class="ab" id="ab-p2k" href="#panel-alarms"><span><span class="long">Alarmeringen laatste uur: </span><span class="short">Alarmeringen (uur): </span>…</span></a>
     <a class="ab" id="ab-nl" href="#panel-nlalert"><span class="d" aria-hidden="true"></span><span>NL-Alert: …</span></a>
+    <a class="ab" id="ab-water" href="#panel-quakes" hidden></a>
     <a class="ab" id="ab-rad" href="#panel-air" hidden><span class="d lvl-rad" aria-hidden="true"></span><span>Straling: <strong>verhoogd</strong></span></a>
     <a class="ab" id="ab-nctv" href="https://www.nctv.nl/onderwerpen/d/dtn" target="_blank" rel="noopener noreferrer"><span class="d" aria-hidden="true"></span><span><span class="long">Dreigingsniveau terrorisme: </span><span class="short">Terreurdreiging: </span>…</span></a>
   </div>
@@ -1118,6 +1121,12 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.26.0</h3>
+    <ul>
+      <li>Aardbevingen en natuurrampen, Nederland: hoogwater en stormvloed van Rijkswaterstaat, met de code per gebied, de verwachting voor 24 uur en de stormvloedkeringen. Bij code oranje of rood, of een gesloten kering, een melding in de bovenbalk en een pushbericht (nieuw onderwerp).</li>
+      <li>Luchtkwaliteit: Hitte en smog, met het Nationaal Hitteplan, smogwaarschuwingen van het RIVM en de ozonverwachting voor 3 dagen.</li>
+      <li>Vanavond aan de hemel: ruimteweer van NOAA (geomagnetische storm, stralingsstorm, radio-storing) en de sterkste zonnevlam van de dag.</li>
+    </ul>
     <h3>Versie 1.25.0</h3>
     <ul>
       <li>Aardbevingen (Nederland), NL-Alert, Autoriteit Persoonsgegevens acties en Gezondheid tonen de afgelopen 14 dagen in plaats van 31.</li>
@@ -1315,6 +1324,12 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.26.0</h3>
+    <ul>
+      <li>Earthquakes and natural disasters, Netherlands: high water and storm surge from Rijkswaterstaat, with the code per area, the 24-hour forecast and the storm-surge barriers. At code orange or red, or with a closed barrier, a notice in the top bar and a push message (new topic).</li>
+      <li>Air quality: Heat and smog, with the National Heat Plan, RIVM smog warnings and the ozone forecast for 3 days.</li>
+      <li>Tonight's sky: space weather from NOAA (geomagnetic storm, radiation storm, radio blackout) and the strongest solar flare of the day.</li>
+    </ul>
     <h3>Version 1.25.0</h3>
     <ul>
       <li>Earthquakes (Netherlands), NL-Alert, Data Protection Authority actions and Health show the last 14 days instead of 31.</li>
@@ -2701,6 +2716,24 @@ const EN = {
   "De brandweer-site is niet bereikbaar ({err}).": "The fire service site is unreachable ({err}).",
   "KNMI-waarschuwingen nu niet beschikbaar.": "KNMI warnings are not available right now.",
   "KNMI: wind in {areas}": "KNMI: wind in {areas}", "details bij Weer": "details under Weather", "Geen windwaarschuwing van het KNMI.": "No wind warning from KNMI.",
+  "Hoogwater en stormvloed": "High water and storm surge", "Rijkswaterstaat is niet bereikbaar ({err}).": "Rijkswaterstaat cannot be reached ({err}).",
+  "Overal code groen: geen hoogwater.": "Code green everywhere: no high water.", "Verwacht: {code} vanaf {t}.": "Expected: {code} from {t}.",
+  "Stormvloedkering dicht": "Storm-surge barrier closed", "Stormvloedkeringen: alle {n} open.": "Storm-surge barriers: all {n} open.",
+  "Waterberichtgeving (Rijkswaterstaat)": "Water reports (Rijkswaterstaat)", "code {c}": "code {c}", "Hoogwater: ": "High water: ", "Water: ": "Water: ",
+  " · kering dicht": " · barrier closed", "Stormvloedkering ": "Storm-surge barrier ", "dicht": "closed",
+  "Rijkswaterstaat: {code} voor {list}.": "Rijkswaterstaat: {code} for {list}.", "Gesloten: {list}.": "Closed: {list}.",
+  "hoogwater {code}": "high water {code}", "stormvloedkering dicht": "storm-surge barrier closed",
+  "Hoogwater code oranje of rood, of een stormvloedkering dicht": "High water code orange or red, or a storm-surge barrier closed",
+  "Hitte en smog": "Heat and smog", "Nationaal Hitteplan actief": "National Heat Plan active", "Nationaal Hitteplan aangekondigd": "National Heat Plan announced",
+  "KNMI code {c}: aanhoudende hitte": "KNMI code {c}: persistent heat", "Nationaal Hitteplan: niet actief.": "National Heat Plan: not active.",
+  "Smog": "Smog", "Kans op smog": "Chance of smog", "ozon tot {v} µg/m³ {day}": "ozone up to {v} µg/m³ {day}", "Geen smog verwacht.": "No smog expected.",
+  "Geen smogwaarschuwing van het RIVM.": "No smog warning from RIVM.", "Ozon (verwachting, hoogste uur): ": "Ozone (forecast, highest hour): ",
+  "smogwaarschuwing vanaf ongeveer {n}": "smog warning from about {n}",
+  "radio-storing": "radio blackout", "stralingsstorm": "solar radiation storm", "geomagnetische storm": "geomagnetic storm", "Ruimteweer": "Space weather",
+  "NOAA SWPC is niet bereikbaar ({err}).": "NOAA SWPC cannot be reached ({err}).", "Nu: ": "Now: ", "Nu: rustig (geen storm of storing).": "Now: quiet (no storm or blackout).",
+  "{p}% kans op radio-storing": "{p}% chance of a radio blackout", "{p}% kans op een stralingsstorm": "{p}% chance of a radiation storm",
+  "Komende dagen: geen storm verwacht.": "Coming days: no storm expected.", "Sterkste zonnevlam (24 uur): ": "Strongest solar flare (24 hours): ", " om {t}": " at {t}",
+  "G: geomagnetische storm (noorderlicht, stroomnet) · R: storing van radio en gps · S: straling voor satellieten en vliegtuigen · schaal 1–5": "G: geomagnetic storm (northern lights, power grid) · R: radio and GPS blackout · S: radiation for satellites and aircraft · scale 1–5",
   "Het wereldoverzicht staat uit in config.yaml (world.enabled).": "The world overview is disabled in config.yaml (world.enabled).",
   "Brandweer · natuurbrandrisico": "Fire service · wildfire risk",
   // 1.21: bronpictogrammen, databesparing
@@ -3943,10 +3976,11 @@ let alertsData = null; // also used by the storm block in Aardbevingen en natuur
 async function loadAlerts() {
   let d;
   try { d = await api('api/alerts'); } catch { d = { failed: true }; }
-  alertsData = d; queueMicrotask(() => renderPanel('quakes'));
+  alertsData = d; queueMicrotask(() => { renderPanel('quakes'); if (catalog?.heat_smog) renderPanel('air'); });
+  renderWaterBadge();
   const on = catalog?.alerts || {};
   const bar = $('#alertbar');
-  bar.hidden = !on.nctv && !on.knmi && !catalog?.nlalert;
+  bar.hidden = !on.nctv && !on.knmi && !catalog?.nlalert && !catalog?.water;
   const set = (id, lvlClass, parts, title, href) => {
     const a = $(id);
     a.hidden = false;
@@ -4385,9 +4419,10 @@ function renderAir(body, extra) {
     h('button', { class: 'linkbtn', type: 'button', onclick: () => openSettings('air'), 'aria-label': t('Plaats voor luchtkwaliteit wijzigen (nu {name})', { name: airLocName() }), text: t('wijzigen') }));
   if (!st) { body.replaceChildren(h('div', { class: 'tsk ask', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:80%' }))); return; }
   const r = st.data;
-  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('Luchtkwaliteit kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
+  const withHeat = note => body.replaceChildren(note, ...[heatSmogBlock()].filter(Boolean)); // heat and smog do not depend on Luchtmeetnet
+  if (!r) { withHeat(h('p', { class: 'pnote', text: t('Luchtkwaliteit kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
   if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (air.enabled).' })); return; }
-  if (!r.station) { body.replaceChildren(h('p', { class: 'pnote', text: r.error ? t('Luchtmeetnet is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: r.error }) : t('Meetgegevens worden voor het eerst opgehaald.') })); return; }
+  if (!r.station) { withHeat(h('p', { class: 'pnote', text: r.error ? t('Luchtmeetnet is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: r.error }) : t('Meetgegevens worden voor het eerst opgehaald.') })); return; }
   const [, label, cls] = lkiLevel(r.lki.value), s = r.station, out = [];
   out.push(h('div', { class: 'airnow ' + cls },
     h('div', { class: 'lki', 'aria-hidden': 'true', text: String(Math.round(r.lki.value)) }),
@@ -4400,8 +4435,34 @@ function renderAir(body, extra) {
   out.push(h('p', { class: 'asc', text: t('Luchtkwaliteitsindex 1–11: 1–3 goed · 4–6 matig · 7–8 onvoldoende · 9–10 slecht · 11 zeer slecht') }));
   const rad = radLine();
   if (rad) out.push(rad);
+  const hs = heatSmogBlock();
+  if (hs) out.push(hs);
   out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink(r.source?.url || 'https://www.luchtmeetnet.nl/', 'Luchtmeetnet'), t(' (RIVM, GGD’s, DCMR en provincies) · gemeten {t}', { t: fmt.time.format(new Date(r.lki.at)) })));
   body.replaceChildren(...out);
+}
+// Hitte en smog: the Nationaal Hitteplan is active while KNMI has code geel (or higher) for heat;
+// RIVM's own news (from the Gezondheid feed) adds the context; the ozone forecast comes with the pollen data.
+const O3_INFO = 180; // µg/m³, the EU information threshold: RIVM warns for smog around it
+function heatSmogBlock() {
+  if (!catalog?.heat_smog) return null;
+  const heat = alertsData?.knmi?.status?.heat, news = panelData.health?.items || [];
+  const latest = (re, days) => news.filter(i => re.test(i.title) && Date.now() - new Date(i.published) <= days * 864e5)
+    .sort((a, b) => new Date(b.published) - new Date(a.published))[0];
+  const hn = latest(/hitteplan|hitte/i, 7), sn = latest(/smog/i, 3);
+  const days = (panelData.pollen?.data?.data?.days || []).filter(d => d.o3 != null);
+  const peak = days.reduce((a, d) => (a == null || d.o3 > a.o3 ? d : a), null);
+  const dayName = d => { const n = daysUntil(d.date); return n === 0 ? t('vandaag') : n === 1 ? t('morgen') : fmt.wdmUTC.format(dateOnly(d.date)); };
+  const newsLink = it => [' · ', h('span', { translate: 'no' }, extLink(it.url, it.title))];
+  const out = [h('h3', null, h('span', { 'aria-hidden': 'true', text: '🌡️ ' }), t('Hitte en smog'))];
+  out.push(h('p', { class: 'eline' }, heat
+    ? [h('span', { class: 'tag lvl-' + heat.level, text: heat.active ? t('Nationaal Hitteplan actief') : t('Nationaal Hitteplan aangekondigd') }), ' ', t('KNMI code {c}: aanhoudende hitte', { c: tr(LEVEL_NL[heat.level]) })]
+    : t('Nationaal Hitteplan: niet actief.'), hn ? newsLink(hn) : null));
+  const smogUp = peak && peak.o3 >= O3_INFO;
+  out.push(h('p', { class: 'eline' }, sn ? [h('span', { class: 'tag fire2', text: t('Smog') }), newsLink(sn)]
+    : smogUp ? [h('span', { class: 'tag fire2', text: t('Kans op smog') }), ' ', t('ozon tot {v} µg/m³ {day}', { v: peak.o3, day: dayName(peak) })]
+      : days.length || catalog?.pollen ? t('Geen smog verwacht.') : t('Geen smogwaarschuwing van het RIVM.')));
+  if (days.length) out.push(h('p', { class: 'm fnote', text: t('Ozon (verwachting, hoogste uur): ') + days.map(d => `${dayName(d)} ${d.o3}`).join(' · ') + ' µg/m³ · ' + t('smogwaarschuwing vanaf ongeveer {n}', { n: O3_INFO }) }));
+  return h('div', { class: 'hsmog' }, out);
 }
 // ---------------------------------------------------------------- straling (RIVM via EURDEP)
 let radSeq = 0;
@@ -4670,7 +4731,7 @@ async function loadPollen() {
     if (seq !== pollenSeq) return;
     panelData.pollen = { data: d };
   } catch (e) { if (seq !== pollenSeq) return; panelData.pollen = { ...(panelData.pollen || {}), error: e }; }
-  renderPanel('pollen');
+  renderPanel('pollen'); if (catalog?.heat_smog) renderPanel('air');
 }
 // name, and the lower bounds (grains/m³, daily maximum) of matig / hoog / zeer hoog: indicative
 const POLLEN = { grass: ['gras', [20, 50, 150]], birch: ['berk', [30, 100, 500]], alder: ['els', [30, 100, 500]],
@@ -5292,6 +5353,7 @@ const PUSH_LABELS = {
   amber: () => t('AMBER Alert, en Vermist Kind Alert in jouw omgeving'),
   nlalert: () => t('NL-Alert in jouw omgeving (je weerlocatie)'),
   radiation: () => t('Verhoogde straling op meerdere RIVM-meetposten'),
+  water: () => t('Hoogwater code oranje of rood, of een stormvloedkering dicht'),
   quakes: () => t('Aardbeving vanaf M{m}', { m: (pushInfo?.quake_min_mag ?? 2.5).toLocaleString(locale()) }),
   breaking: () => t('Groot nieuws: {n} of meer bronnen binnen een uur', { n: pushInfo?.breaking_sources ?? 6 }),
   waste: () => t('Afval: de avond vóór de ophaaldag ({h}:00), voor je adres', { h: pushInfo?.waste_hour ?? 19 }),
@@ -5489,6 +5551,8 @@ function renderSky(body, extra) {
   const au = [t('geen kans'), t('alleen op een lang belichte foto'), t('kleine kans: kijk laag naar het noorden, buiten de stad'), t('goede kans: kijk naar het noorden, buiten de stad')][d.aurora];
   out.push(row('🌌', t('Noorderlicht: {s}', { s: au }), d.kp != null ? ` (Kp ${d.kp.toLocaleString(locale(), { maximumFractionDigits: 1 })})` : ''));
   if (d.meteor) out.push(row('☄️', t('Meteoren: {name}, piek {date} (tot ongeveer {n} per uur bij een donkere hemel)', { name: d.meteor.name, date: fmt.date.format(dateOnly(d.meteor.peak)), n: d.meteor.zhr })));
+  const sw = spaceBlock(r.space);
+  if (sw) out.push(sw);
   const ls = r.launches?.items;
   if (ls) out.push(h('div', { class: 'launches' }, h('h3', null, h('span', { 'aria-hidden': 'true', text: '🚀 ' }), t('Raketlanceringen')),
     ls.length ? h('ul', { class: 'plist' }, ls.slice(0, 3).map(launchItem))
@@ -5499,6 +5563,33 @@ function renderSky(body, extra) {
   body.replaceChildren(...out);
 }
 
+// Ruimteweer (NOAA SWPC): the R, S and G scales now and for three days, and the strongest flare of the day.
+const SPACE_NL = { R: 'radio-storing', S: 'stralingsstorm', G: 'geomagnetische storm' };
+function spaceBlock(sp) {
+  if (!sp || !catalog?.space_weather) return null;
+  const head = h('h3', null, h('span', { 'aria-hidden': 'true', text: '☀️ ' }), t('Ruimteweer'));
+  if (!sp.days?.length) return h('div', { class: 'spacew' }, head, h('p', { class: 'pnote', text: sp.error ? t('NOAA SWPC is niet bereikbaar ({err}).', { err: sp.error }) : t('Wordt voor het eerst opgehaald.') }));
+  const tag = (k, n) => h('span', { class: 'tag ' + (n >= 3 ? 'fire3' : n >= 1 ? 'fire2' : 'plain'), title: t(SPACE_NL[k]), text: k + n });
+  const day = s => { const n = daysUntil(s); return n === 0 ? t('vandaag') : n === 1 ? t('morgen') : fmt.wdmUTC.format(dateOnly(s)); };
+  const now = sp.days[0], active = ['R', 'S', 'G'].filter(k => now[k.toLowerCase()] > 0), out = [head];
+  out.push(h('p', { class: 'eline' }, active.length
+    ? [t('Nu: '), active.map((k, i) => [i ? ', ' : '', tag(k, now[k.toLowerCase()]), ' ', t(SPACE_NL[k])])]
+    : t('Nu: rustig (geen storm of storing).')));
+  const fc = [];
+  for (const d of sp.days.slice(1)) {
+    const bits = [];
+    if (d.g > 0) bits.push([tag('G', d.g), ' ', t(SPACE_NL.G)]);
+    if (d.r_prob >= 25) bits.push(t('{p}% kans op radio-storing', { p: d.r_prob }));
+    if (d.s_prob >= 10) bits.push(t('{p}% kans op een stralingsstorm', { p: d.s_prob }));
+    if (bits.length) fc.push(h('p', { class: 'eline' }, h('b', { text: day(d.date) + ': ' }), bits.map((b, i) => [i ? ', ' : '', b])));
+  }
+  out.push(...(fc.length ? fc : [h('p', { class: 'eline', text: t('Komende dagen: geen storm verwacht.') })]));
+  const f = sp.flare;
+  if (f) out.push(h('p', { class: 'eline' }, t('Sterkste zonnevlam (24 uur): '), /^[MX]/.test(f.class) ? h('span', { class: 'tag ' + (f.class[0] === 'X' ? 'fire3' : 'fire2'), text: f.class }) : h('b', { text: f.class }),
+    t(' om {t}', { t: fmt.time.format(new Date(f.at)) })));
+  out.push(h('p', { class: 'm fnote', text: t('G: geomagnetische storm (noorderlicht, stroomnet) · R: storing van radio en gps · S: straling voor satellieten en vliegtuigen · schaal 1–5') }));
+  return h('div', { class: 'spacew' }, out);
+}
 // Rocket launches (Launch Library 2): when, rocket and mission, who and from where.
 function launchItem(l) {
   const at = new Date(l.time), mins = (at - Date.now()) / 6e4;
@@ -5595,6 +5686,38 @@ function fireRiskBlock() {
     h('p', { class: 'm fnote' }, up.length ? t('Fase 2: langere tijd droog, wees extra voorzichtig met vuur. ') : '', unknown ? t('{n} regio’s onbekend. ', { n: unknown }) : '',
       extLink(fr.url || 'https://www.brandweer.nl/natuurbrandrisico/', t('Kaart en uitleg (brandweer)'))));
 }
+const WATER_NL = ['onbekend', 'groen', 'geel', 'oranje', 'rood'], WATER_LVL = ['wait', 'green', 'yellow', 'orange', 'red'];
+const waterCode = c => t('code {c}', { c: t(WATER_NL[c] || WATER_NL[0]) });
+function waterBlock() {
+  const w = alertsData?.water;
+  if (!catalog?.water || !alertsData) return null;
+  const head = h('h3', null, h('span', { 'aria-hidden': 'true', text: '🌊 ' }), t('Hoogwater en stormvloed'));
+  const s = w?.status;
+  if (!s) return h('div', { class: 'wsec' }, head, h('p', { class: 'pnote', text: w?.error ? t('Rijkswaterstaat is niet bereikbaar ({err}).', { err: w.error }) : t('Wordt voor het eerst opgehaald.') }));
+  const up = s.sectors.filter(x => x.code >= 2), shut = (s.barriers || []).filter(b => !b.open), out = [head];
+  out.push(up.length ? h('ul', { class: 'plist' }, up.map(x => h('li', null, h('span', { class: 'tag lvl-' + WATER_LVL[x.code], text: waterCode(x.code) }), ' ', h('span', { translate: 'no', text: x.name }))))
+    : h('p', { class: 'eline', text: t('Overal code groen: geen hoogwater.') }));
+  if (s.peak > s.level && s.peak_at) out.push(h('p', { class: 'eline', text: t('Verwacht: {code} vanaf {t}.', { code: waterCode(s.peak), t: fmt.warn.format(new Date(s.peak_at)) }) }));
+  if (s.barriers?.length) out.push(h('p', { class: 'eline' }, shut.length
+    ? [h('span', { class: 'tag lvl-orange', text: t('Stormvloedkering dicht') }), ' ', h('span', { translate: 'no', text: shut.map(b => `${b.name} (${b.status})`).join(', ') })]
+    : t('Stormvloedkeringen: alle {n} open.', { n: s.barriers.length })));
+  if (s.outlook) out.push(h('p', { class: 'm fnote', translate: 'no', text: s.outlook }));
+  out.push(h('p', { class: 'm fnote' }, extLink(w.url || 'https://waterberichtgeving.rws.nl/owb/', t('Waterberichtgeving (Rijkswaterstaat)'))));
+  return h('div', { class: 'wsec' }, out);
+}
+function renderWaterBadge() {
+  const a = $('#ab-water'), s = alertsData?.water?.status;
+  const up = (s?.sectors || []).filter(x => x.code >= 3), shut = (s?.barriers || []).filter(b => !b.open);
+  a.hidden = !catalog?.water || (!up.length && !shut.length);
+  if (a.hidden) return;
+  const top = up.length ? Math.max(...up.map(x => x.code)) : 3;
+  a.replaceChildren(h('span', { class: 'd lvl-' + WATER_LVL[top], 'aria-hidden': 'true' }), h('span', null, up.length
+    ? [h('span', { class: 'long', text: t('Hoogwater: ') }), h('span', { class: 'short', text: t('Water: ') }), h('strong', { text: waterCode(top) }),
+      h('span', { class: 'long', translate: 'no', text: ` (${up.slice(0, 2).map(x => x.name).join(', ')}${up.length > 2 ? ' e.a.' : ''})` }), shut.length ? t(' · kering dicht') : '']
+    : [t('Stormvloedkering '), h('strong', { text: t('dicht') })]));
+  a.title = [up.length ? t('Rijkswaterstaat: {code} voor {list}.', { code: waterCode(top), list: up.map(x => x.name).join(', ') }) : '',
+    shut.length ? t('Gesloten: {list}.', { list: shut.map(b => b.name).join(', ') }) : ''].filter(Boolean).join(' ');
+}
 function stormBlock() {
   const k = alertsData?.knmi?.status;
   if (!catalog?.alerts?.knmi || !alertsData) return null;
@@ -5609,8 +5732,10 @@ function nlSummary() {
   const qs = (panelData.quakes?.data?.quakes || []).filter(q => Date.now() - new Date(q.time) <= 864e5);
   const k = alertsData?.knmi?.status, wind = k && k.level !== 'none' && (k.types || []).some(x => /wind|storm/i.test(x));
   const fire = (panelData.world?.data?.fire_risk?.regions || []).filter(x => x.phase >= 2).length;
+  const ws = catalog?.water ? alertsData?.water?.status : null, shut = (ws?.barriers || []).some(b => !b.open);
   const parts = [qs.length ? t(qs.length === 1 ? '1 beving vandaag' : '{n} bevingen vandaag', { n: qs.length }) : null, wind ? t('windwaarschuwing') : null,
-    fire ? t(fire === 1 ? 'natuurbrandrisico fase 2 in 1 regio' : 'natuurbrandrisico fase 2 in {n} regio’s', { n: fire }) : null].filter(Boolean);
+    fire ? t(fire === 1 ? 'natuurbrandrisico fase 2 in 1 regio' : 'natuurbrandrisico fase 2 in {n} regio’s', { n: fire }) : null,
+    ws?.level >= 2 ? t('hoogwater {code}', { code: waterCode(ws.level) }) : null, shut ? t('stormvloedkering dicht') : null].filter(Boolean);
   return parts.length ? parts.join(', ') : t('rustig');
 }
 function renderHazards(body) {
@@ -5627,7 +5752,7 @@ function renderHazards(body) {
   else {
     const qb = h('div', { class: 'wsec' }, h('h3', null, h('span', { 'aria-hidden': 'true', text: '🌍 ' }), t('Aardbevingen ({n} dagen)', { n: RECENT_DAYS })), h('div'));
     renderQuakes(qb.lastChild);
-    out.push(qb, stormBlock(), fireRiskBlock());
+    out.push(qb, stormBlock(), fireRiskBlock(), waterBlock());
   }
   body.replaceChildren(...out.filter(Boolean));
 }
@@ -6071,7 +6196,7 @@ async function loadHealthPanel() {
     const d = await api('api/news?sources=rivm&limit=60&group=0&since=' + recentSince());
     panelData.health = { items: (d.items || []).filter(isHealthAlert), status: d.status?.rivm };
   } catch (e) { panelData.health = { ...(panelData.health || {}), error: e }; }
-  renderPanel('health');
+  renderPanel('health'); if (catalog?.heat_smog) renderPanel('air');
 }
 function renderHealth(body) {
   const d = panelData.health;

@@ -239,6 +239,7 @@ type Config struct {
 		Enabled     bool     `yaml:"enabled"`
 		Base        string   `yaml:"base"`
 		StationsURL string   `yaml:"stations_url"` // RIVM list of measuring locations (CSV)
+		HeatSmog    bool     `yaml:"heat_smog"`    // Hitte en smog: KNMI heat warning, RIVM news, ozone forecast
 		Interval    Duration `yaml:"interval"`
 	} `yaml:"air"`
 	// Trains: Treinstoringen panel (NS Disruptions API v3; needs keys.ns_api_key).
@@ -407,12 +408,14 @@ type Config struct {
 	} `yaml:"insects"`
 	// Sky: Vanavond aan de hemel panel (computed; NOAA Kp forecast, Open-Meteo clouds).
 	Sky struct {
-		Enabled       bool   `yaml:"enabled"`
-		KpURL         string `yaml:"kp_url"`
-		CloudsURL     string `yaml:"clouds_url"`
-		Launches      bool   `yaml:"launches"`       // the next rocket launches (Launch Library 2)
-		LaunchesURL   string `yaml:"launches_url"`   // free tier: 15 requests per hour; fetched hourly
-		LaunchesHours int    `yaml:"launches_hours"` // only launches in the coming hours (1-720); default 24
+		Enabled         bool   `yaml:"enabled"`
+		KpURL           string `yaml:"kp_url"`
+		CloudsURL       string `yaml:"clouds_url"`
+		Launches        bool   `yaml:"launches"`          // the next rocket launches (Launch Library 2)
+		LaunchesURL     string `yaml:"launches_url"`      // free tier: 15 requests per hour; fetched hourly
+		LaunchesHours   int    `yaml:"launches_hours"`    // only launches in the coming hours (1-720); default 24
+		SpaceWeather    bool   `yaml:"space_weather"`     // NOAA space-weather scales and solar flares
+		SpaceWeatherURL string `yaml:"space_weather_url"` // NOAA SWPC services root; read every 30 minutes
 	} `yaml:"sky"`
 	// World: Wereldwijd panel (big earthquakes from USGS, natural events from NASA EONET).
 	World struct {
@@ -424,6 +427,8 @@ type Config struct {
 		Hours       int      `yaml:"hours"`         // the panel's period: quakes and events of the last hours (1-168); default 24
 		FireRisk    bool     `yaml:"fire_risk"`     // natuurbrandrisico per safety region in the Netherlands (brandweer.nl)
 		FireRiskURL string   `yaml:"fire_risk_url"` // the public page; read hourly
+		Water       bool     `yaml:"water"`         // high-water codes and storm-surge barriers (Rijkswaterstaat)
+		WaterURL    string   `yaml:"water_url"`     // waterberichtgeving.rws.nl; read every 10 minutes
 		Days        int      `yaml:"days"`          // 1.23.1, replaced by hours; still read (days × 24) when hours is not set
 		Interval    Duration `yaml:"interval"`
 	} `yaml:"world"`
@@ -541,6 +546,9 @@ func defaultConfig() *Config {
 	c.World.Enabled, c.World.USGSURL, c.World.EONETURL = true, "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson", "https://eonet.gsfc.nasa.gov/api/v3/events?status=open&days=30"
 	c.World.QuakeMinMag, c.World.FireMinHa, c.World.Interval = 6, 2000, Duration(30*time.Minute)
 	c.World.FireRisk, c.World.FireRiskURL = true, "https://www.brandweer.nl/natuurbrandrisico/"
+	c.World.Water, c.World.WaterURL = true, "https://waterberichtgeving.rws.nl"
+	c.Sky.SpaceWeather, c.Sky.SpaceWeatherURL = true, "https://services.swpc.noaa.gov"
+	c.Air.HeatSmog = true
 	c.Sports.Enabled, c.Sports.Sports, c.Sports.F1URL, c.Sports.Interval = true, []string{"f1", "road", "mtb", "athletics", "football"}, "https://api.jolpi.ca/ergast/f1", Duration(time.Hour)
 	c.Push.MaxSubscriptions, c.Push.QuakeMinMag, c.Push.BreakingSources, c.Push.WasteHour = 50, 2.5, 6, 19
 	c.Threats.Enabled = true
@@ -872,6 +880,12 @@ func (c *Config) validate() error {
 	}
 	if c.World.Enabled && c.World.FireRisk && !httpsURL(c.World.FireRiskURL) {
 		fail("world.fire_risk_url must be an https URL")
+	}
+	if c.World.Enabled && c.World.Water && !httpsURL(c.World.WaterURL) {
+		fail("world.water_url must be an https URL")
+	}
+	if c.Sky.Enabled && c.Sky.SpaceWeather && !httpsURL(c.Sky.SpaceWeatherURL) {
+		fail("sky.space_weather_url must be an https URL")
 	}
 	if c.Sky.Launches && (c.Sky.LaunchesHours < 1 || c.Sky.LaunchesHours > 720) {
 		fail("sky.launches_hours must be 1-720")
@@ -1732,6 +1746,9 @@ func (a *App) handleCatalog(w http.ResponseWriter, r *http.Request) {
 		"trending_wiki":    cfg.Trending.Enabled && cfg.Trending.Wikipedia.Enabled,
 		"sky":              cfg.Sky.Enabled,
 		"world":            cfg.World.Enabled,
+		"water":            cfg.World.Enabled && cfg.World.Water,
+		"space_weather":    cfg.Sky.Enabled && cfg.Sky.SpaceWeather,
+		"heat_smog":        cfg.Air.Enabled && cfg.Air.HeatSmog,
 		"sports":           map[string]any{"enabled": cfg.Sports.Enabled, "sports": cfg.Sports.Sports},
 		"accent":           cfg.UI.Accent,
 		"alarms":           map[string]any{"enabled": cfg.Alarms.Enabled, "city": cfg.Alarms.City},
@@ -1960,12 +1977,18 @@ func (a *App) otherFeeds(cfg *Config) []FeedStatus {
 		if cfg.World.FireRisk {
 			add("brandweer:firerisk", "Brandweer · natuurbrandrisico", "daily")
 		}
+		if cfg.World.Water {
+			add("rws:water", "Rijkswaterstaat · hoogwater en stormvloedkeringen", "alert")
+		}
 	}
 	if cfg.Radiation.Enabled {
 		add(radKey, "RIVM via EURDEP · straling", "daily")
 	}
 	if cfg.Sky.Enabled {
 		add("noaa:kp", "NOAA SWPC · noorderlichtverwachting", "daily")
+		if cfg.Sky.SpaceWeather {
+			add("noaa:space", "NOAA SWPC · ruimteweer", "daily")
+		}
 		if cfg.Sky.Launches {
 			add("ll2:launches", "Launch Library 2 · raketlanceringen", "daily")
 		}

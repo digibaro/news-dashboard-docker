@@ -37,7 +37,7 @@ import (
 // visit, so after a restart without snapshot notifications resume once a device
 // opens the dashboard again.
 
-var pushTopics = []string{"amber", "nctv", "knmi", "nlalert", "radiation", "quakes", "breaking", "waste"}
+var pushTopics = []string{"amber", "nctv", "knmi", "nlalert", "radiation", "quakes", "water", "breaking", "waste"}
 
 // pushHosts are the push services of the major browsers; subscriptions to any
 // other host are refused, so the server never posts to arbitrary URLs.
@@ -404,6 +404,11 @@ func (a *App) runPushWatch(ctx context.Context) error {
 			}
 		}
 	}
+	// Water: a sector reaching code oranje or rood, or a storm-surge barrier closing; one message
+	// per new episode (a sector that drops back, or a barrier that reopens, can notify again).
+	if ws, ok := a.threats.get("rws:water").Data.(WaterStatus); ok && cfg.World.Enabled && cfg.World.Water {
+		msgs = append(msgs, waterPush(ws, st.Alerts, now, first)...)
+	}
 	for _, q := range asSlice[Quake](a.threats.get("knmi:quakes").Data) {
 		if _, seen := st.Quakes[q.ID]; seen {
 			continue
@@ -682,7 +687,7 @@ func (a *App) pushTopicsAvailable(cfg *Config) []string {
 	var out []string
 	for _, t := range pushTopics {
 		ok := map[string]bool{"amber": cfg.Amber.Enabled, "nctv": cfg.Alerts.NCTV.Enabled, "knmi": cfg.Alerts.KNMI, "nlalert": cfg.NLAlert.Enabled,
-			"quakes": cfg.Quakes.Enabled, "breaking": cfg.Push.BreakingSources >= 2, "waste": cfg.Waste.Enabled, "radiation": cfg.Radiation.Enabled}[t]
+			"quakes": cfg.Quakes.Enabled, "water": cfg.World.Enabled && cfg.World.Water, "breaking": cfg.Push.BreakingSources >= 2, "waste": cfg.Waste.Enabled, "radiation": cfg.Radiation.Enabled}[t]
 		if ok {
 			out = append(out, t)
 		}
@@ -867,3 +872,60 @@ func (a *App) handlePushTest(w http.ResponseWriter, r *http.Request) {
 }
 
 func roundTo(v, step float64) float64 { return float64(int64(v/step+0.5)) * step }
+
+var waterCodeName = [5][2]string{{}, {"groen", "green"}, {"geel", "yellow"}, {"oranje", "orange"}, {"rood", "red"}}
+
+// waterPush records the current water alarms in seen ("water:…" keys) and returns a message
+// for the new ones; keys of alarms that are over are removed.
+func waterPush(ws WaterStatus, seen map[string]time.Time, now time.Time, first bool) []pushMsg {
+	cur := map[string]bool{}
+	var sectors [2][]string
+	var barriers []string
+	top := 0
+	for _, s := range ws.Sectors {
+		if s.Code < 3 {
+			continue
+		}
+		k := fmt.Sprintf("water:sector:%s:%d", s.ID, s.Code)
+		cur[k] = true
+		if _, ok := seen[k]; !ok {
+			seen[k] = now
+			sectors[0] = append(sectors[0], s.Name)
+			top = max(top, s.Code)
+		}
+	}
+	for _, b := range ws.Barriers {
+		if b.Open {
+			continue
+		}
+		k := "water:barrier:" + b.Name
+		cur[k] = true
+		if _, ok := seen[k]; !ok {
+			seen[k] = now
+			barriers = append(barriers, b.Name)
+		}
+	}
+	for k := range seen {
+		if strings.HasPrefix(k, "water:") && !cur[k] {
+			delete(seen, k)
+		}
+	}
+	if first || (len(sectors[0]) == 0 && len(barriers) == 0) {
+		return nil
+	}
+	var title, body [2]string
+	if len(sectors[0]) > 0 {
+		c := waterCodeName[top]
+		title = [2]string{"Hoogwater: code " + c[0], "High water: code " + c[1]}
+		body = [2]string{"Rijkswaterstaat: code " + c[0] + " voor " + strings.Join(sectors[0], ", ") + ".",
+			"Rijkswaterstaat: code " + c[1] + " for " + strings.Join(sectors[0], ", ") + "."}
+	}
+	if len(barriers) > 0 {
+		if title[0] == "" {
+			title = [2]string{"Stormvloedkering dicht", "Storm-surge barrier closed"}
+		}
+		body[0] = strings.TrimSpace(body[0] + " Gesloten: " + strings.Join(barriers, ", ") + ".")
+		body[1] = strings.TrimSpace(body[1] + " Closed: " + strings.Join(barriers, ", ") + ".")
+	}
+	return []pushMsg{{Topic: "water", Tag: "water", Urgent: top >= 4, TTL: 6 * 3600, URL: "#panel-quakes", Title: title, Body: body}}
+}

@@ -1905,13 +1905,17 @@ func TestParseRansomware(t *testing.T) {
 func TestParsePollen(t *testing.T) {
 	now := time.Date(2026, 9, 26, 10, 30, 0, 0, amsterdam)
 	body := `{"hourly":{"time":["2026-09-26T09:00","2026-09-26T10:00","2026-09-27T12:00","2026-09-28T12:00","2026-09-29T12:00"],
-	 "grass_pollen":[0.7,0.5,1.2,null,0.4],"birch_pollen":[0,0,0,0,0],"mugwort_pollen":[0.1,0.1,0.1,0.1,0.1],"alder_pollen":[0,0,0,0,-1]}}`
+	 "grass_pollen":[0.7,0.5,1.2,null,0.4],"birch_pollen":[0,0,0,0,0],"mugwort_pollen":[0.1,0.1,0.1,0.1,0.1],"alder_pollen":[0,0,0,0,-1],
+	 "ozone":[61.4,88.6,190.2,null,70]}}`
 	d, err := parsePollen([]byte(body), now)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(d.Days) != 3 || d.Days[0].Date != "2026-09-26" || d.Days[0].Max["grass"] != 0.7 || d.Days[1].Max["grass"] != 1.2 || d.Now["grass"] != 0.5 {
 		t.Errorf("pollen: %+v", d)
+	}
+	if o := d.Days; o[0].O3 == nil || *o[0].O3 != 89 || o[1].O3 == nil || *o[1].O3 != 190 || o[2].O3 != nil {
+		t.Errorf("ozone per day (highest hour, rounded): %+v", o)
 	}
 	if _, err := parsePollen([]byte(`{"hourly":{}}`), now); err == nil {
 		t.Error("no data: expected error")

@@ -1754,6 +1754,9 @@ func (a *App) threatJobs(cfg *Config) []Job {
 				Run: a.fetchJob("brandweer:firerisk", func() string { return a.config().World.FireRiskURL }, "text/html", nil,
 					func(b []byte) (any, error) { return parseFireRisk(b) }, nil)})
 		}
+		if w.Water {
+			jobs = append(jobs, Job{Key: "rws:water", Sig: w.WaterURL, Interval: 10 * time.Minute, Run: a.runWater})
+		}
 		jobs = append(jobs, Job{Key: "eonet:events", Sig: fmt.Sprint(w.EONETURL, w.FireMinHa), Interval: w.Interval.D(),
 			Run: a.fetchJob("eonet:events", func() string { return a.config().World.EONETURL }, "application/json", nil,
 				func(b []byte) (any, error) { return parseEONET(b, w.FireMinHa, 7*24, time.Now()) }, nil)})
@@ -1762,6 +1765,9 @@ func (a *App) threatJobs(cfg *Config) []Job {
 		jobs = append(jobs, Job{Key: "noaa:kp", Sig: cfg.Sky.KpURL, Interval: 3 * time.Hour,
 			Run: a.fetchJob("noaa:kp", func() string { return a.config().Sky.KpURL }, "application/json", nil,
 				func(b []byte) (any, error) { return parseKpForecast(b) }, nil)})
+		if cfg.Sky.SpaceWeather {
+			jobs = append(jobs, Job{Key: "noaa:space", Sig: cfg.Sky.SpaceWeatherURL, Interval: 30 * time.Minute, Run: a.runSpaceWeather})
+		}
 	}
 	if cfg.Sports.Enabled && slices.Contains(cfg.Sports.Sports, "f1") {
 		jobs = append(jobs, Job{Key: "f1:jolpica", Sig: cfg.Sports.F1URL, Interval: cfg.Sports.Interval.D(), Run: a.runF1})
@@ -2025,6 +2031,12 @@ type KNMIStatus struct {
 	Types  []string   `json:"types,omitempty"`
 	Areas  []string   `json:"areas,omitempty"`
 	Count  int        `json:"count"`
+	Heat   *KNMIHeat  `json:"heat,omitempty"` // a KNMI heat warning (code geel = Nationaal Hitteplan active)
+}
+
+type KNMIHeat struct {
+	Level  string `json:"level"`
+	Active bool   `json:"active"`
 }
 
 // knmiSummary: the highest KNMI code among Dutch warnings (MeteoAlarm carries KNMI's codes).
@@ -2057,6 +2069,14 @@ func knmiSummary(ws []WxWarning, now time.Time) KNMIStatus {
 		if !seenA[w.Area] {
 			seenA[w.Area] = true
 			s.Areas = append(s.Areas, w.Area)
+		}
+	}
+	for _, w := range ws { // heat on its own: it can hide behind a higher code for wind
+		if w.Country != "nl" || w.Type != "Hitte" {
+			continue
+		}
+		if s.Heat == nil || rank[w.Level] > rank[s.Heat.Level] || (rank[w.Level] == rank[s.Heat.Level] && active(w)) {
+			s.Heat = &KNMIHeat{Level: w.Level, Active: active(w) || (s.Heat != nil && s.Heat.Active && s.Heat.Level == w.Level)}
 		}
 	}
 	return s
@@ -2096,6 +2116,14 @@ func (a *App) handleAlerts(w http.ResponseWriter, r *http.Request) {
 			e["status"], e["fetched_at"] = knmiSummary(ws, time.Now()), at.UTC().Truncate(time.Second)
 		}
 		resp["knmi"] = e
+	}
+	if cfg.World.Enabled && cfg.World.Water {
+		e := a.feedEntry("rws:water")
+		e["url"] = strings.TrimRight(cfg.World.WaterURL, "/") + "/owb/"
+		if v, ok := a.threats.get("rws:water").Data.(WaterStatus); ok {
+			e["status"] = v
+		}
+		resp["water"] = e
 	}
 	if cc := cfg.Alarms.Counts; cfg.Alarms.Enabled && cc.Enabled {
 		resp["p2000"] = map[string]any{"window_minutes": 60, "label": cc.Label, "cities": cc.Cities, "services": a.p2kCounts(cc.Cities, time.Now())}
@@ -4178,7 +4206,8 @@ var pollenTypes = []string{"alder", "birch", "grass", "mugwort", "olive", "ragwe
 
 type PollenDay struct {
 	Date string             `json:"date"`
-	Max  map[string]float64 `json:"max"` // grains/m³, highest hourly value of the day
+	Max  map[string]float64 `json:"max"`          // grains/m³, highest hourly value of the day
+	O3   *float64           `json:"o3,omitempty"` // ozone µg/m³, highest hourly value of the day (Hitte en smog)
 }
 
 type PollenData struct {
@@ -4223,11 +4252,24 @@ func parsePollen(body []byte, now time.Time) (PollenData, error) {
 			}
 		}
 	}
+	o3 := map[string]float64{}
+	var ozone []*float64
+	if json.Unmarshal(r.Hourly["ozone"], &ozone) == nil {
+		for i, v := range ozone {
+			if i < len(times) && v != nil && *v >= 0 && *v < 2000 && len(times[i]) >= 10 && *v > o3[times[i][:10]] {
+				o3[times[i][:10]] = math.Round(*v)
+			}
+		}
+	}
 	sort.Strings(order)
 	today := now.In(amsterdam).Format("2006-01-02")
 	for _, day := range order {
 		if day >= today && len(d.Days) < 3 {
-			d.Days = append(d.Days, PollenDay{Date: day, Max: byDay[day]})
+			pd := PollenDay{Date: day, Max: byDay[day]}
+			if v, ok := o3[day]; ok {
+				pd.O3 = &v
+			}
+			d.Days = append(d.Days, pd)
 		}
 	}
 	if len(d.Days) == 0 {
@@ -4264,6 +4306,9 @@ func (a *App) handlePollen(w http.ResponseWriter, r *http.Request) {
 				var s []string
 				for _, t := range pollenTypes {
 					s = append(s, t+"_pollen")
+				}
+				if cfg.Air.HeatSmog {
+					s = append(s, "ozone") // same request: the ozone forecast for Hitte en smog
 				}
 				return s
 			}(), ","))

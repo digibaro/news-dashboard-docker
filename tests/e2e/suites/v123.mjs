@@ -26,6 +26,7 @@ const WORLD = { enabled: true, min_mag: 6, hours: 24,
   fire_risk: { fetched_at: iso(0), url: 'https://www.brandweer.nl/natuurbrandrisico/', regions: [
     ...Array.from({ length: 22 }, (_, i) => ({ region: 'Regio ' + i, phase: 1 })), { region: 'Noord-Holland-Noord', phase: 2 }, { region: 'Kennemerland', phase: 2 }, { region: 'Zaanstreek-Waterland', phase: 0 }] } };
 const WIND = { level: 'yellow', active: true, count: 2, types: ['Wind'], areas: ['Zeeland', 'Noord-Holland'] };
+const CALM_WATER = { fetched_at: iso(0), url: 'https://waterberichtgeving.rws.nl/owb/', status: { level: 1, peak: 1, sectors: [{ id: 'ijssel', name: 'IJssel', code: 1 }], barriers: [{ name: 'Oosterscheldekering', open: true, status: 'Geopend' }] } };
 async function open(w, { scheme = 'light', lang = 'nl', mobile = false, fixtures = true } = {}) {
   const ctx = await b.newContext({ viewport: { width: w, height: 1000 }, colorScheme: scheme, serviceWorkers: 'block', isMobile: mobile, hasTouch: mobile });
   await ctx.addInitScript(l => { // once per tab, so a reload keeps what the page saved
@@ -35,7 +36,7 @@ async function open(w, { scheme = 'light', lang = 'nl', mobile = false, fixtures
   const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
   if (fixtures) {
     await p.route('**/api/world*', r => r.fulfill({ json: WORLD }));
-    await p.route('**/api/alerts', async r => { const res = await r.fetch(); const j = await res.json(); j.knmi = { ...(j.knmi || {}), status: WIND }; return r.fulfill({ response: res, json: j }); });
+    await p.route('**/api/alerts', async r => { const res = await r.fetch(); const j = await res.json(); j.knmi = { ...(j.knmi || {}), status: WIND }; j.water = CALM_WATER; return r.fulfill({ response: res, json: j }); });
     await p.route('**/api/sky*', async r => { const res = await r.fetch(); const j = await res.json(); j.launches = { fetched_at: iso(0), hours: 24, items: LAUNCHES }; return r.fulfill({ response: res, json: j }); });
   }
   await p.goto(BASEURL); await p.waitForSelector('#stream .item'); await p.waitForTimeout(1000);
@@ -57,13 +58,13 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   const nl = await p.evaluate(() => {
     const pn = document.querySelector('#panel-quakes');
     return { h2: pn.querySelector('h2').textContent, sum: pn.querySelector('.hzsum').textContent, tabs: [...pn.querySelectorAll('.advf .chip')].map(b => b.textContent + ':' + b.getAttribute('aria-pressed')),
-      secs: [...pn.querySelectorAll('.wsec h3')].map(x => x.textContent.trim()), fire: pn.querySelector('.wsec:last-of-type')?.textContent, storm: [...pn.querySelectorAll('.wsec')].find(x => /Storm/.test(x.textContent))?.textContent,
+      secs: [...pn.querySelectorAll('.wsec h3')].map(x => x.textContent.trim()), fire: [...pn.querySelectorAll('.wsec')].find(x => /Natuurbrandrisico/.test(x.textContent))?.textContent, storm: [...pn.querySelectorAll('.wsec')].find(x => /Storm/.test(x.textContent))?.textContent,
       order: [...document.querySelectorAll('#side .panel')].map(x => x.id.replace('panel-', '')) };
   });
   ok(nl.h2 === 'Aardbevingen en natuurrampen' && !nl.order.includes('world'), `one panel "${nl.h2}", no separate Wereldwijd`);
   ok(nl.tabs.join() === 'Nederland:true,Wereld:false', `tabs ${nl.tabs}`);
   ok(/^Nederland: .*windwaarschuwing, natuurbrandrisico fase 2 in 2 regio’s · Wereld: 2 zware bevingen, 2 stormen, 2 andere rampen$/.test(nl.sum), `summary: ${nl.sum}`);
-  ok(nl.secs.join('|') === '🌍 Aardbevingen (14 dagen)|🌀 Storm|🔥 Natuurbrandrisico', `NL sections: ${nl.secs.join(' | ')}`);
+  ok(nl.secs.join('|') === '🌍 Aardbevingen (14 dagen)|🌀 Storm|🔥 Natuurbrandrisico|🌊 Hoogwater en stormvloed', `NL sections: ${nl.secs.join(' | ')}`);
   ok(/code geel/.test(nl.storm) && /KNMI: wind in Zeeland, Noord-Holland/.test(nl.storm), `storm: ${nl.storm}`);
   ok(/fase 2 Kennemerland/.test(nl.fire) && /fase 2 Noord-Holland-Noord/.test(nl.fire) && /1 regio’s onbekend/.test(nl.fire) && /Kaart en uitleg \(brandweer\)/.test(nl.fire), `fire risk: ${nl.fire}`);
   if (w === 1440 && scheme === 'light') await p.locator('#panel-quakes').screenshot({ path: `${OUT}/hazards-nl.png` });

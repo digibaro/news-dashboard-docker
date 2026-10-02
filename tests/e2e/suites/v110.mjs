@@ -129,7 +129,7 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   ok(true, 'invalid OPML is refused');
   const ps = await p.evaluate(() => ({ hidden: document.querySelector('#set-push').hidden, topics: document.querySelectorAll('#push-topics input').length,
     on: !document.querySelector('#push-on').hidden, off: document.querySelector('#push-off').hidden, msg: document.querySelector('#push-msg').textContent }));
-  ok(!ps.hidden && ps.topics === 8 && ps.on && ps.off, `push settings: ${ps.topics} topics, ${ps.msg}`);
+  ok(!ps.hidden && ps.topics === 9 && ps.on && ps.off, `push settings: ${ps.topics} topics, ${ps.msg}`);
   const ax = await new AxeBuilder({ page: p }).include('#settings').analyze();
   ok(ax.violations.length === 0, `axe on settings: ${ax.violations.map(v => v.id + ' ' + v.nodes[0].target).join(',') || 0}`);
   await ctx.close();

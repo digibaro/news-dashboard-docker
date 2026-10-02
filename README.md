@@ -17,9 +17,9 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Security advisories**: NCSC-NL, with the `[kans/schade]` rating parsed into badges, plus optional CERT-EU, CISA, BSI and MSRC.
 - **Top bar:** the current KNMI weather code (only while there is a warning), the number of P2000 alerts in the last hour per service for a configured area (default Den Haag), an active NL-Alert with its place (only while one is active), and the NCTV terrorism threat level.
 - **Vandaag:** date and week number, sunrise and sunset, moon phase, the next public holiday, the next clock change, and school holidays for regio Noord, Midden and Zuid (the visitor's region highlighted).
-- **Luchtkwaliteit:** the air quality index (1–11) and NO₂, PM2.5, PM10 and O₃ from the nearest Luchtmeetnet station. The place is chosen per visitor (default: their weather location). Below it the **radiation** (gamma dose rate) at the nearest RIVM station, with the national range; when several stations measure raised levels, a notice appears in the top bar and a push message can go out.
+- **Luchtkwaliteit:** the air quality index (1–11) and NO₂, PM2.5, PM10 and O₃ from the nearest Luchtmeetnet station. The place is chosen per visitor (default: their weather location). Below it the **radiation** (gamma dose rate) at the nearest RIVM station, with the national range; when several stations measure raised levels, a notice appears in the top bar and a push message can go out. Then **Hitte en smog**: whether the Nationaal Hitteplan is active (KNMI heat warning), RIVM's smog warnings, and the ozone forecast for 3 days.
 - **Hooikoorts:** the pollen forecast (grass, birch, alder, mugwort, ragweed) for 3 days at the visitor's air-quality place, with indicative levels.
-- **Aardbevingen en natuurrampen:** two tabs. **Nederland**: earthquakes from KNMI (14 days), the KNMI wind warning when there is one, and the natuurbrandrisico phase per safety region (Brandweer Nederland). **Wereld**: big earthquakes from USGS (M6+, last 24 hours, with tsunami warning and expected impact) and active natural disasters from NASA EONET (hurricanes and typhoons with wind speed, volcanic eruptions, floods, large wildfires). A summary line above the tabs; the panel remembers the chosen tab.
+- **Aardbevingen en natuurrampen:** two tabs. **Nederland**: earthquakes from KNMI (14 days), the KNMI wind warning when there is one, the natuurbrandrisico phase per safety region (Brandweer Nederland), and **high water and storm surge**: Rijkswaterstaat's water-safety code per river, lake and coast sector, the highest code expected in the next 24 hours, and whether the storm-surge barriers are open. At code orange or red, or with a closed barrier, a notice appears in the top bar and a push message can go out. **Wereld**: big earthquakes from USGS (M6+, last 24 hours, with tsunami warning and expected impact) and active natural disasters from NASA EONET (hurricanes and typhoons with wind speed, volcanic eruptions, floods, large wildfires). A summary line above the tabs; the panel remembers the chosen tab.
 - **Kritieke infrastructuur:** current electricity and gas outages at Liander and Stedin (place, status, expected repair time, customers affected), planned work and outages resolved in the last 24 h.
 - **AMBER Alert and Vermist Kind Alert:** while a child is being searched for, a prominent banner at the top with the name, description, photo and "call 112" (a Vermist Kind Alert only for visitors whose weather location lies in its area), plus a push notification. Source: the police's Burgernet open API.
 - **NL-Alert:** active and recent NL-Alerts (last 14 days), marked when the visitor's weather location lies inside the alert area.
@@ -27,7 +27,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **UV index** in the Weer panel: the highest UV of the next 24 hours and when.
 - **Zonnestroom** in Energieprijzen: the expected yield of your solar panels today and tomorrow, and the sunniest 3 hours. Each visitor enters kWp, direction and tilt under Instellingen.
 - **Satellietbeeld:** the latest Meteosat image of the Benelux from EUMETSAT, every 10 minutes: true colour by day, clouds and city lights at night, with coastlines and borders. The server fetches it and serves it itself.
-- **Vanavond aan de hemel:** when it gets dark, the moon, the planets you can see tonight (when and in which direction), the chance of northern lights, the clouds and active meteor showers, and the next rocket launches (Launch Library 2).
+- **Vanavond aan de hemel:** when it gets dark, the moon, the planets you can see tonight (when and in which direction), the chance of northern lights, the clouds and active meteor showers, **space weather** (the NOAA scales for geomagnetic storms, radiation storms and radio blackouts, now and for 3 days, and the strongest solar flare of the day) and the next rocket launches (Launch Library 2).
 - **Teken en muggen:** an estimate of tick and mosquito activity for 3 days, from the weather.
 - **Sportagenda:** Formula 1 (next race with qualifying, last podium, standings) and the important races and tournaments of road cycling (classics, grand tours, EK, WK), mountain biking (EK, WK), athletics (NK, EK, WK, big marathons) and football (EK and WK only): per sport what is on now and the next three, with matching headlines while an event is on. Visitors choose their sports.
 - **Brandstofprijzen:** the national average recommended pump price (GLA) for Euro95, diesel and LPG, with the change since yesterday.
@@ -55,7 +55,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Data saver:** under Instellingen → Weergave: Automatisch / Aan / Uit. When on, the page refreshes 3× less often and loads no images (thumbnails, source icons, the satellite image only on request). Automatic turns it on when the browser asks to save data, on a 2G connection, or with a battery below 20 % that is not charging.
 - **Read state:** read/unread plus a "Bewaard" list with **notes, labels** and export to Markdown or JSON.
 - **OPML:** export the chosen sources, or import a list from another reader (only feeds that exist on this server are turned on).
-- **Push notifications** (opt-in, per device): NL-Alert in your area, KNMI code orange/red, raised radiation, NCTV threat level, earthquakes, big news and the evening before waste collection. See [Push notifications](#push-notifications).
+- **Push notifications** (opt-in, per device): NL-Alert in your area, KNMI code orange/red, raised radiation, high water (code orange/red) or a closed storm-surge barrier, NCTV threat level, earthquakes, big news and the evening before waste collection. See [Push notifications](#push-notifications).
 - **Watchlist and mute words:** security advisories that mention your products are pinned to the top.
 - **Freshness:** every panel shows how old its data is.
 - **Thumbnails:** optional, via the built-in image proxy.
@@ -170,7 +170,7 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 | `refresh` | how often an open browser tab asks the server for new data, per panel: `news`, `alerts`, `weather`, `today`, `air`, `pollen`, `traffic`, `trains`, `alarms`, `quakes`, `nlalert`, `energy`, `fuel`, `economy`, `markets`, `waste`, `trending`, `amber`, `insects`, `sky`, `sports`, `satellite`, `radiation`, `solar`, `world`, `politics`, `threats`, `advisories`, `breaches`, `ransomware`, `utilities`, `outages`, `ap`, `health` (1m–24h, see below) |
 | `keys` | `abusech_auth_key` (optional), `ns_api_key` (Treinstoringen) |
 | `energy` | Energieprijzen: `enabled`, `url`, `interval` (min. 15m), `vat` (0.21), `electricity_extra` / `gas_extra` (€ added per kWh / m³, e.g. energy tax and markup; default 0) |
-| `air` | Luchtkwaliteit: `enabled`, `base` (Luchtmeetnet API), `stations_url` (RIVM station list, CSV), `interval` (min. 15m) |
+| `air` | Luchtkwaliteit: `enabled`, `base` (Luchtmeetnet API), `stations_url` (RIVM station list, CSV), `interval` (min. 15m), `heat_smog` (Hitte en smog, default true; the ozone forecast comes with the pollen request) |
 | `trains` | Treinstoringen: `enabled`, `url` (NS Disruptions API v3), `interval` (min. 2m). Needs `keys.ns_api_key` |
 | `pollen` | Hooikoorts: `enabled`, `url` (Open-Meteo Air Quality API) |
 | `utilities` | Kritieke infrastructuur: `enabled`, `liander_url` (ArcGIS layer), `stedin_url`, `interval` (min. 2m) |
@@ -182,11 +182,11 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 | `trending` | Trending words above the news: `enabled` (computed from the news cache, no extra requests); `wikipedia`: `enabled` (default true), `url` (default `https://nl.wikipedia.org`), a short summary per topic, only for current trending terms, cached 24 h per term |
 | `radiation` | Straling in Luchtkwaliteit: `enabled`, `url` (BfS open WFS with EURDEP data), `interval` (default 60m, min. 15m), `alert_usv` (default 0.3) and `alert_stations` (default 3): "raised" when at least that many stations measure at least that dose rate |
 | `solar` | Zonnestroom in Energieprijzen: `enabled`, `url` (Open-Meteo forecast), `kwp` (default 0: visitors enter their own panels; above 0 a default for everyone), `tilt` (default 35), `azimuth` (0 south, -90 east, 90 west) |
-| `world` | The Wereld tab and natuurbrandrisico of Aardbevingen en natuurrampen: `enabled`, `usgs_url` (a USGS GeoJSON summary feed, default M4.5+ of the past week), `eonet_url` (NASA EONET v3), `quake_min_mag` (default 6), `fire_min_ha` (wildfires from this size, default 2000), `hours` (the Wereld tab's period, 1–168, default 24; the older `days` still works), `fire_risk` (default true) and `fire_risk_url` (natuurbrandrisico, read hourly from brandweer.nl), `interval` (default 30m, min. 10m) |
+| `world` | The Wereld tab and natuurbrandrisico of Aardbevingen en natuurrampen: `enabled`, `usgs_url` (a USGS GeoJSON summary feed, default M4.5+ of the past week), `eonet_url` (NASA EONET v3), `quake_min_mag` (default 6), `fire_min_ha` (wildfires from this size, default 2000), `hours` (the Wereld tab's period, 1–168, default 24; the older `days` still works), `fire_risk` (default true) and `fire_risk_url` (natuurbrandrisico, read hourly from brandweer.nl), `water` (default true) and `water_url` (high water and storm-surge barriers, read every 10 minutes from waterberichtgeving.rws.nl), `interval` (default 30m, min. 10m) |
 | `satellite` | Satellietbeeld: `enabled`, `url` (EUMETSAT GeoServer), `layer` (default `mtg_fd:rgb_geocolour`; e.g. `msg_fes:ir108` for infrared), `interval` (default 10m, min. 5m) |
 | `amber` | AMBER Alert and Vermist Kind Alert: `enabled`, `url` (Burgernet Landactiehost; the test feed `.../api/test/alerts` cycles through test messages), `interval` (default 5m, min. 1m) |
 | `insects` | Teken en muggen: `enabled`, `url` (Open-Meteo forecast) |
-| `sky` | Vanavond aan de hemel: `enabled`, `kp_url` (NOAA SWPC), `clouds_url` (Open-Meteo), `launches` (default true), `launches_url` (Launch Library 2; free tier 15 requests per hour, fetched hourly) and `launches_hours` (only launches in the coming hours, default 24) |
+| `sky` | Vanavond aan de hemel: `enabled`, `kp_url` (NOAA SWPC), `clouds_url` (Open-Meteo), `launches` (default true), `launches_url` (Launch Library 2; free tier 15 requests per hour, fetched hourly) and `launches_hours` (only launches in the coming hours, default 24), `space_weather` (default true) and `space_weather_url` (NOAA SWPC, read every 30 minutes) |
 | `sports` | Sportagenda: `enabled`, `sports` (`f1`, `road`, `mtb`, `athletics`, `football`; visitors choose among these), `f1_url` (Jolpica), `interval` (default 1h, min. 15m), `events` (races and tournaments: `sport` road/mtb/athletics/football, `name`, `start`, `end`, `place`, `url`, `note` (an extra line), `tentative` (dates not yet confirmed), `keywords` for matching headlines) |
 | `ui` | `accent`: accent colour for all visitors, e.g. `"#00a4dc"` (empty = the default blue); adjusted automatically to a readable shade in light and dark mode |
 | `push` | Push notifications (off by default): `enabled`, `subject` (`mailto:` or https contact), `vapid_private_key` (or `NDB_VAPID_PRIVATE_KEY`), `max_subscriptions` (default 50), `quake_min_mag` (2.5), `breaking_sources` (6; 0 = off), `waste_hour` (19; -1 = off). See [Push notifications](#push-notifications). |
@@ -527,6 +527,7 @@ Visitors can get notifications on their phone or computer, also when the dashboa
 - NL-Alert in their area (their weather location)
 - KNMI code orange or red
 - a change of the NCTV threat level
+- high water: a Rijkswaterstaat sector at code orange or red, or a storm-surge barrier closing (once per episode)
 - earthquakes from `push.quake_min_mag`
 - big news: a story that `push.breaking_sources` sources reported within an hour
 - waste: the evening before collection, at `push.waste_hour`, for the address set on that device (or the default address)
@@ -585,6 +586,8 @@ The server fetches everything; browsers only talk to the dashboard itself.
 | [USGS](https://earthquake.usgs.gov/earthquakes/feed/) | Wereldwijd: aardbevingen | GeoJSON summary feeds, public domain (US government); every 30 minutes. |
 | [NASA EONET](https://eonet.gsfc.nasa.gov/) | Wereldwijd: natuurrampen | Earth Observatory Natural Event Tracker v3, open, no key; storms with a position in the last 3 days, wildfires from `fire_min_ha`. Each event links to its source (NHC, JTWC, IRWIN, …). |
 | [Brandweer Nederland](https://www.brandweer.nl/natuurbrandrisico/) | Natuurbrandrisico | The current phase per safety region. There is **no open API**: the list on the public page is read once an hour (robots.txt allows it). If the page layout changes, the block shows that the site is unreachable until this is adapted. |
+| [Rijkswaterstaat](https://waterberichtgeving.rws.nl/owb/) | Hoogwater en stormvloed | The water-safety codes of the Watermanagementcentrum Nederland per sector and the status of the storm-surge barriers. There is **no documented API**: these are the public JSON and HTML files that waterberichtgeving.rws.nl itself loads, read every 10 minutes. If their format changes, the block says Rijkswaterstaat is unreachable rather than showing a guess. |
+| [NOAA SWPC](https://www.swpc.noaa.gov/) | Ruimteweer | The NOAA space-weather scales and the GOES X-ray flares (public domain), read every 30 minutes. |
 | [Launch Library 2](https://thespacedevs.com/llapi) (The Space Devs) | Hemel: raketlanceringen | Open API, free tier 15 requests per hour per IP; the server asks once an hour. |
 | [Wikipedia](https://nl.wikipedia.org/) | Trending: uitleg | REST API (`/api/rest_v1/page/summary`, `/w/rest.php/v1/search/page`), no key. Only for current trending terms; disambiguation pages are skipped, and a search hit is used only if its title holds every word of the term plus at most one more. Text CC BY-SA 4.0, credited in the card. |
 | [Burgernet](https://www.burgernet.nl/amberalert) (police) | AMBER Alert, Vermist Kind Alert | The open API "Landactiehost" (`services.burgernet.nl/landactiehost/api/v1/alerts`, JSON, no key), documented in *Technische koppelingen Burgernet/AMBER Alert berichten* v1.1. AlertLevel 10 = AMBER Alert (national), 5 = Vermist Kind Alert (a circle); a Cancel closes the alert. The photo is shown via this server's image proxy. |
@@ -696,14 +699,14 @@ All JSON responses:
 | `GET /api/weather?lat=&lon=&region=&cc=` | current, 24 h, 7 days, rain 2 h, warnings (defaults to the configured location) |
 | `GET /api/geocode?q=` | place search, NL/BE first (rate-limited per IP) |
 | `GET /api/threats` | Infocon, top ports, 30-day trend, top IPs + countries, Feodo C2, optional KEV, sources/licences |
-| `GET /api/alerts` | top bar: NCTV level (`level`, `name`, `since`) and KNMI summary (`level`, `active`, `onset`, `types`, `areas`) |
+| `GET /api/alerts` | top bar: NCTV level (`level`, `name`, `since`) KNMI summary (`level`, `active`, `onset`, `types`, `areas`, `heat`) and `water` (`level`, `sectors`, `peak`, `peak_at`, `barriers`, `outlook`) |
 | `GET /api/traffic` | jams (road, direction, from/to, delay), accidents, closure count, VILD version |
 | `GET /api/alarms?city=` | P2000 alerts for a city slug (default from config): per service at most 2, with urgency, units and detail; Lifeliner falls back to national when the city has none |
 | `GET /api/energy` | Energieprijzen: hourly `electricity` (today, tomorrow from ~13:00) and `gas` prices in € incl. VAT (+ configured extras) |
 | `GET /api/air?lat=&lon=` | Luchtkwaliteit: nearest station (`name`, `distance_km`, `url`), `lki` (`value` 1–11, `at`) and `components` (NO2, PM25, PM10, O3 in µg/m³) |
 | `GET /api/trains` | Treinstoringen: `key` (false without an NS key), `calamities`, `disruptions`, `maintenance` (active now, max 5) and `maintenance_total` |
 | `GET /api/politics` | Politiek vandaag: `day`, `activities` (time, kind, subject, committee, cancelled, url) and the latest `votes` (result, kind, subject, date, url) |
-| `GET /api/pollen?lat=&lon=` | Hooikoorts: `days` (3 × daily maximum per pollen type, grains/m³) and `now` |
+| `GET /api/pollen?lat=&lon=` | Hooikoorts: `days` (3 × daily maximum per pollen type, grains/m³, and `o3`: the highest ozone value, µg/m³) and `now` |
 | `GET /api/utilities` | Kritieke infrastructuur: per grid operator the `active` and `planned` outages (energy, place, status, reported, estimate, customers) and `resolved_24h` |
 | `GET /api/economy` | Economie in cijfers: `inflation` and `unemployment` (13 months), `inflation_ea`, `rate` with `rate_since`, `eurusd` (last 2 days) |
 | `GET /api/nlalert?lat=&lon=` | NL-Alert: `alerts` of the last 14 days (text, English text, start, stop, withdrawn, `near` for the given point or the configured weather location) and the number `active` |
@@ -711,7 +714,7 @@ All JSON responses:
 | `GET /api/waste?postcode=&number=&suffix=&provider=` | Afvalkalender for the given address (`own`, `pickups`, `provider`, `calendar`, `home`, or `not_found`); `provider` is optional (default: find automatically). Without parameters the server's default address (`needs_address` when there is none). The address is not echoed. The enabled providers are in `/api/catalog` (`waste_providers`) |
 | `GET /api/amber?lat=&lon=` | AMBER Alert and Vermist Kind Alert: the active `alerts` (title, text, kind, url, photo via `api/img`, area) with `near` for the given point or the weather location |
 | `GET /api/insects?lat=&lon=` | Teken en muggen: 3 `days` with `ticks` and `mosquito` levels 0–3 (an estimate) |
-| `GET /api/sky?lat=&lon=` | Vanavond aan de hemel: sunset, dark, dawn, `moon` (phase, rise, set), `planets` (from, until, best time, altitude, direction), `kp` and `aurora` (0–3), `clouds`, `meteor` |
+| `GET /api/sky?lat=&lon=` | Vanavond aan de hemel: sunset, dark, dawn, `moon` (phase, rise, set), `planets` (from, until, best time, altitude, direction), `kp` and `aurora` (0–3), `clouds`, `meteor`, `space` (`days`: the R, S and G scales with forecast probabilities; `flare`) |
 | `GET /api/sports` | Sportagenda: `f1` (next race with sessions, last podium, standings) and `events` (per sport the current or just-finished events and the next three, with `note`, `tentative` and `headlines`) |
 | `GET /api/world` | Aardbevingen en natuurrampen (Wereld and natuurbrandrisico): `fire_risk.regions` (region, phase; 0 = unknown), `quakes.items` (mag, place, time, depth_km, tsunami, alert, url) and `events.items` (kind storm/volcano/flood/landslide/wildfire, title, time, wind_kmh, area_ha, url) |
 | `GET /api/icon?s=` | A news site's icon (32×32 PNG) for a configured source; the catalog lists the link per source (`icon`) once the icon is there |
@@ -788,6 +791,12 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.26.0
+- **Hoogwater en stormvloed** (Aardbevingen en natuurrampen, Nederland tab): Rijkswaterstaat's water-safety code per sector, the highest code expected in the next 24 hours, the four storm-surge barriers and the short coast outlook. A **top-bar badge** and the new **push topic "water"** at code orange or red, or when a barrier closes.
+- **Hitte en smog** (Luchtkwaliteit): the Nationaal Hitteplan (active while KNMI has a heat warning), RIVM smog warnings and the ozone forecast for 3 days.
+- **Ruimteweer** (Vanavond aan de hemel): the NOAA scales R, S and G now and for 3 days, and the strongest solar flare of the last 24 hours.
+- Config: `world.water`, `world.water_url`, `air.heat_smog`, `sky.space_weather`, `sky.space_weather_url` (all on by default).
 
 ### 1.25.0
 - **Shorter history:** Aardbevingen (Nederland tab), NL-Alert, Autoriteit Persoonsgegevens acties and Gezondheid show the last 14 days instead of 31. KNMI is asked for 14 days by default (`quakes.days`).

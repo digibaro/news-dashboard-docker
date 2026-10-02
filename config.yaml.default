@@ -109,6 +109,8 @@ air:
   base: "https://api.luchtmeetnet.nl/open_api"
   stations_url: "https://data.rivm.nl/data/luchtmeetnet/Metadata/luchtmeetnet_meetlocaties.csv"
   interval: 30m                   # index of all stations (~3 requests); min. 15m
+  heat_smog: true                 # "Hitte en smog": Nationaal Hitteplan (KNMI heat warning), RIVM smog news and the
+                                  # ozone forecast (asked with the pollen data, so it needs pollen.enabled)
 
 # Treinstoringen: NS Disruptions API v3. Needs a free key: register at https://apiportal.ns.nl, subscribe to
 # the product that includes the Disruptions API ("Ns-App"), then set keys.ns_api_key or NS_API_KEY.
@@ -322,6 +324,8 @@ sky:
   launches: true                  # the next rocket launches, from Launch Library 2 (The Space Devs, open)
   launches_url: "https://ll.thespacedevs.com/2.3.0/launches/upcoming/?limit=10"  # free: 15 requests/hour; fetched hourly
   launches_hours: 24              # only launches in the coming hours (1-720); flights under way always
+  space_weather: true             # Ruimteweer: NOAA scales R/S/G now and for 3 days, and the strongest solar flare
+  space_weather_url: "https://services.swpc.noaa.gov"   # read every 30 minutes (2 small JSON files)
 
 # Wereldwijd: big earthquakes worldwide (USGS) and active natural events (NASA EONET: hurricanes and
 # typhoons, volcanic eruptions, large wildfires, floods). Both open, no key. Sea ice and small fires are left out.
@@ -333,6 +337,9 @@ world:
   hours: 24                       # the panel's period: quakes and events of the last hours (1-168)
   fire_risk: true                 # natuurbrandrisico per safety region (Brandweer Nederland); no open API, the
   fire_risk_url: "https://www.brandweer.nl/natuurbrandrisico/"   # public page is read once an hour
+  water: true                     # Hoogwater en stormvloed: Rijkswaterstaat's water-safety codes per sector and the
+                                  # storm-surge barriers; also the top-bar badge and push topic "water"
+  water_url: "https://waterberichtgeving.rws.nl"   # the files behind waterberichtgeving.rws.nl, read every 10 minutes
   fire_min_ha: 2000               # wildfires from this size in hectares
   interval: 30m                   # min. 10m
 

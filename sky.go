@@ -364,6 +364,13 @@ func (a *App) handleSky(w http.ResponseWriter, r *http.Request) {
 		l["hours"] = cfg.Sky.LaunchesHours
 		e["launches"] = l
 	}
+	if cfg.Sky.SpaceWeather {
+		sw := a.feedEntry("noaa:space")
+		if v, ok := a.threats.get("noaa:space").Data.(SpaceWeather); ok {
+			sw["days"], sw["flare"] = v.Days, v.Flare
+		}
+		e["space"] = sw
+	}
 	fe := a.feedEntry("noaa:kp")
 	if v, ok := fe["fetched_at"]; ok {
 		e["fetched_at"] = v
