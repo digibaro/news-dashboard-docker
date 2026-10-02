@@ -60,6 +60,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Freshness:** every panel shows how old its data is.
 - **Thumbnails:** optional, via the built-in image proxy.
 - **Installable and offline-capable** (PWA). On a phone, swipe between the overview, the news and the panels, and pull down to refresh. A share button on every article.
+- **Finding a panel:** a bar above the panels stays in view while you scroll. **Ga naar paneel** lists your panels from A to Z and jumps to the one you pick (or press `g`, type a few letters and Enter); **Alles inklappen** turns every panel into one line with a short summary (temperature, electricity price, disruptions…), so all panels fit on about one screen. On a tablet, **Panelen ↓** next to the news jumps down to them.
 - **Keyboard shortcuts:** press `?` in the app.
 - **Overview and kiosk mode:** "Vandaag in het kort" puts the essentials of today on one screen; kiosk mode is for a wall display (see below).
 
@@ -791,6 +792,11 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.27.0
+- **Panel bar:** above the panels, sticky while scrolling: **Ga naar paneel** (a searchable A–Z list of your panels; also the `g` key) and **Alles inklappen / uitklappen**.
+- **Summary lines:** a collapsed panel shows one line with its current state (e.g. "14° bewolkt", "nu € 0,24/kWh · goedkoopst 13–16 u", "2 storingen"), or how fresh its data is.
+- **Tablet:** a **Panelen ↓** button in the news bar, because the panels are below the news there.
 
 ### 1.26.0
 - **Hoogwater en stormvloed** (Aardbevingen en natuurrampen, Nederland tab): Rijkswaterstaat's water-safety code per sector, the highest code expected in the next 24 hours, the four storm-surge barriers and the short coast outlook. A **top-bar badge** and the new **push topic "water"** at code orange or red, or when a barrier closes.

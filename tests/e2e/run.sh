@@ -20,7 +20,7 @@ export E2E_OUT=${E2E_OUT:-/tmp/ndb-e2e}
 mkdir -p "$E2E_OUT" "$WORK/logs"
 
 ALL=(v115 v114 swipe nlbadge disc v110 v19 v18 v17 v16 i18n breaches alarms check features threats rain race
-  hardening recent14 newpanels weather v116 v118 v119 outages117 trains117 v121 v123 v126)
+  hardening recent14 newpanels weather v116 v118 v119 outages117 trains117 v121 v123 v126 v127)
 if [ $# -gt 0 ]; then SUITES=("$@"); else SUITES=("${ALL[@]}"); fi
 
 pids=()

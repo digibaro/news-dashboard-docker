@@ -330,6 +330,30 @@ kbd.k { display: inline-block; min-width: 1.7em; padding: 1px 6px; border: 1px s
 .ptoggle svg.i { width: 16px; height: 16px; color: var(--text-3); transition: transform .15s ease; }
 .ptoggle[aria-expanded="false"] svg.i { transform: rotate(-90deg); }
 .pextra { font-size: 12px; color: var(--text-3); white-space: nowrap; }
+/* bar above the panels: jump menu and collapse all; sticks below the header */
+.pbar { position: sticky; top: var(--hdr); z-index: 6; grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 6px 0; background: var(--bg); border-bottom: 1px solid var(--line-strong); }
+.pb-wrap { position: relative; }
+.pb-jump svg.i { width: 14px; height: 14px; }
+.pb-pop { position: absolute; left: 0; top: calc(100% + 4px); z-index: 30; width: min(320px, calc(100vw - 32px)); max-height: min(70vh, 480px); overflow: auto;
+  padding: 6px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 8px; box-shadow: 0 6px 24px rgb(0 0 0 / .18); }
+.pb-pop[hidden] { display: none; }
+.pb-q { box-sizing: border-box; width: 100%; height: 34px; padding: 0 8px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; font-size: 14px; }
+.pb-list { list-style: none; margin: 6px 0 0; padding: 0; }
+.pb-list button { display: block; width: 100%; min-height: 32px; padding: 6px 8px; border: 0; border-radius: 6px; background: none; color: var(--text); font: inherit; font-size: 14px; text-align: left; }
+.pb-list button:hover, .pb-list button:focus-visible { background: var(--surface-2); }
+.pb-none { padding: 6px 8px; color: var(--text-3); font-size: 13px; }
+.side > .pbar + .panel { border-top: 0; }
+.panel { scroll-margin-top: 52px; } /* on top of the page's scroll-padding for the header: room for the bar */
+.pname { flex: none; }
+.psum { display: none; flex: 1; min-width: 0; margin-left: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 400; color: var(--text-2); }
+.panel.collapsed { padding-bottom: 6px; }
+.panel.collapsed .psum { display: block; }
+.panel.collapsed .pfresh, .panel.collapsed .pextra { display: none; }
+.panel.flash { animation: pflash 1.6s ease-out; }
+@keyframes pflash { 0%, 35% { box-shadow: inset 3px 0 0 var(--accent); background: var(--accent-bg); } 100% { box-shadow: inset 3px 0 0 transparent; background: transparent; } }
+.to-panels { display: none; }
+@media (min-width: 700px) and (max-width: 1099px) { .to-panels { display: inline-flex; } #mark-read { margin-left: 0 !important; } } /* panels are below the news here */
 .pbody { padding-top: 6px; }
 .pbody[hidden] { display: none; }
 .pnote { margin: 0; color: var(--text-3); font-size: 13px; }
@@ -614,7 +638,7 @@ table.tt { width: 100%; border-collapse: collapse; font-size: 12px; }
 @media (min-width: 1800px) { [data-mode="kiosk"] body { zoom: 1.3; } }
 [data-mode="kiosk"] #open-settings, [data-mode="kiosk"] .search, [data-mode="kiosk"] #search-open, [data-mode="kiosk"] #theme-seg,
 [data-mode="kiosk"] #lang-seg, [data-mode="kiosk"] .news-bar .icon-btn, [data-mode="kiosk"] .item .bm, [data-mode="kiosk"] .item .sh, [data-mode="kiosk"] #welcome,
-[data-mode="kiosk"] .foot, [data-mode="kiosk"] .more, [data-mode="kiosk"] #chips .chip.off, [data-mode="kiosk"] .pextra { display: none !important; }
+[data-mode="kiosk"] .foot, [data-mode="kiosk"] .pbar, [data-mode="kiosk"] .more, [data-mode="kiosk"] #chips .chip.off, [data-mode="kiosk"] .pextra { display: none !important; }
 @media (min-width: 1100px) {
   [data-mode="kiosk"] body { overflow: hidden; }
   [data-mode="kiosk"] .layout { padding-bottom: 0; }
@@ -1056,6 +1080,7 @@ textarea.json {
     <div class="news-bar">
       <h2 id="news-h">Nieuws</h2>
       <span class="news-meta" id="news-meta"></span>
+      <button class="btn to-panels" id="to-panels" type="button" style="margin-left:auto">Panelen ↓</button>
       <button class="icon-btn" id="mark-read" type="button" aria-label="Zichtbare berichten als gelezen markeren" title="Alles als gelezen markeren" style="margin-left:auto"><svg class="i" aria-hidden="true"><use href="#i-check"/></svg></button>
       <button class="icon-btn" id="refresh" type="button" aria-label="Nieuws verversen" title="Verversen (r)" style="margin-left:0"><svg class="i" aria-hidden="true"><use href="#i-refresh"/></svg></button>
     </div>
@@ -1121,6 +1146,11 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.27.0</h3>
+    <ul>
+      <li>Boven de panelen een balk die blijft staan tijdens het scrollen: <b>Ga naar paneel</b> toont je panelen van A tot Z en springt direct naar het gekozen paneel (ook met de toets <kbd>g</kbd>: typ een paar letters en Enter), en <b>Alles inklappen</b> maakt van elk paneel één regel met een korte samenvatting, zoals de temperatuur, de stroomprijs of het aantal storingen.</li>
+      <li>Ook een ingeklapt paneel toont die samenvatting. Op een tablet brengt de knop Panelen ↓ naast het nieuws je direct bij de panelen.</li>
+    </ul>
     <h3>Versie 1.26.0</h3>
     <ul>
       <li>Aardbevingen en natuurrampen, Nederland: hoogwater en stormvloed van Rijkswaterstaat, met de code per gebied, de verwachting voor 24 uur en de stormvloedkeringen. Bij code oranje of rood, of een gesloten kering, een melding in de bovenbalk en een pushbericht (nieuw onderwerp).</li>
@@ -1324,6 +1354,11 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.27.0</h3>
+    <ul>
+      <li>Above the panels, a bar that stays in view while you scroll: <b>Go to panel</b> lists your panels from A to Z and jumps straight to the one you pick (also with the <kbd>g</kbd> key: type a few letters and Enter), and <b>Collapse all</b> turns every panel into one line with a short summary, such as the temperature, the electricity price or the number of disruptions.</li>
+      <li>A single collapsed panel shows that summary too. On a tablet, the Panels ↓ button next to the news takes you straight to the panels.</li>
+    </ul>
     <h3>Version 1.26.0</h3>
     <ul>
       <li>Earthquakes and natural disasters, Netherlands: high water and storm surge from Rijkswaterstaat, with the code per area, the 24-hour forecast and the storm-surge barriers. At code orange or red, or with a closed barrier, a notice in the top bar and a push message (new topic).</li>
@@ -1545,6 +1580,7 @@ textarea.json {
     <dt><code>-woord</code></dt><dd>Zoeken: berichten met dit woord weglaten</dd>
     <dt><kbd class="k">r</kbd></dt><dd>Nieuws verversen</dd>
     <dt><kbd class="k">v</kbd></dt><dd>Overzicht van vandaag aan / uit</dd>
+    <dt><kbd class="k">g</kbd></dt><dd>Naar een paneel gaan (typ een paar letters, Enter)</dd>
     <dt><kbd class="k">?</kbd></dt><dd>Dit overzicht</dd>
     <dt><kbd class="k">Esc</kbd></dt><dd>Venster sluiten of zoekopdracht wissen</dd>
   </dl>
@@ -2192,6 +2228,18 @@ const EN = {
   "Alle gevolgde diensten werken normaal.": "All followed services are operating normally.",
   "Kiosk verlaten": "Leave kiosk",
   "Overzicht van vandaag aan / uit": "Today's overview on / off",
+  "Naar een paneel gaan (typ een paar letters, Enter)": "Go to a panel (type a few letters, Enter)", "Panelen ↓": "Panels ↓",
+  "Typ om te zoeken": "Type to search", "Paneel zoeken": "Search panels", " (ingeklapt)": " (collapsed)", "Geen paneel gevonden.": "No panel found.",
+  "Ga naar paneel (g)": "Go to panel (g)", "Ga naar paneel": "Go to panel", "Alle panelen ingeklapt": "All panels collapsed", "Alle panelen uitgeklapt": "All panels expanded",
+  "Alles uitklappen": "Expand all", "Alles inklappen": "Collapse all", "code {lvl}: {type}": "code {lvl}: {type}", "{name} {when}": "{name} {when}",
+  "straling verhoogd": "radiation raised", "hitteplan actief": "heat plan active", "teken {a} · muggen {b}": "ticks {a} · mosquitoes {b}",
+  "donker vanaf {t}": "dark from {t}", "{n}% bewolkt": "{n}% cloud", "kans op noorderlicht": "chance of northern lights",
+  "1 storing": "1 disruption", "{n} storingen": "{n} disruptions", "1 recente melding": "1 recent alert", "{n} recente meldingen": "{n} recent alerts",
+  "geen actieve": "none active", "nu {p}/kWh": "now {p}/kWh", "goedkoopst {span}": "cheapest {span}", "nu: {name}": "now: {name}", "volgende: {name}": "next: {name}",
+  "1 activiteit": "1 item", "{n} activiteiten": "{n} items", "1 hoog advies (48 uur)": "1 high advisory (48 hours)", "{n} hoge adviezen (48 uur)": "{n} high advisories (48 hours)",
+  "geen hoge adviezen (48 uur)": "no high advisories (48 hours)", "{n} claims in 7 dagen": "{n} claims in 7 days", "{s} stroom- en {g} gasstoringen": "{s} power and {g} gas outages",
+  "alles werkt normaal": "all working normally", "1 bericht (14 dagen)": "1 item (14 days)", "{n} berichten (14 dagen)": "{n} items (14 days)", "geen berichten (14 dagen)": "no items (14 days)",
+  "1 melding (14 dagen)": "1 alert (14 days)", "{n} meldingen (14 dagen)": "{n} alerts (14 days)", "geen meldingen (14 dagen)": "no alerts (14 days)",
   "Energie, lucht, trein en politiek": "Energy, air, trains and politics",
   "EnergyZero · energieprijzen": "EnergyZero · energy prices",
   "Luchtmeetnet · meetstations": "Luchtmeetnet · stations",
@@ -3418,32 +3466,100 @@ function clearSearch() {
 }
 
 // ---------------------------------------------------------------- side panels
+const shownPanels = () => prefs.panels.order.filter(id => !prefs.panels.hidden[id]);
 function buildPanels() {
   const side = $('#side');
-  const order = prefs.panels.order.filter(id => !prefs.panels.hidden[id]);
+  const order = shownPanels();
   side.hidden = !order.length;
-  side.replaceChildren(...order.map(panelEl));
+  side.replaceChildren(panelBar(), ...order.map(panelEl));
   for (const id of order) renderPanel(id);
+  updateAllBtn();
 }
 function panelEl(id) {
   const collapsed = !!prefs.panels.collapsed[id];
   const bodyId = `p-${id}-body`, hId = `p-${id}-h`;
-  return h('section', { class: `panel panel-${id}`, id: `panel-${id}`, 'aria-labelledby': hId },
+  return h('section', { class: `panel panel-${id}` + (collapsed ? ' collapsed' : ''), id: `panel-${id}`, 'aria-labelledby': hId },
     h('div', { class: 'phead' },
       h('h2', { id: hId },
         h('button', { class: 'ptoggle', type: 'button', 'aria-expanded': String(!collapsed), 'aria-controls': bodyId, onclick: () => togglePanel(id) },
-          icon('chev'), h('span', { text: PANELS[id] }))),
+          icon('chev'), h('span', { class: 'pname', text: PANELS[id] }), h('span', { class: 'psum', id: `p-${id}-sum` }))),
       h('div', { class: 'pextra', id: `p-${id}-extra` })),
     h('p', { class: 'pfresh', id: `p-${id}-fresh` }),
     h('div', { class: 'pbody', id: bodyId, hidden: collapsed }));
 }
-function togglePanel(id) {
-  const c = !prefs.panels.collapsed[id];
+function setCollapsed(id, c) {
   if (c) prefs.panels.collapsed[id] = true; else delete prefs.panels.collapsed[id];
-  savePrefs();
-  $(`#panel-${id} .ptoggle`).setAttribute('aria-expanded', String(!c));
-  $(`#p-${id}-body`).hidden = c;
+  $(`#panel-${id}`)?.classList.toggle('collapsed', c);
+  $(`#panel-${id} .ptoggle`)?.setAttribute('aria-expanded', String(!c));
+  const body = $(`#p-${id}-body`); if (body) body.hidden = c;
+  paintSum(id);
 }
+function togglePanel(id) {
+  setCollapsed(id, !prefs.panels.collapsed[id]);
+  savePrefs(); updateAllBtn();
+}
+
+// The bar above the panels: jump to a panel, collapse or expand them all. It sticks below the header.
+function panelBar() {
+  const q = h('input', { type: 'search', id: 'pb-q', class: 'pb-q', autocomplete: 'off', placeholder: t('Typ om te zoeken'), 'aria-label': t('Paneel zoeken'), 'aria-controls': 'pb-list' });
+  const list = h('ul', { id: 'pb-list', class: 'pb-list', 'aria-label': t('Panelen') });
+  const pop = h('div', { id: 'pb-pop', class: 'pb-pop', hidden: true }, q, list);
+  const fill = () => {
+    const f = fold(q.value.trim());
+    list.replaceChildren(...shownPanels().filter(id => !f || fold(t(PANELS[id])).includes(f))
+      .sort((a, b) => t(PANELS[a]).localeCompare(t(PANELS[b]), locale(), { sensitivity: 'base' })).map(id => // A to Z: easier to find than the panel order
+      h('li', null, h('button', { type: 'button', 'data-id': id, onclick: () => jumpTo(id) }, h('span', { text: t(PANELS[id]) }),
+        prefs.panels.collapsed[id] ? h('span', { class: 'sr-only', text: t(' (ingeklapt)') }) : null))));
+    if (!list.children.length) list.append(h('li', { class: 'pb-none', text: t('Geen paneel gevonden.') }));
+  };
+  q.addEventListener('input', fill);
+  pop.addEventListener('keydown', e => {
+    const btns = [...list.querySelectorAll('button')], i = btns.indexOf(document.activeElement);
+    if (e.key === 'Escape') { e.preventDefault(); closeJump(true); }
+    else if (e.key === 'Enter' && e.target === q && btns[0]) { e.preventDefault(); jumpTo(btns[0].dataset.id); }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); btns[Math.min(btns.length - 1, i + 1)]?.focus(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); if (i <= 0) q.focus(); else btns[i - 1].focus(); }
+  });
+  pop.fill = fill;
+  return h('div', { class: 'pbar', id: 'pbar' },
+    h('div', { class: 'pb-wrap' },
+      h('button', { class: 'btn pb-jump', id: 'pb-jump', type: 'button', 'aria-expanded': 'false', 'aria-controls': 'pb-pop', title: t('Ga naar paneel (g)'),
+        onclick: () => ($('#pb-pop').hidden ? openJump() : closeJump(true)) }, h('span', { 'aria-hidden': 'true', text: '☰ ' }), t('Ga naar paneel'), ' ', icon('down')),
+      pop),
+    h('button', { class: 'btn pb-all', id: 'pb-all', type: 'button', onclick: () => setAllCollapsed(!shownPanels().every(id => prefs.panels.collapsed[id])) }));
+}
+function openJump() {
+  if (viewMode !== 'normal') setMode('normal');
+  if (matchMedia('(max-width: 699px)').matches && mobileView !== 'panels') setMobileView('panels', { restore: false });
+  const pop = $('#pb-pop'); if (!pop) return;
+  if (!$('#pbar').getBoundingClientRect().height || $('#pbar').getBoundingClientRect().top > innerHeight || $('#pbar').getBoundingClientRect().bottom < 0) $('#side').scrollIntoView({ block: 'start' });
+  $('#pb-q').value = ''; pop.fill(); pop.hidden = false;
+  $('#pb-jump').setAttribute('aria-expanded', 'true');
+  $('#pb-q').focus({ preventScroll: true });
+}
+function closeJump(refocus) {
+  const pop = $('#pb-pop'); if (!pop || pop.hidden) return;
+  pop.hidden = true; $('#pb-jump').setAttribute('aria-expanded', 'false');
+  if (refocus) $('#pb-jump').focus({ preventScroll: true });
+}
+function jumpTo(id) {
+  closeJump(false);
+  showPanel(id);
+  const el = $(`#panel-${id}`); if (!el) return;
+  el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+  setTimeout(() => el.classList.remove('flash'), 1600);
+}
+function setAllCollapsed(c) {
+  for (const id of shownPanels()) setCollapsed(id, c);
+  savePrefs(); updateAllBtn();
+  toast(c ? t('Alle panelen ingeklapt') : t('Alle panelen uitgeklapt'));
+}
+function updateAllBtn() {
+  const b = $('#pb-all'); if (!b) return;
+  const all = shownPanels().length && shownPanels().every(id => prefs.panels.collapsed[id]);
+  b.replaceChildren(h('span', { 'aria-hidden': 'true', text: all ? '⊞ ' : '⊟ ' }), all ? t('Alles uitklappen') : t('Alles inklappen'));
+}
+document.addEventListener('pointerdown', e => { if (!e.target.closest?.('.pb-wrap')) closeJump(false); });
 function renderPanel(id) {
   if (viewMode === 'digest' || mobileView === 'overview') queueDigest();
   const body = $(`#p-${id}-body`);
@@ -3451,7 +3567,73 @@ function renderPanel(id) {
   (panelRenderers[id] || (() => {}))(body, $(`#p-${id}-extra`));
   const f = freshOf[id]?.();
   $(`#p-${id}-fresh`).replaceChildren(f?.ts ? freshEl(new Date(f.ts), f.max, f.stale) : '');
+  paintSum(id);
 }
+// The summary is only filled while the panel is collapsed, so an open panel's heading is just its name.
+function paintSum(id) {
+  const el = $(`#p-${id}-sum`); if (!el) return;
+  if (!prefs.panels.collapsed[id]) { el.replaceChildren(); return; }
+  let s = null;
+  try { s = summaryOf[id]?.(); } catch { s = null; } // a summary must never break the panel
+  const f = freshOf[id]?.();
+  el.replaceChildren(...(s ? [h('span', { class: 'sr-only', text: ': ' }), s] : f?.ts ? [h('span', { class: 'sr-only', text: ': ' }), freshEl(new Date(f.ts), f.max, f.stale)] : []));
+}
+// One line per collapsed panel, from data the page already has; null = show the freshness instead.
+const pctSigned = v => (v > 0 ? '+' : '') + v.toLocaleString(locale(), { maximumFractionDigits: 1 }) + '%';
+const dayWord = date => { const n = daysUntil(date); return n === 0 ? t('vandaag') : n === 1 ? t('morgen') : fmt.wdmUTC.format(dateOnly(date)); };
+const summaryOf = {
+  weather: () => { const d = panelData.weather?.data; if (!d?.current) return null;
+    const w = d.warnings?.find(x => x.here);
+    return [`${deg(d.current.temp)} ${tr(d.current.desc).toLowerCase()}`, w ? t('code {lvl}: {type}', { lvl: tr(LEVEL_NL[w.level]), type: tr(w.type).toLowerCase() }) : d.rain?.summary ? tr(d.rain.summary) : null].filter(Boolean).join(' · '); },
+  today: () => { const d = panelData.today?.data; if (!d?.enabled) return null;
+    const hd = d.holidays_today?.[0], nx = d.holidays_next?.[0];
+    return [t('week {n}', { n: d.week }), hd ? tr(hd.name) : nx ? t('{name} {when}', { name: tr(nx.name), when: fmt.wdmUTC.format(dateOnly(nx.date)) }) : null].filter(Boolean).join(' · '); },
+  waste: () => { const p = panelData.waste?.data?.pickups?.[0]; return p ? `${dayWord(p.date)}: ${tr(p.type)}` : null; },
+  air: () => { const a = panelData.air?.data; if (!a?.lki) return null; const [, label] = lkiLevel(a.lki.value);
+    const rad = panelData.radiation?.data?.data; return [`${Math.round(a.lki.value)} · ${t(label)}`, rad?.raised ? t('straling verhoogd') : null, alertsData?.knmi?.status?.heat ? t('hitteplan actief') : null].filter(Boolean).join(' · '); },
+  pollen: () => { const d = panelData.pollen?.data?.data; if (!d) return null; const ps = pollenSummary(d);
+    return ps.lv > 0 ? t('{level} ({type})', { level: t(POLLEN_LV[ps.lv]), type: t(POLLEN[ps.typ][0]) }) : t('nauwelijks pollen'); },
+  insects: () => { const d = panelData.insects?.data?.data?.days?.[0]; return d ? t('teken {a} · muggen {b}', { a: t(INSECT_LV[d.ticks]), b: t(INSECT_LV[d.mosquito]) }) : null; },
+  sky: () => { const d = panelData.sky?.data?.data; if (!d?.dark) return null;
+    return [t('donker vanaf {t}', { t: fmt.time.format(new Date(d.dark)) }), d.clouds != null ? t('{n}% bewolkt', { n: d.clouds }) : null, d.aurora >= 2 ? t('kans op noorderlicht') : null].filter(Boolean).join(' · '); },
+  traffic: () => { const d = panelData.traffic?.data?.data; if (!d) return null;
+    return [t(d.jam_count === 1 ? '{n} file' : '{n} files', { n: d.jam_count }), d.total_delay_s ? t('samen {d} vertraging', { d: durationNL(d.total_delay_s) }) : null, t(d.accident_count === 1 ? '{n} ongeval' : '{n} ongevallen', { n: d.accident_count })].filter(Boolean).join(' · '); },
+  trains: () => { const d = panelData.trains?.data; if (!d?.key || !d.data) return null; const n = d.data.calamities.length + d.data.disruptions.length;
+    return n ? t(n === 1 ? '1 storing' : '{n} storingen', { n }) : t('geen storingen'); },
+  alarms: () => { const g = panelData.alarms?.data?.groups; if (!g) return null; const n = g.filter(x => x.scope !== 'national').reduce((a, x) => a + x.items.length, 0);
+    return t(n === 1 ? '1 recente melding' : '{n} recente meldingen', { n }); },
+  nlalert: () => { const a = panelData.nlalert?.data?.alerts; if (!a) return null;
+    const act = a.filter(x => !x.withdrawn && new Date(x.start) <= Date.now() && (!x.stop || new Date(x.stop) > Date.now()));
+    return act.length ? t(act.length === 1 ? '1 actieve NL-Alert' : '{n} actieve NL-Alerts', { n: act.length }) + (act.some(x => x.near) ? t(' · in jouw omgeving') : '') : t('geen actieve'); },
+  quakes: () => panelData.quakes?.data || alertsData ? nlSummary() : null,
+  energy: () => { const en = panelData.energy?.data?.data; if (!en) return null; const ds = energyDays(en), cur = pointAt(ds.all, Date.now());
+    const win = cheapestWindow(ds.today.filter(p => +p.date + 36e5 > Date.now()), 3);
+    return [cur ? t('nu {p}/kWh', { p: eur(cur.p) }) : null, win ? t('goedkoopst {span}', { span: hourSpan(win.from, 3) }) : null].filter(Boolean).join(' · ') || null; },
+  fuel: () => { const f = panelData.fuel?.data?.data?.prices; return f?.length ? f.filter(p => p.fuel !== 'lpg').map(p => `${tr(p.name).replace(' (E10)', '')} ${euro3(p.price)}`).join(' · ') : null; },
+  economy: () => { const e = panelData.economy?.data?.data; if (!e) return null;
+    return [e.inflation?.at(-1) ? t('inflatie {v}', { v: pct1(e.inflation.at(-1).value) }) : null, e.rate ? t('ECB {v}', { v: e.rate.value.toLocaleString(locale(), { minimumFractionDigits: 2 }) + '%' }) : null].filter(Boolean).join(' · ') || null; },
+  markets: () => { const aex = panelData.markets?.data?.data?.indices?.find(q => q.symbol === '^AEX'); return aex ? `AEX ${price2(aex.price)} ${pctSigned(aex.change_pct)}` : null; },
+  sports: () => { const ev = (panelData.sports?.data?.events || []).filter(e => chosenSports().includes(e.sport));
+    const live = ev.find(e => e.status === 'live'), next = ev.find(e => e.status === 'upcoming');
+    return live ? t('nu: {name}', { name: live.name }) : next ? t('volgende: {name}', { name: next.name }) : null; },
+  politics: () => { const d = panelData.politics?.data?.data; if (!d) return null; const n = (d.activities || []).filter(a => !a.cancelled).length;
+    return `${politicsDayLabel(d.day)} · ${t(n === 1 ? '1 activiteit' : '{n} activiteiten', { n })}`; },
+  threats: () => { const d = panelData.threats?.data; return d?.infocon ? t('Infocon {lvl}', { lvl: tr(INFOCON_NL[d.infocon]) }) : null; },
+  advisories: () => { const a = panelData.advisories?.data?.items; if (!a) return null;
+    const n = a.filter(x => (x.severity === 'high' || x.severity === 'critical') && Date.now() - advDate(x) < 48 * 36e5).length;
+    return n ? t(n === 1 ? '1 hoog advies (48 uur)' : '{n} hoge adviezen (48 uur)', { n }) : t('geen hoge adviezen (48 uur)'); },
+  breaches: () => { const b = panelData.breaches?.data?.data; if (!b) return null; const l = [...(b.nl || []), ...(b.other || [])].sort((x, y) => new Date(y.added) - new Date(x.added))[0];
+    return l ? t('laatste: {name}', { name: l.title }) : null; },
+  ransomware: () => { const r = panelData.ransomware?.data; return r?.enabled && r.sources?.some(x => x.fetched_at) ? t('{n} claims in 7 dagen', { n: r.last7 }) : null; },
+  utilities: () => { const u = panelData.utilities?.data; if (!u?.enabled || !u.operators?.length) return null; const act = u.operators.flatMap(g => g.active || []);
+    return act.length ? t('{s} stroom- en {g} gasstoringen', { s: act.filter(o => o.energy === 'elektriciteit').length, g: act.filter(o => o.energy === 'gas').length }) : t('geen storingen'); },
+  outages: () => { const o = panelData.outages?.data; if (!o?.enabled) return null; const bad = (o.providers || []).filter(p => p.data && p.data.status !== 'ok');
+    return bad.length ? bad.map(p => `${p.name}: ${t(OUT_NL[p.data.status])}`).slice(0, 2).join(' · ') : t('alles werkt normaal'); },
+  ap: () => { const a = panelData.ap?.items; if (!a) return null; const n = a.filter(isRecent).length;
+    return n ? t(n === 1 ? '1 bericht (14 dagen)' : '{n} berichten (14 dagen)', { n }) : t('geen berichten (14 dagen)'); },
+  health: () => { const a = panelData.health?.items; if (!a) return null;
+    return a.length ? t(a.length === 1 ? '1 melding (14 dagen)' : '{n} meldingen (14 dagen)', { n: a.length }) : t('geen meldingen (14 dagen)'); },
+};
 // Age of the data behind each panel; "verouderd" after twice the refresh interval.
 const oldest = sources => (sources || []).map(s => s.fetched_at).filter(Boolean).sort()[0];
 const freshOf = {
@@ -6518,6 +6700,7 @@ function onKey(e) {
   if (k === 'v') return act(() => setMode(viewMode === 'digest' ? 'normal' : 'digest'));
   if (k === '/') return act(() => { $('#top').classList.add('searching'); $('#q').focus(); });
   if (k === '?') return act(openKeys);
+  if (k === 'g') return act(openJump);
   if (k === 'j' || k === 'k') return act(() => moveItem(cur, k === 'j' ? 1 : -1));
   if (k === 'r') return act(() => $('#refresh').click());
   if (/^[1-9]$/.test(k)) {
@@ -6574,6 +6757,7 @@ function wire() {
   };
   $('#stream').addEventListener('click', onOpen);
   $('#stream').addEventListener('auxclick', onOpen);
+  $('#to-panels').addEventListener('click', () => { $('#side').scrollIntoView({ block: 'start' }); $('#pb-jump')?.focus({ preventScroll: true }); });
   $('#mark-read').addEventListener('click', () => {
     const lis = document.querySelectorAll('#stream .item');
     for (const li of lis) readMap[li.dataset.id] = Date.now();
