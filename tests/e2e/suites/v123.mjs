@@ -63,7 +63,7 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   ok(nl.h2 === 'Aardbevingen en natuurrampen' && !nl.order.includes('world'), `one panel "${nl.h2}", no separate Wereldwijd`);
   ok(nl.tabs.join() === 'Nederland:true,Wereld:false', `tabs ${nl.tabs}`);
   ok(/^Nederland: .*windwaarschuwing, natuurbrandrisico fase 2 in 2 regio’s · Wereld: 2 zware bevingen, 2 stormen, 2 andere rampen$/.test(nl.sum), `summary: ${nl.sum}`);
-  ok(nl.secs.join('|') === '🌍 Aardbevingen (31 dagen)|🌀 Storm|🔥 Natuurbrandrisico', `NL sections: ${nl.secs.join(' | ')}`);
+  ok(nl.secs.join('|') === '🌍 Aardbevingen (14 dagen)|🌀 Storm|🔥 Natuurbrandrisico', `NL sections: ${nl.secs.join(' | ')}`);
   ok(/code geel/.test(nl.storm) && /KNMI: wind in Zeeland, Noord-Holland/.test(nl.storm), `storm: ${nl.storm}`);
   ok(/fase 2 Kennemerland/.test(nl.fire) && /fase 2 Noord-Holland-Noord/.test(nl.fire) && /1 regio’s onbekend/.test(nl.fire) && /Kaart en uitleg \(brandweer\)/.test(nl.fire), `fire risk: ${nl.fire}`);
   if (w === 1440 && scheme === 'light') await p.locator('#panel-quakes').screenshot({ path: `${OUT}/hazards-nl.png` });

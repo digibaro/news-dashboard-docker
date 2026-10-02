@@ -162,7 +162,7 @@ utilities:
 quakes:
   enabled: true
   url: "https://rdsa.knmi.nl/fdsnws/event/1/query"
-  days: 90
+  days: 14                        # the panel shows the last 14 days (1-365)
   interval: 15m                   # min. 5m
 
 # Economie in cijfers: Eurostat (inflation HICP, unemployment) and the ECB (deposit rate, EUR/USD), no key.
@@ -255,7 +255,7 @@ waste:
     url: ""                       # e.g. "http://homeassistant.local:8123" (reachable from this server)
     token: ""                     # long-lived access token; better: NDB_HA_TOKEN in .env
     entities: []                  # e.g. [sensor.afvalwijzer_gft, sensor.afvalwijzer_restafval]
-  interval: 6h                    # default address; visitor addresses are cached 6 h; min. 1h
+  interval: 24h                   # default and visitor addresses: collection days change rarely; min. 1h
 
 # Trending: words that suddenly appear in many headlines (computed from the news cache, no requests).
 trending:
@@ -345,7 +345,7 @@ sports:
   f1_url: "https://api.jolpi.ca/ergast/f1"
   interval: 1h                    # F1: 3 requests per interval; min. 15m
   # The important races per sport (NK, classics, grand tours, EK, WK); the UCI, World Athletics, UEFA and
-  # FIFA have no open calendar API. The panel shows per sport what is on now (or ended in the last 10 days)
+  # FIFA have no open calendar API. The panel shows per sport what is on now (or ended in the last 14 days)
   # and the next three. keywords pick matching headlines from the news while an event is on.
   # note: an extra line (e.g. race days); tentative: true marks dates the organiser has not confirmed.
   # Dates checked 29 September 2026 (UCI, UEC, KNWU, Atletiekunie, organisers, FIFA/UEFA).

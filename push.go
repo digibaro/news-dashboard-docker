@@ -491,7 +491,7 @@ func (a *App) wastePush(ctx context.Context, cfg *Config, day string) {
 			pickups = asSlice[WastePickup](a.threats.get("waste:calendar").Data)
 		} else {
 			w := *addrs[k]
-			res, _, _, err := a.waste.get(k, 6*time.Hour, func() (WasteResult, error) { return a.wasteForAddress(ctx, w) })
+			res, _, _, err := a.waste.get(k, cfg.Waste.Interval.D(), func() (WasteResult, error) { return a.wasteForAddress(ctx, w) })
 			if err != nil {
 				continue
 			}

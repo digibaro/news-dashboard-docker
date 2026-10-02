@@ -13,17 +13,16 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
   - abuse.ch Feodo botnet C2 servers
   - geolocation via ip-api.com
   - the ISC Infocon level
-  - Autoriteit Persoonsgegevens enforcement news (last 31 days)
+  - Autoriteit Persoonsgegevens enforcement news (last 14 days)
 - **Security advisories**: NCSC-NL, with the `[kans/schade]` rating parsed into badges, plus optional CERT-EU, CISA, BSI and MSRC.
 - **Top bar:** the current KNMI weather code (only while there is a warning), the number of P2000 alerts in the last hour per service for a configured area (default Den Haag), an active NL-Alert with its place (only while one is active), and the NCTV terrorism threat level.
 - **Vandaag:** date and week number, sunrise and sunset, moon phase, the next public holiday, the next clock change, and school holidays for regio Noord, Midden and Zuid (the visitor's region highlighted).
 - **Luchtkwaliteit:** the air quality index (1–11) and NO₂, PM2.5, PM10 and O₃ from the nearest Luchtmeetnet station. The place is chosen per visitor (default: their weather location). Below it the **radiation** (gamma dose rate) at the nearest RIVM station, with the national range; when several stations measure raised levels, a notice appears in the top bar and a push message can go out.
 - **Hooikoorts:** the pollen forecast (grass, birch, alder, mugwort, ragweed) for 3 days at the visitor's air-quality place, with indicative levels.
-- **Aardbevingen:** earthquakes in and around the Netherlands from KNMI in the last 31 days, with magnitude, depth and induced (gas extraction) events marked.
-- **Aardbevingen en natuurrampen:** two tabs. **Nederland**: earthquakes from KNMI (31 days), the KNMI wind warning when there is one, and the natuurbrandrisico phase per safety region (Brandweer Nederland). **Wereld**: big earthquakes from USGS (M6+, last 24 hours, with tsunami warning and expected impact) and active natural disasters from NASA EONET (hurricanes and typhoons with wind speed, volcanic eruptions, floods, large wildfires). A summary line above the tabs; the panel remembers the chosen tab.
+- **Aardbevingen en natuurrampen:** two tabs. **Nederland**: earthquakes from KNMI (14 days), the KNMI wind warning when there is one, and the natuurbrandrisico phase per safety region (Brandweer Nederland). **Wereld**: big earthquakes from USGS (M6+, last 24 hours, with tsunami warning and expected impact) and active natural disasters from NASA EONET (hurricanes and typhoons with wind speed, volcanic eruptions, floods, large wildfires). A summary line above the tabs; the panel remembers the chosen tab.
 - **Kritieke infrastructuur:** current electricity and gas outages at Liander and Stedin (place, status, expected repair time, customers affected), planned work and outages resolved in the last 24 h.
 - **AMBER Alert and Vermist Kind Alert:** while a child is being searched for, a prominent banner at the top with the name, description, photo and "call 112" (a Vermist Kind Alert only for visitors whose weather location lies in its area), plus a push notification. Source: the police's Burgernet open API.
-- **NL-Alert:** active and recent NL-Alerts (last 31 days), marked when the visitor's weather location lies inside the alert area.
+- **NL-Alert:** active and recent NL-Alerts (last 14 days), marked when the visitor's weather location lies inside the alert area.
 - **Afvalkalender:** the next waste collection days. Each visitor sets an own address (postcode and house number) under Instellingen, like the places for alarms and air quality; the server finds the provider that knows it among 51 built-in providers (municipal calendars, Ximmio, Amsterdam, HVC, RD4, ROVA and more; 60 with the optional app providers such as Mijn Afvalwijzer). An optional default address can also come from an iCal link or Home Assistant.
 - **UV index** in the Weer panel: the highest UV of the next 24 hours and when.
 - **Zonnestroom** in Energieprijzen: the expected yield of your solar panels today and tomorrow, and the sunniest 3 hours. Each visitor enters kWp, direction and tilt under Instellingen.
@@ -42,7 +41,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Datalekken:** the latest 3 Dutch and 3 other data breaches at organisations, from Have I Been Pwned: number of accounts, leak date, and what data leaked.
 - **Ransomware NL:** organisations claimed by ransomware groups on their leak sites (ransomware.live), with counts, the most active groups and the latest claims. No links to leak sites and no descriptions.
 - **Storingen:** **internet in the Netherlands** on top, then the status of Akamai, AWS, Cloudflare, Microsoft Azure, Microsoft 365, Google Cloud and STACKIT (in the order of `config.yaml`); internet: outages detected by IODA for the country and KPN, VodafoneZiggo, Odido and DELTA Fiber. Any service with an Atlassian Statuspage or RSS status feed can be added in `config.yaml`.
-- **Gezondheid:** RIVM news of the last 31 days, filtered to health alerts (infectious diseases, vaccination, heat, smog).
+- **Gezondheid:** RIVM news of the last 14 days, filtered to health alerts (infectious diseases, vaccination, heat, smog).
 - **Themes**: Licht / Donker (true black) / Auto.
 - **Language**: Nederlands / English / Auto (browser language), switchable at the top and under Instellingen → Weergave. Only the interface is translated; news, advisories and alerts stay in their original language.
 
@@ -175,11 +174,11 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 | `trains` | Treinstoringen: `enabled`, `url` (NS Disruptions API v3), `interval` (min. 2m). Needs `keys.ns_api_key` |
 | `pollen` | Hooikoorts: `enabled`, `url` (Open-Meteo Air Quality API) |
 | `utilities` | Kritieke infrastructuur: `enabled`, `liander_url` (ArcGIS layer), `stedin_url`, `interval` (min. 2m) |
-| `quakes` | Aardbevingen: `enabled`, `url` (KNMI FDSN), `days` (1–365, default 90; the panel shows the last 31 days, the overview card the last 7), `interval` (min. 5m) |
+| `quakes` | Aardbevingen: `enabled`, `url` (KNMI FDSN), `days` (1–365, default 14; the panel shows the last 14 days, the overview card the last 7), `interval` (min. 5m) |
 | `economy` | Economie in cijfers: `enabled`, `eurostat_base`, `ecb_base`, `interval` (default 6h, min. 1h) |
 | `nlalert` | NL-Alert: `enabled`, `url`, `interval` (default 2m, min. 1m) |
 | `fuel` | Brandstofprijzen: `enabled`, `url` (UnitedConsumers page), `interval` (default 3h, min. 1h) |
-| `waste` | Afvalkalender: `enabled`, `providers` (provider ids to use, e.g. `[denhaag, hvc]`; a list replaces the default of all built-in providers; https URLs add extra opzet calendars), `app_providers` (default `false`; see *Data sources*), `interval` (default 6h, min. 1h). Visitors set their own address in the browser and can pick a provider or let the server find it. Optional **default address** (for visitors without one, and their push reminders) via `provider`: **auto** (or a provider id) `postcode`, `number`, `suffix` · **ics** `ics_url` · **home_assistant** `home_assistant.url`, `home_assistant.token` (or `NDB_HA_TOKEN`), `home_assistant.entities` (1–10 sensor ids). |
+| `waste` | Afvalkalender: `enabled`, `providers` (provider ids to use, e.g. `[denhaag, hvc]`; a list replaces the default of all built-in providers; https URLs add extra opzet calendars), `app_providers` (default `false`; see *Data sources*), `interval` (default 24h, min. 1h; also how long a visitor address is cached). Visitors set their own address in the browser and can pick a provider or let the server find it. Optional **default address** (for visitors without one, and their push reminders) via `provider`: **auto** (or a provider id) `postcode`, `number`, `suffix` · **ics** `ics_url` · **home_assistant** `home_assistant.url`, `home_assistant.token` (or `NDB_HA_TOKEN`), `home_assistant.entities` (1–10 sensor ids). |
 | `trending` | Trending words above the news: `enabled` (computed from the news cache, no extra requests); `wikipedia`: `enabled` (default true), `url` (default `https://nl.wikipedia.org`), a short summary per topic, only for current trending terms, cached 24 h per term |
 | `radiation` | Straling in Luchtkwaliteit: `enabled`, `url` (BfS open WFS with EURDEP data), `interval` (default 60m, min. 15m), `alert_usv` (default 0.3) and `alert_stations` (default 3): "raised" when at least that many stations measure at least that dose rate |
 | `solar` | Zonnestroom in Energieprijzen: `enabled`, `url` (Open-Meteo forecast), `kwp` (default 0: visitors enter their own panels; above 0 a default for everyone), `tilt` (default 35), `azimuth` (0 south, -90 east, 90 west) |
@@ -707,7 +706,7 @@ All JSON responses:
 | `GET /api/pollen?lat=&lon=` | Hooikoorts: `days` (3 × daily maximum per pollen type, grains/m³) and `now` |
 | `GET /api/utilities` | Kritieke infrastructuur: per grid operator the `active` and `planned` outages (energy, place, status, reported, estimate, customers) and `resolved_24h` |
 | `GET /api/economy` | Economie in cijfers: `inflation` and `unemployment` (13 months), `inflation_ea`, `rate` with `rate_since`, `eurusd` (last 2 days) |
-| `GET /api/nlalert?lat=&lon=` | NL-Alert: `alerts` of the last 31 days (text, English text, start, stop, withdrawn, `near` for the given point or the configured weather location) and the number `active` |
+| `GET /api/nlalert?lat=&lon=` | NL-Alert: `alerts` of the last 14 days (text, English text, start, stop, withdrawn, `near` for the given point or the configured weather location) and the number `active` |
 | `GET /api/fuel` | Brandstofprijzen: `date` and `prices` (fuel, name, price per litre, change in cents) |
 | `GET /api/waste?postcode=&number=&suffix=&provider=` | Afvalkalender for the given address (`own`, `pickups`, `provider`, `calendar`, `home`, or `not_found`); `provider` is optional (default: find automatically). Without parameters the server's default address (`needs_address` when there is none). The address is not echoed. The enabled providers are in `/api/catalog` (`waste_providers`) |
 | `GET /api/amber?lat=&lon=` | AMBER Alert and Vermist Kind Alert: the active `alerts` (title, text, kind, url, photo via `api/img`, area) with `near` for the given point or the weather location |
@@ -789,6 +788,11 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.25.0
+- **Shorter history:** Aardbevingen (Nederland tab), NL-Alert, Autoriteit Persoonsgegevens acties and Gezondheid show the last 14 days instead of 31. KNMI is asked for 14 days by default (`quakes.days`).
+- **Sportagenda:** finished events stay listed for 14 days instead of 10.
+- **Afvalkalender:** refreshed once a day (`waste.interval` default 24h, which now also applies to visitor addresses).
 
 ### 1.24.0
 - **Aardbevingen en natuurrampen:** the Aardbevingen and Wereldwijd panels are now one panel with two tabs. **Nederland**: earthquakes (KNMI, 31 days), the KNMI wind warning when there is one, and **natuurbrandrisico** per safety region (new, from brandweer.nl: the regions in phase 2, otherwise "overal fase 1"). **Wereld**: the former Wereldwijd content. A summary line above the tabs ("Nederland: rustig · Wereld: 3 stormen"); the chosen tab is remembered. Visitors' panel order, collapsed state and visibility carry over.

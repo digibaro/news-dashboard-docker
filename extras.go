@@ -132,7 +132,7 @@ func (a *App) handleNLAlert(w http.ResponseWriter, r *http.Request) {
 		list := make([]NLAlert, 0, len(v))
 		active := 0
 		for _, al := range v {
-			if now.Sub(al.Start) > 31*24*time.Hour {
+			if now.Sub(al.Start) > 14*24*time.Hour {
 				continue
 			}
 			al.Near = al.inArea(lat, lon)
@@ -492,7 +492,7 @@ func (a *App) handleWaste(w http.ResponseWriter, r *http.Request) {
 		}
 		ip := a.clientIP(r)
 		ctx := context.WithoutCancel(r.Context())
-		res, at, stale, err := a.waste.get(addr.key(), 6*time.Hour, func() (WasteResult, error) {
+		res, at, stale, err := a.waste.get(addr.key(), cfg.Waste.Interval.D(), func() (WasteResult, error) {
 			if !a.wx.limiter.allow(ip) {
 				return WasteResult{}, errRateLimited
 			}

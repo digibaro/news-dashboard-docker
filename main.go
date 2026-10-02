@@ -524,10 +524,10 @@ func defaultConfig() *Config {
 	c.Utilities.Enabled, c.Utilities.Interval = true, Duration(5*time.Minute)
 	c.Utilities.LianderURL = "https://services1.arcgis.com/v6W5HAVrpgSg3vts/arcgis/rest/services/IStoringen_Productie_V7/FeatureServer/0"
 	c.Utilities.StedinURL = "https://www.stedin.net/api/storingen/places"
-	c.Quakes.Enabled, c.Quakes.URL, c.Quakes.Days, c.Quakes.Interval = true, "https://rdsa.knmi.nl/fdsnws/event/1/query", 90, Duration(15*time.Minute)
+	c.Quakes.Enabled, c.Quakes.URL, c.Quakes.Days, c.Quakes.Interval = true, "https://rdsa.knmi.nl/fdsnws/event/1/query", 14, Duration(15*time.Minute)
 	c.NLAlert.Enabled, c.NLAlert.URL, c.NLAlert.Interval = true, "https://api.public-warning.app/api/v1/providers/nl-alert/alerts", Duration(2*time.Minute)
 	c.Fuel.Enabled, c.Fuel.URL, c.Fuel.Interval = true, "https://www.unitedconsumers.com/tanken/brandstofprijzen", Duration(3*time.Hour)
-	c.Waste.Enabled, c.Waste.Provider, c.Waste.Interval = true, "auto", Duration(6*time.Hour)
+	c.Waste.Enabled, c.Waste.Provider, c.Waste.Interval = true, "auto", Duration(24*time.Hour)
 	c.Trending.Enabled = true
 	c.Trending.Wikipedia.Enabled, c.Trending.Wikipedia.URL = true, "https://nl.wikipedia.org"
 	c.Satellite.Enabled, c.Satellite.URL, c.Satellite.Layer, c.Satellite.Interval = true, "https://view.eumetsat.int/geoserver", "mtg_fd:rgb_geocolour", Duration(10*time.Minute)

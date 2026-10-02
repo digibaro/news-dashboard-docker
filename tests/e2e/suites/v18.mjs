@@ -29,7 +29,7 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
     ops: [...document.querySelectorAll('#panel-utilities .grid-op')].map(g => ({ name: g.querySelector('.row1 a')?.textContent, href: g.querySelector('.row1 a')?.href,
       st: g.querySelector('.st2')?.textContent, items: g.querySelectorAll('li').length })),
     utNotes: [...document.querySelectorAll('#panel-utilities .pnote, #panel-utilities .pfoot')].map(x => x.textContent).join(' | '),
-    qSum: document.querySelector('#panel-quakes .eline')?.textContent,
+    qSum: document.querySelector('#panel-quakes .wsec')?.querySelector('.eline')?.textContent,
     qItems: [...document.querySelectorAll('#panel-quakes .qlist li')].map(li => ({ mag: li.querySelector('.mag')?.textContent, href: li.querySelector('a')?.href, induced: !!li.querySelector('.tag') })),
     inet: document.querySelector('#panel-outages .inet .row1')?.textContent, inetItems: document.querySelectorAll('#panel-outages .inet li').length,
     outOrder: [...document.querySelectorAll('#panel-outages .out .row1 a')].map(x => x.textContent),
@@ -45,7 +45,7 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   ok(t.ops[0].items === Math.min(4, ut.operators[0].active.length) && t.ops[1].items === Math.min(4, ut.operators[1].active.length), 'up to 4 active outages per operator');
   ok(!/Enexis/.test(t.utNotes) && !/Drinkwater/.test(t.utNotes) && /0800-9009/.test(t.utNotes), 'only the 0800-9009 note; no Enexis or drinking-water note');
   const recent = qk.quakes.filter(q => Date.now() - new Date(q.time) <= 31 * 864e5);
-  ok(recent.length ? new RegExp(`^${recent.length} bevingen? in de afgelopen 31 dagen · sterkste: M`).test(t.qSum || '') : !t.qSum, `quakes summary (31 days): ${t.qSum}`);
+  ok(recent.length ? new RegExp(`^${recent.length} bevingen? in de afgelopen 14 dagen · sterkste: M`).test(t.qSum || '') : !t.qSum, `quakes summary (14 days): ${t.qSum}`);
   ok(t.qItems.length === Math.min(6, recent.length) && t.qItems.every(q => /^M(\d|\?)/.test(q.mag) && q.href.startsWith('https://www.knmi.nl/nederland-nu/seismologie/aardbevingen/')), 'quakes: magnitude + KNMI link each');
   ok(t.qItems.filter(q => q.induced).length === recent.slice(0, 6).filter(q => q.induced).length, 'induced quakes are tagged');
   const evs = (out.internet.entities || []).reduce((n, e) => n + e.events.length, 0);

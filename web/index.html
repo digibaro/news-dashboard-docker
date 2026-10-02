@@ -1118,6 +1118,12 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.25.0</h3>
+    <ul>
+      <li>Aardbevingen (Nederland), NL-Alert, Autoriteit Persoonsgegevens acties en Gezondheid tonen de afgelopen 14 dagen in plaats van 31.</li>
+      <li>Sportagenda: afgelopen wedstrijden blijven 14 dagen staan in plaats van 10.</li>
+      <li>Afvalkalender: de ophaaldagen worden één keer per dag ververst.</li>
+    </ul>
     <h3>Versie 1.24.0</h3>
     <ul>
       <li>Aardbevingen en Wereldwijd zijn samen één paneel, Aardbevingen en natuurrampen, met de tabbladen Nederland en Wereld. Nieuw bij Nederland: de windwaarschuwing van het KNMI en het natuurbrandrisico per regio.</li>
@@ -1309,6 +1315,12 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.25.0</h3>
+    <ul>
+      <li>Earthquakes (Netherlands), NL-Alert, Data Protection Authority actions and Health show the last 14 days instead of 31.</li>
+      <li>Sports calendar: finished events stay listed for 14 days instead of 10.</li>
+      <li>Waste calendar: collection days are refreshed once a day.</li>
+    </ul>
     <h3>Version 1.24.0</h3>
     <ul>
       <li>Earthquakes and Worldwide are now one panel, Earthquakes and natural disasters, with the tabs Netherlands and World. New under Netherlands: the KNMI wind warning and the wildfire risk per region.</li>
@@ -1929,8 +1941,8 @@ const EN = {
   'Dit paneel staat uit in config.yaml (outages.enabled).': 'This panel is disabled in config.yaml (outages.enabled).',
   // health & AP
   ' · alleen meldingen over infectieziekten, vaccinatie, hitte en smog': ' · only alerts about infectious diseases, vaccination, heat and smog',
-  'Geen gezondheidsmeldingen van het RIVM in de afgelopen 31 dagen.': 'No health alerts from RIVM in the last 31 days.',
-  'Geen berichten van de Autoriteit Persoonsgegevens in de afgelopen 31 dagen.': 'No news from the Dutch Data Protection Authority in the last 31 days.',
+  'Geen gezondheidsmeldingen van het RIVM in de afgelopen 14 dagen.': 'No health alerts from RIVM in the last 14 days.',
+  'Geen berichten van de Autoriteit Persoonsgegevens in de afgelopen 14 dagen.': 'No news from the Dutch Data Protection Authority in the last 14 days.',
   // data breaches
   'Datalekken': 'Data breaches', 'Elders': 'Elsewhere', 'nieuw': 'new', '{n} accounts': '{n} accounts', 'gelekt {d}': 'breached {d}', 'gemeld {d}': 'added {d}',
   'Geen Nederlandse datalekken gevonden.': 'No Dutch data breaches found.', 'Geen datalekken gevonden.': 'No data breaches found.',
@@ -2379,12 +2391,12 @@ const EN = {
   "1 actieve NL-Alert": "1 active NL-Alert",
   "{n} actieve NL-Alerts": "{n} active NL-Alerts",
   "Geen actieve NL-Alerts": "No active NL-Alerts",
-  " · {n} in de afgelopen 31 dagen": " · {n} in the last 31 days",
+  " · {n} in de afgelopen 14 dagen": " · {n} in the last 14 days",
   "In jouw omgeving": "In your area",
   "Elders in Nederland": "Elsewhere in the Netherlands",
   "jouw omgeving": "your area",
   "ingetrokken": "withdrawn",
-  "Geen NL-Alerts in de afgelopen 31 dagen.": "No NL-Alerts in the last 31 days.",
+  "Geen NL-Alerts in de afgelopen 14 dagen.": "No NL-Alerts in the last 14 days.",
   " · \"jouw omgeving\": je weerlocatie ({name}) ligt in het gebied van het bericht": " · \"your area\": your weather location ({name}) lies within the message area",
   " · in jouw omgeving": " · in your area",
   "Afgelopen 24 uur": "Last 24 hours",
@@ -4739,7 +4751,7 @@ function renderUtilities(body) {
 }
 
 // ---------------------------------------------------------------- aardbevingen (KNMI)
-const RECENT_DAYS = 31; // Aardbevingen, AP and Gezondheid show only items of the last 31 days
+const RECENT_DAYS = 14; // Aardbevingen, AP and Gezondheid show only items of the last 14 days (NL-Alert: the server keeps 14 days)
 const recentSince = () => Math.floor(Date.now() / 1000) - RECENT_DAYS * 86400;
 const isRecent = it => Date.now() - new Date(it.published) <= RECENT_DAYS * 864e5;
 async function loadQuakes() {
@@ -4896,7 +4908,7 @@ function renderNLAlert(body) {
   const when = a => `${fmt.short.format(new Date(a.start))} ${fmt.time.format(new Date(a.start))}`;
   const out = [h('p', { class: 'eline' }, active.length
     ? h('b', { class: 'nl-on', text: t(active.length === 1 ? '1 actieve NL-Alert' : '{n} actieve NL-Alerts', { n: active.length }) })
-    : t('Geen actieve NL-Alerts'), t(' · {n} in de afgelopen 31 dagen', { n: r.alerts.length }))];
+    : t('Geen actieve NL-Alerts'), t(' · {n} in de afgelopen 14 dagen', { n: r.alerts.length }))];
   for (const a of active) {
     out.push(h('div', { class: 'nl-active' + (a.near ? ' near' : ''), role: 'alert' },
       h('p', { class: 'nl-h' }, h('b', { text: a.near ? t('In jouw omgeving') : t('Elders in Nederland') }), ` · ${when(a)}`),
@@ -4909,7 +4921,7 @@ function renderNLAlert(body) {
         a.near ? h('span', { class: 'tag plain', text: t('jouw omgeving') }) : null,
         a.withdrawn ? h('span', { class: 'tag plain', text: t('ingetrokken') }) : null)))));
   } else if (!active.length) {
-    out.push(h('p', { class: 'pnote', text: t('Geen NL-Alerts in de afgelopen 31 dagen.') }));
+    out.push(h('p', { class: 'pnote', text: t('Geen NL-Alerts in de afgelopen 14 dagen.') }));
   }
   out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://actueel.nl-alert.nl/', 'NL-Alert'),
     t(' · "jouw omgeving": je weerlocatie ({name}) ligt in het gebied van het bericht', { name: wxLocName() })));
@@ -6072,7 +6084,7 @@ function renderHealth(body) {
     out.push(h('ul', { class: 'plist' }, healthItems.slice(0, 8).map(it => h('li', null, h('span', { translate: 'no' }, extLink(it.url, it.title)),
       h('div', { class: 'm' }, timeEl(new Date(it.published), false))))));
   } else if (d.items) {
-    out.push(h('p', { class: 'pnote', text: 'Geen gezondheidsmeldingen van het RIVM in de afgelopen 31 dagen.' }));
+    out.push(h('p', { class: 'pnote', text: 'Geen gezondheidsmeldingen van het RIVM in de afgelopen 14 dagen.' }));
   }
   out.push(h('p', { class: 'pfoot' }, 'Bron: ', extLink('https://www.rivm.nl/', 'RIVM'), ' · alleen meldingen over infectieziekten, vaccinatie, hitte en smog'));
   body.replaceChildren(...out);
@@ -6111,7 +6123,7 @@ function renderAP(body, extra) {
         h('div', { class: 'm' }, timeEl(new Date(it.published), false), act ? h('span', { class: 'tag ' + act[2], text: t(act[1]) }) : null));
     })));
   } else if (!d.error) {
-    out.push(h('p', { class: 'pnote', text: 'Geen berichten van de Autoriteit Persoonsgegevens in de afgelopen 31 dagen.' }));
+    out.push(h('p', { class: 'pnote', text: 'Geen berichten van de Autoriteit Persoonsgegevens in de afgelopen 14 dagen.' }));
   }
   const home = srcById.get('ap')?.homepage;
   if (home) out.push(h('p', { class: 'pfoot' }, 'Bron: ', extLink(home, 'Autoriteit Persoonsgegevens')));

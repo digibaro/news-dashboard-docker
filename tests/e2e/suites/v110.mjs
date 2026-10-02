@@ -39,7 +39,7 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   ok(i('waste') === i('today') + 1 && i('nlalert') === i('alarms') + 1 && i('fuel') === i('energy') + 1 && i('economy') === i('fuel') + 1, `${w} ${scheme}: panel positions`);
   ok(t.heads.join() === 'NL-Alert,Brandstofprijzen,Afvalkalender', 'panel names');
   const active = nl.alerts.filter(a => !a.withdrawn && new Date(a.start) <= Date.now() && (!a.stop || new Date(a.stop) > Date.now()));
-  ok(new RegExp(`${nl.alerts.length} in de afgelopen 31 dagen`).test(t.nlLine) && t.nlActive === active.length && t.nlItems === Math.min(5, nl.alerts.length - active.length), `NL-Alert: ${t.nlLine}`);
+  ok(new RegExp(`${nl.alerts.length} in de afgelopen 14 dagen`).test(t.nlLine) && t.nlActive === active.length && t.nlItems === Math.min(5, nl.alerts.length - active.length), `NL-Alert: ${t.nlLine}`);
   ok(/NL-Alert/.test(t.nlFoot) && /weerlocatie/.test(t.nlFoot), 'NL-Alert footer');
   ok(t.fuel.length === fu.data.prices.length && t.fuel[0].startsWith('Euro95 (E10)€ ' + fu.data.prices[0].price.toLocaleString('nl-NL', { minimumFractionDigits: 3 })), `fuel: ${t.fuel.join(' | ')}`);
   ok(/UnitedConsumers/.test(t.fuelFoot) && !/persoonlijk gebruik/.test(t.fuelFoot) && /goedkoper/.test(t.fuelFoot), `fuel footer without the personal-use note: ${t.fuelFoot}`);
@@ -197,7 +197,7 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
     nl: document.querySelector('#panel-nlalert .pbody').innerText, fuel: document.querySelector('#panel-fuel .pbody').innerText, waste: document.querySelector('#panel-waste .pbody').innerText,
     trend: document.querySelector('#trending .tl').textContent, cov: document.querySelector('.covbtn')?.textContent }));
   ok(e.heads.join() === 'NL-Alert,Fuel prices,Waste collection', `English names: ${e.heads}`);
-  ok(/in the last 31 days/.test(e.nl) && /Fire|Smoke|smoke|fire|No NL-Alerts/.test(e.nl) && !/personal use/.test(e.fuel) && /Set your address/.test(e.waste) && /Coverage \(\d+ sources\)/.test(e.cov || ''), 'English texts (NL-Alert shows the English part)');
+  ok(/in the last 14 days/.test(e.nl) && /Fire|Smoke|smoke|fire|No NL-Alerts/.test(e.nl) && !/personal use/.test(e.fuel) && /Set your address/.test(e.waste) && /Coverage \(\d+ sources\)/.test(e.cov || ''), 'English texts (NL-Alert shows the English part)');
   await ctx.close();
 }
 

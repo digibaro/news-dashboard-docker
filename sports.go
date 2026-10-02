@@ -274,7 +274,7 @@ type SportEventOut struct {
 	Headlines []SportHeadline `json:"headlines,omitempty"`
 }
 
-// sportEvents: per sport the events that are on now or just ended (10 days), and the next three.
+// sportEvents: per sport the events that are on now or just ended (14 days), and the next three.
 func (a *App) sportEvents(cfg *Config, now time.Time) []SportEventOut {
 	today := now.In(amsterdam).Format("2006-01-02")
 	var out []SportEventOut
@@ -292,7 +292,7 @@ func (a *App) sportEvents(cfg *Config, now time.Time) []SportEventOut {
 			e := &evs[i]
 			endT, _ := time.Parse("2006-01-02", e.End)
 			switch {
-			case e.Start <= today && endT.AddDate(0, 0, 10).Format("2006-01-02") >= today: // on now, or ended in the last 10 days
+			case e.Start <= today && endT.AddDate(0, 0, 14).Format("2006-01-02") >= today: // on now, or ended in the last 14 days
 				show = append(show, e)
 			case e.Start > today && upcoming < sportUpcoming:
 				show = append(show, e)
