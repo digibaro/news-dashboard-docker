@@ -53,12 +53,12 @@ for (const [w, scheme, mobile] of [[1440, 'light', false], [1440, 'dark', false]
   ok(j.closed && j.focus === 'panel-energy' && j.flash, `${tag}: Enter jumps to Energieprijzen, focus on its heading, highlighted`);
   ok(j.top >= j.barBottom - 2 && j.top < j.barBottom + 60, `${tag}: the panel is just below the bar (panel ${j.top}, bar ends ${j.barBottom})`);
   // a collapsed panel opens when you jump to it; arrows and Escape
-  await p.click('#panel-markets .ptoggle');
-  ok(await p.$eval('#panel-markets', e => e.classList.contains('collapsed')), `${tag}: Beurs collapsed by hand`);
-  await p.click('#pb-jump'); await p.keyboard.type('beu'); await p.keyboard.press('ArrowDown');
-  ok(await p.evaluate(() => document.activeElement?.dataset.id) === 'markets', `${tag}: arrow down moves into the list`);
+  await p.click('#panel-fuel .ptoggle');
+  ok(await p.$eval('#panel-fuel', e => e.classList.contains('collapsed')), `${tag}: Brandstofprijzen collapsed by hand`);
+  await p.click('#pb-jump'); await p.keyboard.type('brand'); await p.keyboard.press('ArrowDown');
+  ok(await p.evaluate(() => document.activeElement?.dataset.id) === 'fuel', `${tag}: arrow down moves into the list`);
   await p.keyboard.press('Enter'); await p.waitForTimeout(700);
-  ok(!(await p.$eval('#panel-markets', e => e.classList.contains('collapsed'))) && !(await p.$eval('#p-markets-body', e => e.hidden)), `${tag}: jumping to a collapsed panel opens it`);
+  ok(!(await p.$eval('#panel-fuel', e => e.classList.contains('collapsed'))) && !(await p.$eval('#p-fuel-body', e => e.hidden)), `${tag}: jumping to a collapsed panel opens it`);
   await p.click('#pb-jump'); await p.keyboard.press('Escape');
   ok(await p.$eval('#pb-pop', e => e.hidden) && await p.evaluate(() => document.activeElement?.id) === 'pb-jump', `${tag}: Escape closes the list and returns focus`);
   await p.click('#pb-jump'); await p.mouse.click(5, 300);

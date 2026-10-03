@@ -50,7 +50,7 @@ for (const scheme of ['light', 'dark']) {
     } else console.log('SKIP "Meer files": 8 jams or fewer right now');
     await p.click('#open-status'); await p.waitForFunction(() => /bronnen in orde/.test(document.querySelector('#status-sum').textContent));
     const groups = await p.$$eval('#status-list h3', hs => hs.map(x => x.textContent));
-    ok(['Bovenbalk', 'Verkeer', 'Storingen'].every(g => groups.includes(g)), `Bronstatus lists the new sources (${groups.slice(-3).join(', ')})`);
+    ok(['Bovenbalk', 'Verkeer', 'Internetstoringen'].every(g => groups.includes(g)), `Bronstatus lists the new sources (${groups.slice(-3).join(', ')})`);
   }
   await ctx.close();
 }

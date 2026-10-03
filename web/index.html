@@ -873,6 +873,9 @@ dialog.sheet::backdrop { background: var(--backdrop); }
 .porder li { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); }
 .porder li > label { flex: 1; display: flex; align-items: center; gap: 10px; cursor: pointer; }
 .porder .icon-btn { width: 30px; height: 30px; }
+.porder .ppage { height: 30px; max-width: 118px; padding: 0 4px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; font-size: 12px; }
+.ppage { display: none; }
+@media (max-width: 699px) { .porder .ppage { display: inline-block; } } /* the pages only exist on a phone */
 .porder .icon-btn:disabled { opacity: .35; cursor: default; }
 textarea.json {
   width: 100%; min-height: 150px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px;
@@ -954,18 +957,19 @@ textarea.json {
 .mview { display: none; }
 @media (max-width: 699px) {
   html:not([data-mode]) .mview { display: flex; gap: 4px; margin: -4px 0 0; border-bottom: 1px solid var(--line); }
-  .mview button { flex: 1; height: 38px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--text-2);
-    font: inherit; font-size: 14px; font-weight: 600; margin-bottom: -1px; }
+  .mview button { flex: 1; height: 38px; padding: 0 2px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--text-2);
+    font: inherit; font-size: 13px; font-weight: 600; margin-bottom: -1px; }
   .mview button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
   .mview .dots { display: none; }
   html:not([data-mode])[data-mview="news"] #side, html:not([data-mode])[data-mview="panels"] #news,
-  html:not([data-mode])[data-mview="panels"] #chips,
+  html:not([data-mode])[data-mview="panels"] #chips, html:not([data-mode])[data-mview="panels2"] #news, html:not([data-mode])[data-mview="panels2"] #chips,
+  html:not([data-mode])[data-mview="panels"] #side .panel[data-page="b"], html:not([data-mode])[data-mview="panels2"] #side .panel[data-page="a"],
   html:not([data-mode])[data-mview="overview"] #news, html:not([data-mode])[data-mview="overview"] #side,
   html:not([data-mode])[data-mview="overview"] #chips { display: none; }
   html:not([data-mode])[data-mview="overview"] .digest { display: block; }
   html:not([data-mode]) #digest-exit { display: none; }
   html:not([data-mode]) { overscroll-behavior-y: contain; } /* our pull-to-refresh instead of the browser's reload */
-  html:not([data-mode]) .layout { gap: 12px; }
+  html:not([data-mode]) .layout { gap: 12px; touch-action: pan-y pinch-zoom; } /* sideways swipes are ours, not the browser's */
   html:not([data-mode])[data-mview="panels"] .side > .panel:first-child { border-top: 0; }
   .mv-in-l { animation: mvL .18s ease-out; }
   .mv-in-r { animation: mvR .18s ease-out; }
@@ -1069,7 +1073,8 @@ textarea.json {
   <div class="mview" id="mview" role="tablist" aria-label="Weergave op de telefoon">
     <button type="button" role="tab" id="mv-overview" aria-controls="digest" aria-selected="false" tabindex="-1">Overzicht</button>
     <button type="button" role="tab" id="mv-news" aria-controls="news" aria-selected="true">Nieuws</button>
-    <button type="button" role="tab" id="mv-panels" aria-controls="side" aria-selected="false" tabindex="-1">Panelen</button>
+    <button type="button" role="tab" id="mv-panels" aria-controls="side" aria-selected="false" tabindex="-1">Dagelijks</button>
+    <button type="button" role="tab" id="mv-panels2" aria-controls="side" aria-selected="false" tabindex="-1">Achtergrond</button>
   </div>
   <section class="digest" id="digest" aria-labelledby="digest-h" tabindex="-1">
     <div class="digest-h"><h2 id="digest-h">Vandaag in het kort</h2><span class="muted" id="digest-date"></span>
@@ -1146,6 +1151,15 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.28.0</h3>
+    <ul>
+      <li>Telefoon: de panelen staan nu op twee veegpagina’s, <b>Dagelijks</b> (weer, verkeer, afval, energie…) en <b>Achtergrond</b> (beveiliging, economie, politiek, storingen…). Onder Instellingen → Panelen kies je per paneel op welke pagina het staat. Ga naar paneel springt naar de juiste pagina.</li>
+    </ul>
+    <h3>Versie 1.27.1</h3>
+    <ul>
+      <li>Het paneel Storingen heet nu Internetstoringen.</li>
+      <li>Telefoon: vegen tussen Overzicht, Nieuws en Panelen werkt makkelijker. Een korte, snelle veeg of een wat schuine duimbeweging is genoeg; het begin van de beweging bepaalt de richting.</li>
+    </ul>
     <h3>Versie 1.27.0</h3>
     <ul>
       <li>Boven de panelen een balk die blijft staan tijdens het scrollen: <b>Ga naar paneel</b> toont je panelen van A tot Z en springt direct naar het gekozen paneel (ook met de toets <kbd>g</kbd>: typ een paar letters en Enter), en <b>Alles inklappen</b> maakt van elk paneel één regel met een korte samenvatting, zoals de temperatuur, de stroomprijs of het aantal storingen.</li>
@@ -1354,6 +1368,15 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.28.0</h3>
+    <ul>
+      <li>Phone: the panels are now on two swipe pages, <b>Daily</b> (weather, traffic, waste, energy…) and <b>Background</b> (security, economy, politics, outages…). Under Settings → Panels you choose the page per panel. Go to panel jumps to the right page.</li>
+    </ul>
+    <h3>Version 1.27.1</h3>
+    <ul>
+      <li>The Outages panel is now called Internet outages.</li>
+      <li>Phone: swiping between Overview, News and Panels is easier. A short quick flick or a slightly curved thumb movement is enough; the start of the movement decides the direction.</li>
+    </ul>
     <h3>Version 1.27.0</h3>
     <ul>
       <li>Above the panels, a bar that stays in view while you scroll: <b>Go to panel</b> lists your panels from A to Z and jumps straight to the one you pick (also with the <kbd>g</kbd> key: type a few letters and Enter), and <b>Collapse all</b> turns every panel into one line with a short summary, such as the temperature, the electricity price or the number of disruptions.</li>
@@ -1743,7 +1766,7 @@ textarea.json {
     </section>
     <section aria-labelledby="set-panels-h">
       <h3 id="set-panels-h">Panelen</h3>
-      <p class="hint">Kies welke panelen je ziet en in welke volgorde.</p>
+      <p class="hint">Kies welke panelen je ziet en in welke volgorde. Op de telefoon staan de panelen op twee veegpagina’s: kies per paneel Dagelijks of Achtergrond.</p>
       <ol class="porder" id="panel-order"></ol>
     </section>
     <section aria-labelledby="set-prefs-h">
@@ -1792,7 +1815,7 @@ const PANELS = {
   breaches: 'Datalekken',
   ransomware: 'Ransomware NL',
   utilities: 'Kritieke infrastructuur',
-  outages: 'Storingen',
+  outages: 'Internetstoringen',
   ap: 'Autoriteit Persoonsgegevens acties',
   health: 'Gezondheid',
 };
@@ -1803,7 +1826,7 @@ const DEFAULTS = {
   v: 2, theme: 'auto', sources: null, known: [], pageSize: 60, summaries: true,
   density: 'compact', category: 'all', weather: null, threatTab: 'ips', advFilter: 'all',
   lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, trending: true, pushTopics: null, waste: null, sports: null, sportsSeen: null, solar: null, saver: 'auto', hazardTab: 'nl', watch: [], mute: [],
-  panels: { order: PANEL_IDS.slice(), collapsed: {}, hidden: {} },
+  panels: { order: PANEL_IDS.slice(), collapsed: {}, hidden: {}, page: {} },
 };
 
 // ---------------------------------------------------------------- helpers
@@ -1924,7 +1947,7 @@ const EN = {
   'Kies eerst een weerlocatie in de instellingen.': 'Choose a weather location in the settings first.',
   // panel names
   'Weer': 'Weather', 'Verkeer': 'Traffic', 'Alarmeringen': 'Emergency alerts', 'Cyberdreigingen': 'Cyber threats', 'Security-adviezen': 'Security advisories',
-  'Storingen': 'Outages', 'Autoriteit Persoonsgegevens acties': 'Dutch Data Protection Authority actions', 'Gezondheid': 'Health',
+  'Storingen': 'Outages', 'Internetstoringen': 'Internet outages', 'Autoriteit Persoonsgegevens acties': 'Dutch Data Protection Authority actions', 'Gezondheid': 'Health',
   // weather
   'wijzigen': 'change', 'Neerslag komende 2 uur': 'Rain in the next 2 hours', 'Komende 24 uur': 'Next 24 hours', '7 dagen': '7 days', 'droog': 'dry',
   'wind (Beaufort)': 'wind (Beaufort)', 'details': 'details', 'Bronnen: ': 'Sources: ', 'Bron: ': 'Source: ', 'standaardlocatie': 'default location',
@@ -2024,7 +2047,9 @@ const EN = {
   'Taal': 'Language', 'Volglijst en filters': 'Watchlist and filters',
   'Woorden of productnamen, gescheiden door komma\'s. Berichten en security-adviezen die een woord van je volglijst noemen, worden gemarkeerd; adviezen komen bovenaan. Berichten met een woord uit "Verbergen" zie je niet meer.': 'Words or product names, separated by commas. Articles and security advisories that mention a watchlist word are highlighted; advisories move to the top. Articles with a word from "Hide" are no longer shown.',
   'Volgen': 'Follow', 'Verbergen': 'Hide', 'bijv. WordPress, Fortinet, Utrecht': 'e.g. WordPress, Fortinet, Utrecht', 'bijv. songfestival, royalty': 'e.g. eurovision, royalty',
-  'Panelen': 'Panels', 'Kies welke panelen je ziet en in welke volgorde.': 'Choose which panels you see and in which order.',
+  'Panelen': 'Panels', 'Kies welke panelen je ziet en in welke volgorde. Op de telefoon staan de panelen op twee veegpagina’s: kies per paneel Dagelijks of Achtergrond.': 'Choose which panels you see and in which order. On a phone the panels are on two swipe pages: choose Daily or Background per panel.',
+  'Dagelijks': 'Daily', 'Achtergrond': 'Background', 'Pagina op de telefoon voor {name}': 'Page on the phone for {name}', 'Pagina op de telefoon': 'Page on the phone',
+  'Geen panelen op deze pagina. Kies onder Instellingen → Panelen welke panelen hier staan.': 'No panels on this page. Choose under Settings → Panels which panels go here.',
   'Voorkeuren overzetten': 'Transfer preferences', 'Kopieer deze tekst naar een ander apparaat en plak hem daar terug om je instellingen over te nemen.': 'Copy this text to another device and paste it back there to take your settings along.',
   'Kopiëren': 'Copy', 'Importeren': 'Import', 'Standaardinstellingen': 'Default settings', 'Voorkeuren geïmporteerd.': 'Preferences imported.',
   'Dit is geen geldige JSON. Plak de volledige tekst die je eerder hebt gekopieerd.': 'This is not valid JSON. Paste the complete text you copied earlier.',
@@ -3008,6 +3033,7 @@ function sanitize(p) {
     for (const k of ['collapsed', 'hidden']) {
       if (pp[k] && typeof pp[k] === 'object') for (const id of PANEL_IDS) if (pp[k][id] === true) d.panels[k][id] = true;
     }
+    if (pp.page && typeof pp.page === 'object') for (const id of PANEL_IDS) if (pp.page[id] === 'a' || pp.page[id] === 'b') d.panels.page[id] = pp.page[id];
     // 1.24: Wereldwijd joined Aardbevingen; whoever kept Wereldwijd visible keeps the combined panel visible
     if (d.panels.hidden.quakes && Array.isArray(pp.order) && pp.order.includes('world') && pp.hidden?.world !== true) delete d.panels.hidden.quakes;
   }
@@ -3467,18 +3493,29 @@ function clearSearch() {
 
 // ---------------------------------------------------------------- side panels
 const shownPanels = () => prefs.panels.order.filter(id => !prefs.panels.hidden[id]);
+// On a phone the panels are two swipe pages: Dagelijks (a) and Achtergrond (b). Visitors move panels under Instellingen.
+const PAGE_B = new Set(['economy', 'markets', 'politics', 'threats', 'advisories', 'breaches', 'ransomware', 'utilities', 'outages', 'ap', 'health']);
+const pageOf = id => prefs.panels.page?.[id] || (PAGE_B.has(id) ? 'b' : 'a');
+const viewOfPanel = id => pageOf(id) === 'b' ? 'panels2' : 'panels';
+function updatePageEmpty() {
+  const el = $('#pg-empty'); if (!el) return;
+  const pg = mobileView === 'panels2' ? 'b' : 'a';
+  el.hidden = shownPanels().some(id => pageOf(id) === pg);
+  el.textContent = t('Geen panelen op deze pagina. Kies onder Instellingen → Panelen welke panelen hier staan.');
+}
 function buildPanels() {
   const side = $('#side');
   const order = shownPanels();
   side.hidden = !order.length;
-  side.replaceChildren(panelBar(), ...order.map(panelEl));
+  side.replaceChildren(panelBar(), h('p', { class: 'pnote pg-empty', id: 'pg-empty', hidden: true }), ...order.map(panelEl));
+  updatePageEmpty();
   for (const id of order) renderPanel(id);
   updateAllBtn();
 }
 function panelEl(id) {
   const collapsed = !!prefs.panels.collapsed[id];
   const bodyId = `p-${id}-body`, hId = `p-${id}-h`;
-  return h('section', { class: `panel panel-${id}` + (collapsed ? ' collapsed' : ''), id: `panel-${id}`, 'aria-labelledby': hId },
+  return h('section', { class: `panel panel-${id}` + (collapsed ? ' collapsed' : ''), id: `panel-${id}`, 'data-page': pageOf(id), 'aria-labelledby': hId },
     h('div', { class: 'phead' },
       h('h2', { id: hId },
         h('button', { class: 'ptoggle', type: 'button', 'aria-expanded': String(!collapsed), 'aria-controls': bodyId, onclick: () => togglePanel(id) },
@@ -3530,7 +3567,7 @@ function panelBar() {
 }
 function openJump() {
   if (viewMode !== 'normal') setMode('normal');
-  if (matchMedia('(max-width: 699px)').matches && mobileView !== 'panels') setMobileView('panels', { restore: false });
+  if (matchMedia('(max-width: 699px)').matches && mobileView !== 'panels' && mobileView !== 'panels2') setMobileView('panels', { restore: false });
   const pop = $('#pb-pop'); if (!pop) return;
   if (!$('#pbar').getBoundingClientRect().height || $('#pbar').getBoundingClientRect().top > innerHeight || $('#pbar').getBoundingClientRect().bottom < 0) $('#side').scrollIntoView({ block: 'start' });
   $('#pb-q').value = ''; pop.fill(); pop.hidden = false;
@@ -5992,7 +6029,7 @@ function renderSports(body) {
           e.url && safeHref(e.url) ? [' · ', extLink(e.url, e.status === 'upcoming' ? t('programma') : t('uitslagen'))] : null,
           e.note ? h('span', { class: 'm spnote', translate: 'no', text: e.note }) : null),
           e.headlines?.length ? h('ul', { class: 'plist' }, e.headlines.map(x => h('li', null, h('span', { translate: 'no' }, extLink(x.url, x.title)),
-            h('div', { class: 'm' }, h('span', { text: x.source }), h('span', { text: when(x.published) }))))) : null));
+            h('div', { class: 'm' }, h('span', { translate: 'no', text: x.source }), h('span', { text: when(x.published) }))))) : null));
       }
     }
     out.push(h('div', { class: 'spsec' }, sec));
@@ -6086,8 +6123,8 @@ function dCard(id, title, kids, wide) {
 // own scroll position.
 const isPhone = () => matchMedia('(max-width: 699px)').matches;
 let mobileView = 'news';
-const MVIEWS = ['overview', 'news', 'panels'];
-const mvScroll = { overview: 0, news: 0, panels: 0 };
+const MVIEWS = ['overview', 'news', 'panels', 'panels2'];
+const mvScroll = { overview: 0, news: 0, panels: 0, panels2: 0 };
 function setMobileView(v, { animate = true, restore = true } = {}) {
   if (v === mobileView) return;
   const phone = isPhone() && viewMode === 'normal';
@@ -6095,13 +6132,14 @@ function setMobileView(v, { animate = true, restore = true } = {}) {
   const dir = MVIEWS.indexOf(v) > MVIEWS.indexOf(mobileView) ? 'mv-in-l' : 'mv-in-r';
   mobileView = v;
   document.documentElement.dataset.mview = v;
-  for (const [id, view] of [['#mv-overview', 'overview'], ['#mv-news', 'news'], ['#mv-panels', 'panels']]) {
+  for (const [id, view] of [['#mv-overview', 'overview'], ['#mv-news', 'news'], ['#mv-panels', 'panels'], ['#mv-panels2', 'panels2']]) {
     const b = $(id), on = view === v;
     b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1;
   }
+  updatePageEmpty();
   if (!phone) return;
   if (v === 'overview') renderDigest();
-  const el = v === 'panels' ? $('#side') : v === 'overview' ? $('#digest') : $('#news');
+  const el = v === 'panels' || v === 'panels2' ? $('#side') : v === 'overview' ? $('#digest') : $('#news');
   if (animate) { el.classList.remove('mv-in-l', 'mv-in-r'); void el.offsetWidth; el.classList.add(dir); }
   if (restore) scrollTo({ top: mvScroll[v], behavior: 'instant' });
 }
@@ -6117,8 +6155,9 @@ function wireMobileViews() {
     });
   });
   for (const el of [$('#news'), $('#side'), $('#digest')]) el.addEventListener('animationend', () => el.classList.remove('mv-in-l', 'mv-in-r'));
-  // swipe: mostly horizontal, at least 60 px, not from the screen edge (the
-  // browser's back gesture) and not inside something that scrolls sideways
+  // swipe: not from the screen edge (the browser's back gesture) and not inside something that
+  // scrolls sideways. The direction is decided by the first 14 px of movement, so the arc of a
+  // thumb does not spoil a long swipe; then 45 px sideways, or a quick flick of 25 px, is enough.
   let t0 = null;
   const scrollsSideways = el => {
     for (; el && el !== document.body; el = el.parentElement) {
@@ -6133,13 +6172,23 @@ function wireMobileViews() {
     if (!isPhone() || viewMode !== 'normal' || e.touches.length !== 1 || document.querySelector('dialog[open]')) return;
     const p = e.touches[0];
     if (p.clientX < 24 || p.clientX > innerWidth - 24 || e.target.closest('input, textarea, select, [contenteditable]') || scrollsSideways(e.target)) return;
-    t0 = { x: p.clientX, y: p.clientY, at: Date.now() };
+    t0 = { x: p.clientX, y: p.clientY, at: Date.now(), axis: null };
+  }, { passive: true });
+  const axisOf = (dx, dy) => Math.abs(dx) > 1.2 * Math.abs(dy) ? 'x' : 'y';
+  main.addEventListener('touchmove', e => {
+    if (!t0 || t0.axis) return;
+    const p = e.touches[0], dx = p.clientX - t0.x, dy = p.clientY - t0.y;
+    if (Math.hypot(dx, dy) < 14) return;
+    t0.axis = axisOf(dx, dy);
+    if (t0.axis === 'y') t0 = null; // scrolling the page
   }, { passive: true });
   main.addEventListener('touchend', e => {
     if (!t0) return;
-    const p = e.changedTouches[0], dx = p.clientX - t0.x, dy = p.clientY - t0.y, dt = Date.now() - t0.at;
+    const p = e.changedTouches[0], dx = p.clientX - t0.x, dy = p.clientY - t0.y, dt = Math.max(1, Date.now() - t0.at);
+    const axis = t0.axis || axisOf(dx, dy);
     t0 = null;
-    if (Math.abs(dx) < 60 || Math.abs(dx) < 2 * Math.abs(dy) || dt > 800) return;
+    if (axis !== 'x' || Math.abs(dx) < Math.abs(dy) || dt > 1500) return;
+    if (Math.abs(dx) < 45 && !(Math.abs(dx) >= 25 && Math.abs(dx) / dt > 0.4)) return;
     const i = MVIEWS.indexOf(mobileView) + (dx < 0 ? 1 : -1);
     if (i >= 0 && i < MVIEWS.length) setMobileView(MVIEWS[i]);
   }, { passive: true });
@@ -6182,14 +6231,14 @@ function refreshView(v) {
   const panels = () => [loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(), loadBreaches(), loadOutages(), loadHealthPanel(),
     loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(),
     loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar(), loadWorld()];
-  const jobs = v === 'news' ? [loadNews({ replace: true }), loadTrending()] : v === 'panels' ? panels() : [loadNews({ replace: true }), ...panels()];
+  const jobs = v === 'news' ? [loadNews({ replace: true }), loadTrending()] : v === 'panels' || v === 'panels2' ? panels() : [loadNews({ replace: true }), ...panels()];
   return Promise.allSettled(jobs);
 }
 
 function showPanel(id) {
   setMode('normal');
   if (id === 'news') { setMobileView('news', { restore: false }); $('#news').focus({ preventScroll: true }); $('#news').scrollIntoView({ block: 'start' }); return; }
-  setMobileView('panels', { restore: false });
+  setMobileView(viewOfPanel(id), { restore: false });
   if (prefs.panels.hidden[id]) { delete prefs.panels.hidden[id]; savePrefs(); buildPanels(); }
   if (prefs.panels.collapsed[id]) togglePanel(id);
   $(`#panel-${id}`)?.scrollIntoView({ block: 'start' });
@@ -6303,7 +6352,7 @@ function renderDigest() {
     const bad = (outg.providers || []).filter(p => p.data && p.data.status !== 'ok');
     const netEv = (outg.internet?.entities || []).flatMap(e => e.events.map(x => ({ ...x, who: e.name }))).filter(x => Date.now() - new Date(x.start) < 864e5);
     const items = [...bad.map(p => li(h('b', { text: p.name }), t(OUT_NL[p.data.status]))), ...netEv.slice(0, 2).map(x => li(h('b', { text: t('Internet: {who}', { who: x.who }) }), `${fmt.time.format(new Date(x.start))} · ${durText(x.duration_s)}`))];
-    cards.push(dCard('outages', 'Storingen', items.length ? h('ul', null, items) : h('p', { text: t('Alle gevolgde diensten werken normaal.') })));
+    cards.push(dCard('outages', 'Internetstoringen', items.length ? h('ul', null, items) : h('p', { text: t('Alle gevolgde diensten werken normaal.') })));
   }
   const ut = panelData.utilities?.data;
   if (panelOn('utilities') && ut?.enabled && ut.operators?.length) {
@@ -6577,6 +6626,9 @@ function buildPanelOrder() {
       h('input', { type: 'checkbox', class: 'switch', role: 'switch', checked: !prefs.panels.hidden[id],
         onchange: e => { if (e.target.checked) delete prefs.panels.hidden[id]; else prefs.panels.hidden[id] = true; savePrefs(); buildPanels(); } }),
       h('span', { text: PANELS[id] })),
+    h('select', { class: 'ppage', 'aria-label': t('Pagina op de telefoon voor {name}', { name: t(PANELS[id]) }), title: t('Pagina op de telefoon'),
+      onchange: e => { prefs.panels.page[id] = e.target.value; savePrefs(); buildPanels(); } },
+      [['a', 'Dagelijks'], ['b', 'Achtergrond']].map(([v, l]) => h('option', { value: v, selected: pageOf(id) === v, text: t(l) }))),
     h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('{name} omhoog', { name: t(PANELS[id]) }), disabled: i === 0, 'data-mv': `${id}:-1`, onclick: () => movePanel(id, -1) }, icon('up')),
     h('button', { class: 'icon-btn', type: 'button', 'aria-label': t('{name} omlaag', { name: t(PANELS[id]) }), disabled: i === order.length - 1, 'data-mv': `${id}:1`, onclick: () => movePanel(id, 1) }, icon('down')))));
 }
@@ -6665,7 +6717,7 @@ function renderStatus() {
   const feeds = d.feeds || [];
   groups.push({ title: 'Cyberdreigingen', rows: feeds.filter(f => f.kind === 'threat').map(f => ({ name: f.name, s: f })) });
   groups.push({ title: 'Security-adviezen', rows: feeds.filter(f => f.kind === 'advisory').map(f => ({ name: f.name, s: f })) });
-  for (const [kind, title] of [['alert', 'Bovenbalk'], ['traffic', 'Verkeer'], ['breach', 'Datalekken'], ['daily', 'Energie, lucht, trein, politiek en infrastructuur'], ['outage', 'Storingen']]) {
+  for (const [kind, title] of [['alert', 'Bovenbalk'], ['traffic', 'Verkeer'], ['breach', 'Datalekken'], ['daily', 'Energie, lucht, trein, politiek en infrastructuur'], ['outage', 'Internetstoringen']]) {
     groups.push({ title, rows: feeds.filter(f => f.kind === kind).map(f => ({ name: f.name, s: f })) });
   }
   const all = groups.flatMap(g => g.rows);

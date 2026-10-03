@@ -40,7 +40,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Alarmeringen:** the latest P2000 alerts for your city from Zwaailicht.nl, grouped as Brandweer, Ambulance, Politie and Lifeliner (at most 2 each). The city is chosen per visitor under Instellingen.
 - **Datalekken:** the latest 3 Dutch and 3 other data breaches at organisations, from Have I Been Pwned: number of accounts, leak date, and what data leaked.
 - **Ransomware NL:** organisations claimed by ransomware groups on their leak sites (ransomware.live), with counts, the most active groups and the latest claims. No links to leak sites and no descriptions.
-- **Storingen:** **internet in the Netherlands** on top, then the status of Akamai, AWS, Cloudflare, Microsoft Azure, Microsoft 365, Google Cloud and STACKIT (in the order of `config.yaml`); internet: outages detected by IODA for the country and KPN, VodafoneZiggo, Odido and DELTA Fiber. Any service with an Atlassian Statuspage or RSS status feed can be added in `config.yaml`.
+- **Internetstoringen:** **internet in the Netherlands** on top, then the status of Akamai, AWS, Cloudflare, Microsoft Azure, Microsoft 365, Google Cloud and STACKIT (in the order of `config.yaml`); internet: outages detected by IODA for the country and KPN, VodafoneZiggo, Odido and DELTA Fiber. Any service with an Atlassian Statuspage or RSS status feed can be added in `config.yaml`.
 - **Gezondheid:** RIVM news of the last 14 days, filtered to health alerts (infectious diseases, vaccination, heat, smog).
 - **Themes**: Licht / Donker (true black) / Auto.
 - **Language**: Nederlands / English / Auto (browser language), switchable at the top and under Instellingen → Weergave. Only the interface is translated; news, advisories and alerts stay in their original language.
@@ -59,7 +59,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Watchlist and mute words:** security advisories that mention your products are pinned to the top.
 - **Freshness:** every panel shows how old its data is.
 - **Thumbnails:** optional, via the built-in image proxy.
-- **Installable and offline-capable** (PWA). On a phone, swipe between the overview, the news and the panels, and pull down to refresh. A share button on every article.
+- **Installable and offline-capable** (PWA). On a phone, swipe between the overview, the news and two panel pages (Dagelijks and Achtergrond, your choice per panel), and pull down to refresh. A share button on every article.
 - **Finding a panel:** a bar above the panels stays in view while you scroll. **Ga naar paneel** lists your panels from A to Z and jumps to the one you pick (or press `g`, type a few letters and Enter); **Alles inklappen** turns every panel into one line with a short summary (temperature, electricity price, disruptions…), so all panels fit on about one screen. On a tablet, **Panelen ↓** next to the news jumps down to them.
 - **Keyboard shortcuts:** press `?` in the app.
 - **Overview and kiosk mode:** "Vandaag in het kort" puts the essentials of today on one screen; kiosk mode is for a wall display (see below).
@@ -264,7 +264,7 @@ There are two separate rates:
 | Cyberdreigingen | 15m | 15m (ISC minimum), 30-day summary 1h |
 | Security advisories | 30m | 15m |
 | Datalekken | 30m | 3h (≈ 1 MB list) |
-| Storingen | 10m | status pages 10m, internet (IODA) 30m |
+| Internetstoringen | 10m | status pages 10m, internet (IODA) 30m |
 | AP actions, Gezondheid | 30m | 30m |
 
 A browser refresh faster than the server's interval gives nothing new, so keep `refresh:` at or above the matching server interval.
@@ -600,7 +600,7 @@ The server fetches everything; browsers only talk to the dashboard itself.
 | [KNMI](https://www.knmi.nl/nederland-nu/seismologie/aardbevingen) | Aardbevingen | FDSN event service (`rdsa.knmi.nl`), open data; each quake links to its KNMI page. Only earthquakes and induced events; explosions, quarry blasts and sonic booms are left out. |
 | [Liander](https://www.liander.nl/storingen-en-onderhoud) | Kritieke infrastructuur | The public ArcGIS feature service `IStoringen_Productie_V7` (Alliander) behind Liander's outage map: status, cause, expected repair time and a customer count per outage. No explicit licence; attribution shown. |
 | [Stedin](https://web.stedin.net/storingen) | Kritieke infrastructuur | The JSON behind Stedin's outage page (`/api/storingen/places`, undocumented): one overview request plus one per affected place. Enexis, Rendo, Coteq, Westland Infra and the drinking-water companies publish no open outage data (checked September 2026), so they are not in the panel. |
-| [IODA](https://ioda.inetintel.cc.gatech.edu/) (Georgia Tech) | Storingen: internet | Outage events for the country and chosen networks (routing, reachability, traffic). No key. The data is "Copyright Georgia Tech Research Corporation"; no published data licence found (checked September 2026), attribution shown. IODA's server does not answer Go's TLS 1.3 handshake, so the app talks to that one host over TLS 1.2. |
+| [IODA](https://ioda.inetintel.cc.gatech.edu/) (Georgia Tech) | Internetstoringen | Outage events for the country and chosen networks (routing, reachability, traffic). No key. The data is "Copyright Georgia Tech Research Corporation"; no published data licence found (checked September 2026), attribution shown. IODA's server does not answer Go's TLS 1.3 handshake, so the app talks to that one host over TLS 1.2. |
 | [ransomware.live](https://www.ransomware.live/) | Ransomware NL | Free API v2: no key, **personal use only**, 1 request per minute per endpoint (polled hourly per country). Business use needs their free PRO key under separate terms. These are claims made by criminal groups, not verified; the panel says so. Descriptions (which can quote stolen data) and links to leak sites are never passed on. |
 | [Have I Been Pwned](https://haveibeenpwned.com/) | Datalekken | The public breach list (`/api/v3/breaches`): no API key, and no visitor data is sent. Licensed **CC BY 4.0** (attribution shown in the panel). Fetched every 3 h. Left out: unverified, fabricated, retired, spam lists, malware and stealer logs, entries without a domain, and (unless `include_sensitive: true`) sensitive breaches. HIBP has no country field, so "Dutch" means a `.nl` domain or a description mentioning Dutch/the Netherlands. |
 | [Zwaailicht.nl](https://zwaailicht.nl/blog/rss-feeds-p2000-meldingen) | P2000 alerts | Public Atom feeds per city (`/feed/meldingen/<city>.xml`), refreshed every minute. House numbers are left out by Zwaailicht. Fetched only for cities visitors actually choose, and cached 2 min per city. **Not for emergencies: call 112.** |
@@ -792,6 +792,13 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.28.0
+- **Two panel pages on a phone:** Overzicht ← Nieuws → **Dagelijks** → **Achtergrond**. By default Achtergrond holds Economie, Beurs, Politiek, Cyberdreigingen, Security-adviezen, Datalekken, Ransomware, Kritieke infrastructuur, Internetstoringen, AP and Gezondheid; under *Instellingen → Panelen* each panel has a Dagelijks/Achtergrond choice (phone only; desktop and tablet are unchanged). *Ga naar paneel* switches to the right page.
+
+### 1.27.1
+- **Internetstoringen:** the Storingen panel is renamed.
+- **Swiping on a phone** is more forgiving: the first 14 px of movement decide the direction (so the arc of a thumb no longer spoils it), 45 px sideways or a quick 25 px flick is enough, slow swipes up to 1.5 s count, and the page claims sideways panning (`touch-action: pan-y`) so the browser's own gestures no longer interfere. Previously a swipe had to be 60 px, twice as wide as tall at the end, and under 0.8 s.
 
 ### 1.27.0
 - **Panel bar:** above the panels, sticky while scrolling: **Ga naar paneel** (a searchable A–Z list of your panels; also the `g` key) and **Alles inklappen / uitklappen**.

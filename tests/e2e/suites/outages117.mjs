@@ -8,7 +8,7 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   await ctx.addInitScript(() => localStorage.setItem('ndb:prefs', JSON.stringify({ v: 2, onboarded: true })));
   const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
   await p.goto(process.env.BASE); await p.waitForSelector('#stream .item');
-  if (w === 360) { await p.click('#mv-panels'); await p.waitForTimeout(300); }
+  if (w === 360) { await p.click('#mv-panels2'); await p.waitForTimeout(300); } // Internetstoringen is on the Achtergrond page
   await p.locator('#panel-outages').scrollIntoViewIfNeeded(); await p.waitForTimeout(1500);
   const txt = await p.textContent('#panel-outages');
   if (w === 1440 && scheme === 'light') await p.locator('#panel-outages').screenshot({ path: `${OUT}/outages.png` });

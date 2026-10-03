@@ -76,7 +76,7 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
     target.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, touches: [t(x0)], changedTouches: [t(x0)] })); target.dispatchEvent(new TouchEvent('touchend', { bubbles: true, touches: [], changedTouches: [t(x1)] })); }, [x0, x1]);
   const view = () => p.evaluate(() => ({ v: document.documentElement.dataset.mview, digest: getComputedStyle(document.querySelector('#digest')).display, cards: document.querySelectorAll('#dgrid .dcard').length,
     exit: getComputedStyle(document.querySelector('#digest-exit')).display, tabs: [...document.querySelectorAll('#mview button')].map(b => b.textContent + (b.getAttribute('aria-selected') === 'true' ? '*' : '')).join('|') }));
-  ok((await view()).tabs === 'Overzicht|Nieuws*|Panelen', 'phone: three tabs, starts on the news');
+  ok((await view()).tabs === 'Overzicht|Nieuws*|Dagelijks|Achtergrond', 'phone: four tabs, starts on the news');
   await swipe(100, 300); await p.waitForTimeout(400);
   let v = await view();
   ok(v.v === 'overview' && v.digest === 'block' && v.cards >= 3 && v.exit === 'none', `swipe right from the news: overview (${v.cards} cards, no "Volledige weergave" button)`);
