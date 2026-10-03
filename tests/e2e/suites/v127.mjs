@@ -74,7 +74,7 @@ for (const [w, scheme, mobile] of [[1440, 'light', false], [1440, 'dark', false]
   if (w === 360) await p.locator('#side').screenshot({ path: `${OUT}/panels-collapsed-360.png` });
   ok(c.all && /Alles uitklappen/.test(c.btn), `${tag}: all ${c.n} panels collapsed, button now "${c.btn.trim()}"`);
   ok(c.h / c.n < (w === 900 ? 110 : 60), `${tag}: about one line per panel (${Math.round(c.h / c.n)} px each)`);
-  ok(/°/.test(c.sums.weather) && /^\d+ · /.test(c.sums.air || '0 · ') && /storing|werkt/.test(c.sums.outages) && /nu € ?\d|goedkoopst|bijgewerkt/.test(c.sums.energy), `${tag}: summaries: weer "${c.sums.weather}", energie "${c.sums.energy}"`);
+  ok(/°/.test(c.sums.weather) && /^\d+ · /.test(c.sums.air || '0 · ') && /storing|werkt/.test(c.sums.outages) && /nu €\s?\d|goedkoopst|bijgewerkt/.test(c.sums.energy), `${tag}: summaries: weer "${c.sums.weather}", energie "${c.sums.energy}"`);
   ok(c.empty.length <= 2 && !c.over, `${tag}: every collapsed panel has a summary or its freshness (${c.empty.join(', ') || 'all'}), nothing sticks out`);
   await axe(p, '#side', `${tag} collapsed panels`);
   ok(errs.length === 0 && await p.evaluate(() => document.documentElement.scrollWidth) <= w, `${tag}: no page errors, no horizontal scroll ${errs.join('|')}`);

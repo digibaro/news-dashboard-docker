@@ -794,14 +794,14 @@ table.tt { width: 100%; border-collapse: collapse; font-size: 12px; }
 .muted-inline { color: var(--text-3); font-size: 12px; }
 
 /* ---------- Datalekken ---------- */
-.bgrp h3 { margin: 8px 0 4px; font-size: 12px; font-weight: 650; color: var(--text-2); text-transform: uppercase; letter-spacing: .03em; }
+.bgrp h3, .phgrp h3 { margin: 8px 0 4px; font-size: 12px; font-weight: 650; color: var(--text-2); text-transform: uppercase; letter-spacing: .03em; }
 .bgrp:first-child h3 { margin-top: 0; }
 .bgrp .plist .tag { margin-left: 6px; vertical-align: 1px; }
-.bgrp .m { flex-wrap: wrap; row-gap: 0; }
+.bgrp .m, .phgrp .m { flex-wrap: wrap; row-gap: 0; }
 .bgrp .m span + span::before { content: "·"; margin-right: 8px; }
 .bgrp .bdc { margin-top: 2px; font-size: 12px; color: var(--text-2); }
-.bsk { height: 520px; } .bsk .sk { height: 480px; } /* loading placeholder ≈ 2 × 3 breaches */
-@media (max-width: 699px) { .bsk { height: 690px; } .bsk .sk { height: 650px; } }
+.bsk { height: 710px; } .bsk .sk { height: 670px; } /* loading placeholder ≈ 2 × 3 breaches + 3 scam warnings */
+@media (max-width: 699px) { .bsk { height: 870px; } .bsk .sk { height: 830px; } }
 
 /* ---------- Outages ---------- */
 .outs { list-style: none; margin: 0; padding: 0; }
@@ -929,6 +929,10 @@ textarea.json {
 .fnote { font-size: 12px; color: var(--text-3); margin: 2px 0 0; }
 .tag.lvl-yellow, .tag.lvl-orange, .tag.lvl-red, .tag.lvl-green { border-color: var(--lvl); border-left-width: 4px; color: var(--text); } /* yellow text would be unreadable */
 .hsmog { margin-top: 4px; }
+.seab, .otd { margin-top: 10px; }
+.seab h3, .otd h3 { margin: 0 0 4px; font-size: 12px; font-weight: 650; color: var(--text-2); text-transform: uppercase; letter-spacing: .03em; }
+.seab h3 .m { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.otd li b { font-variant-numeric: tabular-nums; }
 .tag.live { color: var(--sev-crit); }
 .spev .plist { margin: 2px 0 6px; }
 .wxthunder, .wxuv { margin: 6px 0 0; font-size: 13px; color: var(--text-2); }
@@ -1151,6 +1155,16 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.29.0</h3>
+    <ul>
+      <li>Weer: <b>Zee en getij</b> bij het dichtstbijzijnde kuststation, met de volgende hoog- en laagwaters (Rijkswaterstaat), de zeewatertemperatuur en de golven.</li>
+      <li>Vandaag: <b>Op deze dag</b>, vier gebeurtenissen op de datum van vandaag uit Wikipedia.</li>
+      <li>Datalekken: <b>Oplichting en phishing</b>, de nieuwste waarschuwingen van de Fraudehelpdesk.</li>
+    </ul>
+    <h3>Versie 1.28.1</h3>
+    <ul>
+      <li>Telefoon: Beurs staat standaard op de pagina Dagelijks (een eigen keuze onder Instellingen → Panelen blijft gelden).</li>
+    </ul>
     <h3>Versie 1.28.0</h3>
     <ul>
       <li>Telefoon: de panelen staan nu op twee veegpagina’s, <b>Dagelijks</b> (weer, verkeer, afval, energie…) en <b>Achtergrond</b> (beveiliging, economie, politiek, storingen…). Onder Instellingen → Panelen kies je per paneel op welke pagina het staat. Ga naar paneel springt naar de juiste pagina.</li>
@@ -1368,6 +1382,16 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.29.0</h3>
+    <ul>
+      <li>Weather: <b>Sea and tide</b> at the nearest coastal station, with the next high and low tides (Rijkswaterstaat), the sea temperature and the waves.</li>
+      <li>Today: <b>On this day</b>, four events on today's date from Wikipedia.</li>
+      <li>Data breaches: <b>Scams and phishing</b>, the latest warnings from the Fraudehelpdesk.</li>
+    </ul>
+    <h3>Version 1.28.1</h3>
+    <ul>
+      <li>Phone: Markets is on the Daily page by default (your own choice under Settings → Panels still applies).</li>
+    </ul>
     <h3>Version 1.28.0</h3>
     <ul>
       <li>Phone: the panels are now on two swipe pages, <b>Daily</b> (weather, traffic, waste, energy…) and <b>Background</b> (security, economy, politics, outages…). Under Settings → Panels you choose the page per panel. Go to panel jumps to the right page.</li>
@@ -2789,6 +2813,13 @@ const EN = {
   "De brandweer-site is niet bereikbaar ({err}).": "The fire service site is unreachable ({err}).",
   "KNMI-waarschuwingen nu niet beschikbaar.": "KNMI warnings are not available right now.",
   "KNMI: wind in {areas}": "KNMI: wind in {areas}", "details bij Weer": "details under Weather", "Geen windwaarschuwing van het KNMI.": "No wind warning from KNMI.",
+  "Oplichting en phishing": "Scams and phishing", "De Fraudehelpdesk is niet bereikbaar ({err}).": "The Fraudehelpdesk cannot be reached ({err}).",
+  "Geen nieuwe waarschuwingen van de Fraudehelpdesk in de afgelopen 30 dagen.": "No new warnings from the Fraudehelpdesk in the last 30 days.",
+  "Twijfel je? ": "In doubt? ", "Alle waarschuwingen en hulp (Fraudehelpdesk)": "All warnings and help (Fraudehelpdesk, Dutch)",
+  "Op deze dag": "On this day", "Meer op Wikipedia ({title})": "More on Wikipedia ({title}, Dutch)", " · op deze dag: ": " · on this day: ",
+  "Zee en getij": "Sea and tide", " ({km} km)": " ({km} km)", "hoogwater": "high tide", "laagwater": "low tide",
+  "Getijden nu niet beschikbaar (Rijkswaterstaat).": "Tides unavailable right now (Rijkswaterstaat).", "zeewater {v}°": "sea water {v}°",
+  "golven {v} m": "waves {v} m", " uit het {dir}": " from the {dir}", "vandaag tot {v} m": "today up to {v} m", "Getij t.o.v. NAP: ": "Tide relative to NAP: ", " · zee: ": " · sea: ",
   "Hoogwater en stormvloed": "High water and storm surge", "Rijkswaterstaat is niet bereikbaar ({err}).": "Rijkswaterstaat cannot be reached ({err}).",
   "Overal code groen: geen hoogwater.": "Code green everywhere: no high water.", "Verwacht: {code} vanaf {t}.": "Expected: {code} from {t}.",
   "Stormvloedkering dicht": "Storm-surge barrier closed", "Stormvloedkeringen: alle {n} open.": "Storm-surge barriers: all {n} open.",
@@ -3494,7 +3525,7 @@ function clearSearch() {
 // ---------------------------------------------------------------- side panels
 const shownPanels = () => prefs.panels.order.filter(id => !prefs.panels.hidden[id]);
 // On a phone the panels are two swipe pages: Dagelijks (a) and Achtergrond (b). Visitors move panels under Instellingen.
-const PAGE_B = new Set(['economy', 'markets', 'politics', 'threats', 'advisories', 'breaches', 'ransomware', 'utilities', 'outages', 'ap', 'health']);
+const PAGE_B = new Set(['economy', 'politics', 'threats', 'advisories', 'breaches', 'ransomware', 'utilities', 'outages', 'ap', 'health']);
 const pageOf = id => prefs.panels.page?.[id] || (PAGE_B.has(id) ? 'b' : 'a');
 const viewOfPanel = id => pageOf(id) === 'b' ? 'panels2' : 'panels';
 function updatePageEmpty() {
@@ -3771,6 +3802,35 @@ async function loadWeather() {
   renderPanel('weather');
   renderWxMini();
   if (panelData.today) renderPanel('today'); // sunrise and sunset come from the weather data
+  loadSea();
+}
+// Zee en getij: tides and sea at the coastal station nearest to the weather location (cached on the server).
+let seaSeq = 0;
+async function loadSea() {
+  const seq = ++seaSeq, w = prefs.weather;
+  try {
+    const d = await api('api/sea' + (w ? `?lat=${w.lat.toFixed(2)}&lon=${w.lon.toFixed(2)}` : ''));
+    if (seq !== seaSeq) return;
+    panelData.sea = d;
+  } catch { if (seq !== seaSeq) return; }
+  renderPanel('weather');
+}
+const DIR16 = ['N', 'NNO', 'NO', 'ONO', 'O', 'OZO', 'ZO', 'ZZO', 'Z', 'ZZW', 'ZW', 'WZW', 'W', 'WNW', 'NW', 'NNW'];
+function seaBlock() {
+  const d = panelData.sea;
+  if (!d?.enabled || !d.station) return null;
+  const num = (v, n = 1) => v.toLocaleString(locale(), { minimumFractionDigits: n, maximumFractionDigits: n });
+  const tides = (d.tides || []).filter(x => new Date(x.time) > Date.now() - 30 * 6e4).slice(0, 3), s = d.sea, out = [];
+  out.push(h('h3', null, h('span', { 'aria-hidden': 'true', text: '🌊 ' }), t('Zee en getij'), h('span', { class: 'm', translate: 'no', text: ` · ${d.station.name}` + (d.station.km > 10 ? t(' ({km} km)', { km: d.station.km }) : '') })));
+  if (tides.length) out.push(h('p', { class: 'eline' }, tides.map((x, i) => [i ? ' · ' : '', h('b', { text: x.high ? t('hoogwater') : t('laagwater') }), ' ',
+    `${daysUntil(fmt.key.format(new Date(x.time))) === 1 ? t('morgen') + ' ' : ''}${fmt.time.format(new Date(x.time))}`, h('span', { class: 'm', text: ` (${x.cm > 0 ? '+' : ''}${x.cm} cm)` })])));
+  else if (d.tides_error) out.push(h('p', { class: 'pnote', text: t('Getijden nu niet beschikbaar (Rijkswaterstaat).') }));
+  if (s && (s.temp != null || s.wave != null)) out.push(h('p', { class: 'eline' }, [
+    s.temp != null ? t('zeewater {v}°', { v: num(s.temp) }) : null,
+    s.wave != null ? t('golven {v} m', { v: num(s.wave) }) + (s.wave_dir != null ? t(' uit het {dir}', { dir: trDir(DIR16[Math.round(s.wave_dir / 22.5) % 16]) }) : '') : null,
+    s.wave_max != null && s.wave != null && s.wave_max > s.wave + 0.2 ? t('vandaag tot {v} m', { v: num(s.wave_max) }) : null].filter(Boolean).join(' · ')));
+  out.push(h('p', { class: 'm fnote' }, t('Getij t.o.v. NAP: '), extLink('https://waterinfo.rws.nl/', 'Rijkswaterstaat'), t(' · zee: '), extLink('https://open-meteo.com/', 'Open-Meteo')));
+  return h('div', { class: 'seab' }, out);
 }
 function warnWindow(w) {
   const on = w.onset ? new Date(w.onset) : null, off = w.expires ? new Date(w.expires) : null;
@@ -3874,6 +3934,8 @@ function renderWeather(body, extra) {
   const notes = [];
   if (d.stale) notes.push(t('let op: gegevens van {when}, de weerdienst is tijdelijk onbereikbaar', { when: since(upd) }));
   if (d.errors?.warnings) notes.push('waarschuwingen tijdelijk niet beschikbaar');
+  const sea = seaBlock();
+  if (sea) out.push(sea);
   out.push(h('p', { class: 'pfoot' }, t('Bronnen: '), extLink('https://open-meteo.com/', 'Open-Meteo'),
     d.rain || d.errors?.rain ? [' · ', extLink('https://www.buienradar.nl/', 'Buienradar')] : null,
     ' · ', extLink('https://meteoalarm.org/', 'MeteoAlarm'), t(' · bijgewerkt {t}', { t: fmt.time.format(upd) }),
@@ -4472,7 +4534,16 @@ function renderBreaches(body) {
         list?.length ? h('ul', { class: 'plist' }, list.map(breachItem)) : h('p', { class: 'pnote', text: none })));
     }
   }
-  out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://haveibeenpwned.com/', 'Have I Been Pwned'), ' (CC BY 4.0)', h('br'),
+  const ph = r.phishing;
+  if (ph) {
+    const recent = (ph.items || []).filter(x => Date.now() - new Date(x.published) <= 30 * 864e5).slice(0, 3);
+    out.push(h('div', { class: 'phgrp' }, h('h3', null, h('span', { 'aria-hidden': 'true', text: '🎣 ' }), t('Oplichting en phishing')),
+      !ph.items ? h('p', { class: 'pnote', text: ph.error ? t('De Fraudehelpdesk is niet bereikbaar ({err}).', { err: ph.error }) : t('Wordt voor het eerst opgehaald.') })
+        : recent.length ? h('ul', { class: 'plist' }, recent.map(x => h('li', null, h('span', { translate: 'no' }, extLink(x.url, x.title)), h('div', { class: 'm' }, timeEl(new Date(x.published), false)))))
+          : h('p', { class: 'pnote', text: t('Geen nieuwe waarschuwingen van de Fraudehelpdesk in de afgelopen 30 dagen.') }),
+      h('p', { class: 'm fnote' }, t('Twijfel je? '), extLink(ph.url || 'https://www.fraudehelpdesk.nl/actueel/', t('Alle waarschuwingen en hulp (Fraudehelpdesk)')))));
+  }
+  out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://haveibeenpwned.com/', 'Have I Been Pwned'), ' (CC BY 4.0)', ph ? [' · ', extLink('https://www.fraudehelpdesk.nl/', 'Fraudehelpdesk')] : null, h('br'),
     t('Alleen geverifieerde lekken bij organisaties; zonder spamlijsten, malware en gevoelige sites.')));
   body.replaceChildren(...out);
 }
@@ -4895,7 +4966,12 @@ function renderToday(body) {
   } else if (sch?.error) {
     out.push(row('🎒', t('Schoolvakanties konden niet worden opgehaald; er wordt automatisch opnieuw geprobeerd.')));
   }
-  out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://www.rijksoverheid.nl/onderwerpen/schoolvakanties', 'Rijksoverheid'), t(' (schoolvakanties) · zon: Open-Meteo · feestdagen en maan: berekend')));
+  const od = d.on_this_day;
+  if (od?.events?.length) out.push(h('div', { class: 'otd' }, h('h3', null, h('span', { 'aria-hidden': 'true', text: '📜 ' }), t('Op deze dag')),
+    h('ul', { class: 'plist', translate: 'no' }, od.events.map(e => h('li', null, h('b', { text: String(e.year) }), ' – ', e.text))),
+    h('p', { class: 'm fnote' }, extLink(od.url, t('Meer op Wikipedia ({title})', { title: od.title })))));
+  out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://www.rijksoverheid.nl/onderwerpen/schoolvakanties', 'Rijksoverheid'), t(' (schoolvakanties) · zon: Open-Meteo · feestdagen en maan: berekend'),
+    od?.events?.length ? [t(' · op deze dag: '), extLink('https://nl.wikipedia.org/', 'Wikipedia'), ' (CC BY-SA)'] : null));
   body.replaceChildren(...out);
 }
 

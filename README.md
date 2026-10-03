@@ -7,7 +7,7 @@
 A fast, privacy-friendly **single-page news dashboard in Dutch, with an English interface**. It combines:
 
 - **News** from about 80 selectable RSS/Atom feeds: NL, regional, tech & security, data breaches, finance, sport, international and Belgium.
-- **Weather** for a configurable location: Open-Meteo forecast, Buienradar rain for the next 2 hours, and KNMI/KMI warnings via MeteoAlarm.
+- **Weather** for a configurable location: Open-Meteo forecast, Buienradar rain for the next 2 hours, and KNMI/KMI warnings via MeteoAlarm. **Zee en getij** at the coastal station nearest to the weather location: the next high and low tides (Rijkswaterstaat), sea temperature and waves (Open-Meteo Marine).
 - **Live cyber threats**:
   - SANS ISC/DShield top ports, 30-day attacker trend and top source IPs
   - abuse.ch Feodo botnet C2 servers
@@ -16,7 +16,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
   - Autoriteit Persoonsgegevens enforcement news (last 14 days)
 - **Security advisories**: NCSC-NL, with the `[kans/schade]` rating parsed into badges, plus optional CERT-EU, CISA, BSI and MSRC.
 - **Top bar:** the current KNMI weather code (only while there is a warning), the number of P2000 alerts in the last hour per service for a configured area (default Den Haag), an active NL-Alert with its place (only while one is active), and the NCTV terrorism threat level.
-- **Vandaag:** date and week number, sunrise and sunset, moon phase, the next public holiday, the next clock change, and school holidays for regio Noord, Midden and Zuid (the visitor's region highlighted).
+- **Vandaag:** date and week number, sunrise and sunset, moon phase, the next public holiday, the next clock change, and school holidays for regio Noord, Midden and Zuid (the visitor's region highlighted). **Op deze dag**: four events on today's date from the Dutch Wikipedia day page (Dutch ones first).
 - **Luchtkwaliteit:** the air quality index (1–11) and NO₂, PM2.5, PM10 and O₃ from the nearest Luchtmeetnet station. The place is chosen per visitor (default: their weather location). Below it the **radiation** (gamma dose rate) at the nearest RIVM station, with the national range; when several stations measure raised levels, a notice appears in the top bar and a push message can go out. Then **Hitte en smog**: whether the Nationaal Hitteplan is active (KNMI heat warning), RIVM's smog warnings, and the ozone forecast for 3 days.
 - **Hooikoorts:** the pollen forecast (grass, birch, alder, mugwort, ragweed) for 3 days at the visitor's air-quality place, with indicative levels.
 - **Aardbevingen en natuurrampen:** two tabs. **Nederland**: earthquakes from KNMI (14 days), the KNMI wind warning when there is one, the natuurbrandrisico phase per safety region (Brandweer Nederland), and **high water and storm surge**: Rijkswaterstaat's water-safety code per river, lake and coast sector, the highest code expected in the next 24 hours, and whether the storm-surge barriers are open. At code orange or red, or with a closed barrier, a notice appears in the top bar and a push message can go out. **Wereld**: big earthquakes from USGS (M6+, last 24 hours, with tsunami warning and expected impact) and active natural disasters from NASA EONET (hurricanes and typhoons with wind speed, volcanic eruptions, floods, large wildfires). A summary line above the tabs; the panel remembers the chosen tab.
@@ -38,7 +38,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Politiek vandaag:** today's debates and committee meetings of the Tweede Kamer (or the next sitting day) and the latest votes.
 - **Verkeer:** jams, accidents and road closures from NDW open data (Rijkswaterstaat), with readable road names.
 - **Alarmeringen:** the latest P2000 alerts for your city from Zwaailicht.nl, grouped as Brandweer, Ambulance, Politie and Lifeliner (at most 2 each). The city is chosen per visitor under Instellingen.
-- **Datalekken:** the latest 3 Dutch and 3 other data breaches at organisations, from Have I Been Pwned: number of accounts, leak date, and what data leaked.
+- **Datalekken:** the latest 3 Dutch and 3 other data breaches at organisations, from Have I Been Pwned: number of accounts, leak date, and what data leaked. Below them **Oplichting en phishing**: the latest scam warnings of the Fraudehelpdesk.
 - **Ransomware NL:** organisations claimed by ransomware groups on their leak sites (ransomware.live), with counts, the most active groups and the latest claims. No links to leak sites and no descriptions.
 - **Internetstoringen:** **internet in the Netherlands** on top, then the status of Akamai, AWS, Cloudflare, Microsoft Azure, Microsoft 365, Google Cloud and STACKIT (in the order of `config.yaml`); internet: outages detected by IODA for the country and KPN, VodafoneZiggo, Odido and DELTA Fiber. Any service with an Atlassian Statuspage or RSS status feed can be added in `config.yaml`.
 - **Gezondheid:** RIVM news of the last 14 days, filtered to health alerts (infectious diseases, vaccination, heat, smog).
@@ -192,15 +192,15 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 | `ui` | `accent`: accent colour for all visitors, e.g. `"#00a4dc"` (empty = the default blue); adjusted automatically to a readable shade in light and dark mode |
 | `push` | Push notifications (off by default): `enabled`, `subject` (`mailto:` or https contact), `vapid_private_key` (or `NDB_VAPID_PRIVATE_KEY`), `max_subscriptions` (default 50), `quake_min_mag` (2.5), `breaking_sources` (6; 0 = off), `waste_hour` (19; -1 = off). See [Push notifications](#push-notifications). |
 | `markets` | Beurs: `enabled`, `url` (Yahoo spark), `interval` (default 15m, min. 5m), `indices` (1–20, shown in order) and `stocks` (max. 60, the source of the top 3 risers and fallers), each `{ symbol, name }`. The default stocks are the AEX constituents; Euronext reviews them every quarter. |
-| `today` | Vandaag: `enabled`, `school_url` (Rijksoverheid school holidays) |
+| `today` | Vandaag: `enabled`, `school_url` (Rijksoverheid school holidays), `on_this_day` (default true) and `wiki_url` (Dutch Wikipedia, read hourly) |
 | `ransomware` | Ransomware NL: `enabled`, `base` (ransomware.live API v2), `countries` (ISO codes, default `[NL]`, max. 5), `interval` (min. 10m) |
 | `politics` | Politiek vandaag: `enabled`, `base` (Tweede Kamer OData), `interval` (min. 10m) |
-| `weather` | default `location` (`name`, `lat`, `lon`, `region` = province for warnings, `country`), `interval`, MeteoAlarm feed URLs |
+| `weather` | default `location` (`name`, `lat`, `lon`, `region` = province for warnings, `country`), `interval`, MeteoAlarm feed URLs, `sea` (Zee en getij, default true), `tides_url` (Rijkswaterstaat water data) and `marine_url` (Open-Meteo Marine) |
 | `threats` | `enabled`, `interval` (min. 15m, ISC's request), `daily_interval`, `cisa_kev` |
 | `alerts` | top bar: `nctv` (`enabled`, `url`, `interval`, min. 1h) and `knmi` (`true`/`false`) |
 | `traffic` | `enabled`, `interval` (min. 2m), `url` (NDW DATEX II publication), `vild_base` (where the VILD location tables live) |
 | `alarms` | `enabled`, `city` (default city slug, e.g. `den-haag`), `base` (feed URL prefix), `interval` (cache per city, min. 1m); `counts` for the top bar: `label`, `cities` (one or more slugs, e.g. a whole safety region), `interval` (1m–10m) |
-| `breaches` | Datalekken panel: `enabled`, `url` (HIBP breach list), `interval` (min. 1h, default 3h), `include_sensitive` (default `false`) |
+| `breaches` | Datalekken panel: `enabled`, `url` (HIBP breach list), `interval` (min. 1h, default 3h), `include_sensitive` (default `false`), `phishing` (default true) and `phishing_url` (Fraudehelpdesk alerts RSS, read every 2 hours) |
 | `outages` | `enabled`, `interval` (min. 5m), `internet` (`enabled`, `base`, `country`, `networks`: `asn` + `name`, max. 10, `interval` min. 10m), `providers`: `id`, `name`, `url`, `homepage`, `format` (`statuspage` for any Atlassian Statuspage `summary.json` / `rss` / `m365` / `gcp` for Google Cloud's `incidents.json`) |
 | `advisories` | advisory feeds: `format: ncsc` (parses the NCSC title) or `rss` (any feed, severity from keywords) |
 | `categories`, `sources` | news categories (`short` = chip label; `name_en`/`short_en` for the English interface) and feeds (`region` = province, for the "Mijn regio" preset) |
@@ -603,6 +603,10 @@ The server fetches everything; browsers only talk to the dashboard itself.
 | [IODA](https://ioda.inetintel.cc.gatech.edu/) (Georgia Tech) | Internetstoringen | Outage events for the country and chosen networks (routing, reachability, traffic). No key. The data is "Copyright Georgia Tech Research Corporation"; no published data licence found (checked September 2026), attribution shown. IODA's server does not answer Go's TLS 1.3 handshake, so the app talks to that one host over TLS 1.2. |
 | [ransomware.live](https://www.ransomware.live/) | Ransomware NL | Free API v2: no key, **personal use only**, 1 request per minute per endpoint (polled hourly per country). Business use needs their free PRO key under separate terms. These are claims made by criminal groups, not verified; the panel says so. Descriptions (which can quote stolen data) and links to leak sites are never passed on. |
 | [Have I Been Pwned](https://haveibeenpwned.com/) | Datalekken | The public breach list (`/api/v3/breaches`): no API key, and no visitor data is sent. Licensed **CC BY 4.0** (attribution shown in the panel). Fetched every 3 h. Left out: unverified, fabricated, retired, spam lists, malware and stealer logs, entries without a domain, and (unless `include_sensitive: true`) sensitive breaches. HIBP has no country field, so "Dutch" means a `.nl` domain or a description mentioning Dutch/the Netherlands. |
+| [Fraudehelpdesk](https://www.fraudehelpdesk.nl/actueel/) | Datalekken: oplichting en phishing | The public RSS feed of warnings (`/feed/?post_type=alert`), read every 2 hours. |
+| [Wikipedia (nl)](https://nl.wikipedia.org/) | Vandaag: op deze dag | The wikitext of the day page (e.g. "3 oktober", section Gebeurtenissen) via the standard API, read hourly; CC BY-SA. Dutch Wikipedia has no "on this day" feed. |
+| [Rijkswaterstaat water data](https://rijkswaterstaatdata.nl/waterdata/) | Weer: getij | The astronomical tide (high and low water, cm relative to NAP) of 19 coastal stations, via the open DDAPI 2.0 (`OphalenWaarnemingen`); cached per station for 6 hours. |
+| [Open-Meteo Marine](https://open-meteo.com/en/docs/marine-weather-api) | Weer: zee | Sea surface temperature and wave height at the station; cached per station for an hour. |
 | [Zwaailicht.nl](https://zwaailicht.nl/blog/rss-feeds-p2000-meldingen) | P2000 alerts | Public Atom feeds per city (`/feed/meldingen/<city>.xml`), refreshed every minute. House numbers are left out by Zwaailicht. Fetched only for cities visitors actually choose, and cached 2 min per city. **Not for emergencies: call 112.** |
 
 **Grid operators (Stedin, Enexis, Liander)** publish outages only as web pages or through internal app APIs, not as open data (checked September 2026). They are therefore not included; see the `# TODO` in `config.yaml`.
@@ -698,6 +702,7 @@ All JSON responses:
 | `GET /api/img?u=&s=` | thumbnail through the image proxy (only URLs signed by this server) |
 | `GET /manifest.webmanifest`, `/icon-*.png`, `/sw.js` | installable web app: manifest, icons (drawn at startup) and offline service worker |
 | `GET /api/weather?lat=&lon=&region=&cc=` | current, 24 h, 7 days, rain 2 h, warnings (defaults to the configured location) |
+| `GET /api/sea?lat=&lon=` | Zee en getij: the nearest coastal `station` (`name`, `km`), the next `tides` (`time`, `high`, `cm`) and `sea` (`temp`, `wave`, `wave_dir`, `wave_max`) |
 | `GET /api/geocode?q=` | place search, NL/BE first (rate-limited per IP) |
 | `GET /api/threats` | Infocon, top ports, 30-day trend, top IPs + countries, Feodo C2, optional KEV, sources/licences |
 | `GET /api/alerts` | top bar: NCTV level (`level`, `name`, `since`) KNMI summary (`level`, `active`, `onset`, `types`, `areas`, `heat`) and `water` (`level`, `sectors`, `peak`, `peak_at`, `barriers`, `outlook`) |
@@ -729,9 +734,9 @@ All JSON responses:
 | `POST /api/push/subscribe` · `/unsubscribe` · `/test` | Register, remove or test this device's subscription (same-origin JSON only) |
 | `GET /api/markets` | Beurs: `indices` in config order and `stocks` sorted by daily change (symbol, name, price, change_pct, prev_close, time) |
 | `GET /api/quakes` | Aardbevingen: the quakes of the last `days` (time, place, magnitude, depth, induced, KNMI link) |
-| `GET /api/today` | Vandaag: `date`, `week`, `holidays_today`, `holidays_next`, `moon` (`phase`, `illumination`, `next_full`, `next_new`, `moment`), `clock_change`, `school.regions` (noord/midden/zuid: current or next holiday) |
+| `GET /api/today` | Vandaag: `date`, `week`, `holidays_today`, `holidays_next`, `moon` (`phase`, `illumination`, `next_full`, `next_new`, `moment`), `clock_change`, `school.regions` (noord/midden/zuid: current or next holiday), `on_this_day` (`title`, `url`, `events`: `year`, `text`) |
 | `GET /api/ransomware` | Ransomware NL: `last7` / `last30` / `last365` counts, `top_groups` (90 days), the 8 newest `victims` (name, website, sector, group, date) and per-country `sources` |
-| `GET /api/breaches` | Datalekken: the latest 3 Dutch (`nl`) and 3 other (`other`) breaches with `title`, `domain`, `url`, `breach_date`, `added`, `count`, `data_classes`, plus `total`/`shown` |
+| `GET /api/breaches` | Datalekken: the latest 3 Dutch (`nl`) and 3 other (`other`) breaches with `title`, `domain`, `url`, `breach_date`, `added`, `count`, `data_classes`, plus `total`/`shown`, `phishing` (`items`: `title`, `url`, `published`) |
 | `GET /api/outages` | per provider: status (`ok`/`minor`/`major`) and incidents; `internet`: IODA events per country/network |
 | `GET /api/advisories?sources=&limit=` | normalised advisories: `{id, source, title, url, published, updated, severity, probability, impact, cves, products, exploited}` |
 | `GET /healthz` | `{"status":"ok", …}` + per-source status for news (`sources`) and threat/advisory feeds (`feeds`) |
@@ -793,8 +798,17 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 
 ## Changelog
 
+### 1.29.0
+- **Zee en getij** (Weer): the next high and low tides at the nearest of 19 coastal stations (Rijkswaterstaat), with the sea temperature and waves (Open-Meteo Marine). New endpoint `/api/sea`.
+- **Op deze dag** (Vandaag): four events on today's date from the Dutch Wikipedia day page, Dutch events first.
+- **Oplichting en phishing** (Datalekken): the latest Fraudehelpdesk warnings of the last 30 days.
+- Config: `weather.sea`, `weather.tides_url`, `weather.marine_url`, `today.on_this_day`, `today.wiki_url`, `breaches.phishing`, `breaches.phishing_url` (all on by default).
+
+### 1.28.1
+- **Beurs** is on the Dagelijks page by default on a phone (a visitor's own choice still applies).
+
 ### 1.28.0
-- **Two panel pages on a phone:** Overzicht ← Nieuws → **Dagelijks** → **Achtergrond**. By default Achtergrond holds Economie, Beurs, Politiek, Cyberdreigingen, Security-adviezen, Datalekken, Ransomware, Kritieke infrastructuur, Internetstoringen, AP and Gezondheid; under *Instellingen → Panelen* each panel has a Dagelijks/Achtergrond choice (phone only; desktop and tablet are unchanged). *Ga naar paneel* switches to the right page.
+- **Two panel pages on a phone:** Overzicht ← Nieuws → **Dagelijks** → **Achtergrond**. By default Achtergrond holds Economie, Politiek, Cyberdreigingen, Security-adviezen, Datalekken, Ransomware, Kritieke infrastructuur, Internetstoringen, AP and Gezondheid; under *Instellingen → Panelen* each panel has a Dagelijks/Achtergrond choice (phone only; desktop and tablet are unchanged). *Ga naar paneel* switches to the right page.
 
 ### 1.27.1
 - **Internetstoringen:** the Storingen panel is renamed.

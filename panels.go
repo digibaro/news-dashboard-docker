@@ -1785,6 +1785,9 @@ func (a *App) threatJobs(cfg *Config) []Job {
 	if cfg.Today.Enabled {
 		jobs = append(jobs, Job{Key: "rijk:schoolholidays", Sig: cfg.Today.SchoolURL, Interval: 24 * time.Hour,
 			Run: a.fetchJob("rijk:schoolholidays", func() string { return a.config().Today.SchoolURL }, "application/json", nil, parseSchoolHolidays, nil)})
+		if cfg.Today.OnThisDay {
+			jobs = append(jobs, Job{Key: "wiki:onthisday", Sig: cfg.Today.WikiURL, Interval: time.Hour, Run: a.runOnThisDay})
+		}
 	}
 	if cfg.Politics.Enabled {
 		jobs = append(jobs, Job{Key: "tk:politics", Sig: cfg.Politics.Base, Interval: cfg.Politics.Interval.D(), Run: a.runPolitics})
@@ -1794,6 +1797,11 @@ func (a *App) threatJobs(cfg *Config) []Job {
 		jobs = append(jobs, Job{Key: "hibp:breaches", Sig: fmt.Sprint(cfg.Breaches.URL, sensitive), Interval: cfg.Breaches.Interval.D(),
 			Run: a.fetchJob("hibp:breaches", func() string { return a.config().Breaches.URL }, "application/json", nil,
 				func(b []byte) (any, error) { return parseBreaches(b, sensitive, time.Now()) }, nil)})
+		if cfg.Breaches.Phishing {
+			jobs = append(jobs, Job{Key: "fhd:alerts", Sig: cfg.Breaches.PhishingURL, Interval: 2 * time.Hour,
+				Run: a.fetchJob("fhd:alerts", func() string { return a.config().Breaches.PhishingURL }, "application/rss+xml, application/xml", nil,
+					func(b []byte) (any, error) { return parseScamAlerts(b, time.Now()) }, nil)})
+		}
 	}
 	if cfg.Outages.Enabled {
 		for _, p := range cfg.Outages.Providers {
@@ -2678,6 +2686,14 @@ func (a *App) handleBreaches(w http.ResponseWriter, r *http.Request) {
 	e["enabled"] = true
 	if v, ok := a.threats.get("hibp:breaches").Data.(BreachData); ok {
 		e["data"] = v
+	}
+	if cfg.Breaches.Phishing {
+		ph := a.feedEntry("fhd:alerts")
+		if v, ok := a.threats.get("fhd:alerts").Data.([]ScamAlert); ok {
+			ph["items"] = v
+		}
+		ph["url"] = "https://www.fraudehelpdesk.nl/actueel/"
+		e["phishing"] = ph
 	}
 	writeJSON(w, r, http.StatusOK, 300, e)
 }
@@ -4043,7 +4059,8 @@ func schoolNow(all map[string][]SchoolHoliday, today string) map[string]map[stri
 }
 
 func (a *App) handleToday(w http.ResponseWriter, r *http.Request) {
-	if !a.config().Today.Enabled {
+	cfg := a.config()
+	if !cfg.Today.Enabled {
 		writeJSON(w, r, http.StatusOK, 60, map[string]any{"enabled": false})
 		return
 	}
@@ -4071,6 +4088,13 @@ func (a *App) handleToday(w http.ResponseWriter, r *http.Request) {
 		school["regions"] = schoolNow(v, today)
 	}
 	resp["school"] = school
+	if cfg.Today.OnThisDay {
+		od := a.feedEntry("wiki:onthisday")
+		if v, ok := a.threats.get("wiki:onthisday").Data.(OnThisDay); ok && v.Date == today {
+			od["title"], od["url"], od["events"] = v.Title, v.URL, v.Events
+		}
+		resp["on_this_day"] = od
+	}
 	writeJSON(w, r, http.StatusOK, 300, resp)
 }
 

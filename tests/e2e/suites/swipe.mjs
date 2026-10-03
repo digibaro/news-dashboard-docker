@@ -117,10 +117,10 @@ const state = p => p.evaluate(() => {
   ok(tabs.map(x => x.t).join('|') === 'Overzicht|Nieuws|Dagelijks|Achtergrond' && tabs.every(x => x.fits), `four tabs that fit at 360 px: ${tabs.map(x => x.t + (x.fits ? '' : ' (cut off)')).join(' | ')}`);
   await swipe(p, 300, 500, 100, 500, '#pbar'); await p.waitForTimeout(300);
   let s = await state(p), a = await shown();
-  ok(s.view === 'panels' && s.sel === 'mv-panels' && a.includes('weather') && a.includes('energy') && !a.includes('markets') && !a.includes('advisories'), `swipe left: Dagelijks (${a.length} panels, ${a.slice(0, 4).join(', ')}…)`);
+  ok(s.view === 'panels' && s.sel === 'mv-panels' && a.includes('weather') && a.includes('energy') && a.includes('markets') && !a.includes('advisories'), `swipe left: Dagelijks (${a.length} panels, ${a.slice(0, 4).join(', ')}…)`);
   await swipe(p, 300, 500, 100, 500, '#pbar'); await p.waitForTimeout(300);
   s = await state(p); const b = await shown();
-  ok(s.view === 'panels2' && s.sel === 'mv-panels2' && s.side && !s.news && !s.chips && b.includes('markets') && b.includes('outages') && !b.includes('weather'), `swipe left again: Achtergrond (${b.join(', ')})`);
+  ok(s.view === 'panels2' && s.sel === 'mv-panels2' && s.side && !s.news && !s.chips && b.includes('economy') && b.includes('outages') && !b.includes('markets') && !b.includes('weather'), `swipe left again: Achtergrond (${b.join(', ')})`);
   ok(a.length + b.length === await p.$$eval('#side .panel', l => l.length), 'every panel is on exactly one page');
   await p.screenshot({ path: `${OUT}/swipe-panels2.png` });
   await swipe(p, 300, 500, 100, 500, '#pbar'); await p.waitForTimeout(300);
@@ -128,18 +128,18 @@ const state = p => p.evaluate(() => {
   await swipe(p, 100, 500, 300, 500, '#pbar'); await p.waitForTimeout(300);
   ok((await state(p)).view === 'panels', 'swipe right: back to Dagelijks');
   // Ga naar paneel goes to the right page
-  await p.click('#pb-jump'); await p.keyboard.type('beurs'); await p.keyboard.press('Enter'); await p.waitForTimeout(600);
-  ok((await state(p)).view === 'panels2' && await p.evaluate(() => { const r = document.querySelector('#panel-markets').getBoundingClientRect(); return r.height > 0 && r.top >= 0 && r.top < 400; }), 'Ga naar paneel "Beurs" switches to Achtergrond');
+  await p.click('#pb-jump'); await p.keyboard.type('economie'); await p.keyboard.press('Enter'); await p.waitForTimeout(600);
+  ok((await state(p)).view === 'panels2' && await p.evaluate(() => { const r = document.querySelector('#panel-economy').getBoundingClientRect(); return r.height > 0 && r.top >= 0 && r.top < 400; }), 'Ga naar paneel "Economie" switches to Achtergrond');
   // move a panel to the other page in the settings
   await p.click('#open-settings');
   await p.waitForTimeout(300);
-  const sel = '#panel-order select[aria-label="Pagina op de telefoon voor Beurs"]';
-  ok(await p.$eval(sel, e => e.value) === 'b' && await p.$eval(sel, e => getComputedStyle(e).display !== 'none'), 'settings: Beurs is on Achtergrond');
+  const sel = '#panel-order select[aria-label="Pagina op de telefoon voor Economie in cijfers"]';
+  ok(await p.$eval(sel, e => e.value) === 'b' && await p.$eval(sel, e => getComputedStyle(e).display !== 'none'), 'settings: Economie in cijfers is on Achtergrond');
   await p.selectOption(sel, 'a'); await p.keyboard.press('Escape'); await p.waitForTimeout(300);
   await p.click('#mv-panels'); await p.waitForTimeout(300);
-  ok((await shown()).includes('markets'), 'after choosing Dagelijks, Beurs is on Dagelijks');
+  ok((await shown()).includes('economy'), 'after choosing Dagelijks, Economie in cijfers is on Dagelijks');
   await p.reload(); await p.waitForSelector('#pbar', { state: 'attached' }); await p.click('#mv-panels'); await p.waitForTimeout(400);
-  ok((await shown()).includes('markets'), 'the choice is remembered after a reload');
+  ok((await shown()).includes('economy'), 'the choice is remembered after a reload');
   // an empty page says so
   await p.evaluate(() => { const pr = JSON.parse(localStorage.getItem('ndb:prefs')); pr.panels.page = Object.fromEntries(pr.panels.order.map(id => [id, 'a'])); localStorage.setItem('ndb:prefs', JSON.stringify(pr)); });
   await p.reload(); await p.waitForSelector('#pbar', { state: 'attached' }); await p.click('#mv-panels2'); await p.waitForTimeout(400);

@@ -56,6 +56,11 @@ weather:
   meteoalarm:                     # KNMI / KMI warnings via MeteoAlarm (CC BY 4.0)
     nl: "https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-netherlands"
     be: "https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-belgium"
+  sea: true                       # "Zee en getij": high and low tides (Rijkswaterstaat, astronomical tide) and sea
+                                  # temperature and waves (Open-Meteo Marine) at the coastal station nearest to the
+                                  # visitor's weather location; cached per station (tides 6 h, sea 1 h)
+  tides_url: "https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenWaarnemingen"
+  marine_url: "https://marine-api.open-meteo.com/v1/marine"
 
 threats:
   enabled: true
@@ -89,6 +94,8 @@ breaches:
   url: "https://haveibeenpwned.com/api/v3/breaches"
   interval: 3h                    # the list is ~1 MB and changes a few times a week; min. 1h
   include_sensitive: false        # true = also show breaches HIBP marks as sensitive (e.g. adult sites)
+  phishing: true                  # "Oplichting en phishing": the latest Fraudehelpdesk warnings (RSS, every 2 hours)
+  phishing_url: "https://www.fraudehelpdesk.nl/feed/?post_type=alert"
 
 # Energieprijzen: day-ahead electricity and gas prices from EnergyZero (no key needed).
 # Shown as the market price incl. VAT. Add energy tax and your supplier's markup (incl. VAT) to see an
@@ -132,6 +139,8 @@ politics:
 today:
   enabled: true
   school_url: "https://opendata.rijksoverheid.nl/v1/infotypes/schoolholidays?output=json"
+  on_this_day: true               # "Op deze dag": four events on today's date from the Dutch Wikipedia day page (hourly)
+  wiki_url: "https://nl.wikipedia.org"
 
 # Ransomware NL: organisations claimed by ransomware groups on their leak sites, from ransomware.live.
 # The free API (v2) needs no key but is for personal use only and allows 1 request per minute per endpoint;

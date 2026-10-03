@@ -1613,3 +1613,142 @@ func TestKNMIHeat(t *testing.T) {
 		t.Errorf("no heat warning: %+v", s.Heat)
 	}
 }
+
+func TestScamAlerts(t *testing.T) {
+	b, err := os.ReadFile("testdata/fraudehelpdesk-alerts.xml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 10, 3, 12, 0, 0, 0, time.UTC)
+	as, err := parseScamAlerts(b, now)
+	if err != nil || len(as) < 3 || as[0].Title != "Pop-up met beschuldiging van kijken kinderporno" || !strings.HasPrefix(as[0].URL, "https://www.fraudehelpdesk.nl/") {
+		t.Fatalf("alerts: %v %+v", err, as[:min(2, len(as))])
+	}
+	for i, a := range as {
+		if now.Sub(a.Published) > 60*24*time.Hour || (i > 0 && a.Published.After(as[i-1].Published)) || strings.Contains(a.Title, "&#") {
+			t.Errorf("alert %d: %+v (60 days, newest first, entities decoded)", i, a)
+		}
+	}
+	if as, _ := parseScamAlerts(b, now.AddDate(1, 0, 0)); len(as) != 0 {
+		t.Errorf("a year later nothing is recent: %d", len(as))
+	}
+	a := newTestApp(t, validConfig)
+	a.threats.ok("fhd:alerts", as, "", "")
+	if body := get(a.routes("/"), "GET", "/api/breaches", nil).Body.String(); !strings.Contains(body, `"phishing":{`) || !strings.Contains(body, "Valse telefoontjes") {
+		t.Errorf("breaches handler: %s", body[:min(len(body), 300)])
+	}
+}
+
+func TestOnThisDay(t *testing.T) {
+	b, err := os.ReadFile("testdata/wiki-3-oktober.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var r struct {
+		Parse struct {
+			Wikitext string `json:"wikitext"`
+		} `json:"parse"`
+	}
+	if err := json.Unmarshal(b, &r); err != nil {
+		t.Fatal(err)
+	}
+	all := parseDayEvents(r.Parse.Wikitext)
+	if len(all) < 40 {
+		t.Fatalf("events: %d", len(all))
+	}
+	for _, e := range all {
+		if strings.ContainsAny(e.Text, "[]{}<>|") || strings.Contains(e.Text, "''") || e.Year < 1 || e.Year > 2100 {
+			t.Errorf("markup left or bad year: %+v", e)
+		}
+	}
+	if e := all[0]; e.Year != 382 || !strings.HasPrefix(e.Text, "Keizer Theodosius I sluit een verbond met de Visigoten") || !strings.Contains(e.Text, "Balkangebergte") {
+		t.Errorf("first event (links with labels resolved): %+v", e)
+	}
+	pick := pickDayEvents(all, 4)
+	dutch := 0
+	for i, e := range pick {
+		if dutchTopicRe.MatchString(e.Text) {
+			dutch++
+		}
+		if i > 0 && e.Year < pick[i-1].Year {
+			t.Errorf("picked events oldest first: %+v", pick)
+		}
+	}
+	if len(pick) != 4 || dutch < 1 || dutch > 2 {
+		t.Errorf("pick: %d events, %d Dutch: %+v", len(pick), dutch, pick)
+	}
+	if got := cleanWikitext(`De [[Elfstedentocht|tocht]] {{nowrap|x}} begint<ref name="a">bron</ref> in '''[[Leeuwarden]]'''.`); got != "De tocht begint in Leeuwarden." {
+		t.Errorf("clean: %q", got)
+	}
+	if dayPageTitle(time.Date(2026, 10, 3, 9, 0, 0, 0, amsterdam)) != "3 oktober" || dayPageTitle(time.Date(2026, 1, 21, 9, 0, 0, 0, amsterdam)) != "21 januari" {
+		t.Error("page title")
+	}
+	if parseDayEvents("== Geboren ==\n* [[1900]] – Iemand") != nil {
+		t.Error("no Gebeurtenissen section: no events")
+	}
+	a := newTestApp(t, validConfig)
+	today := time.Now().In(amsterdam).Format("2006-01-02")
+	a.threats.ok("wiki:onthisday", OnThisDay{Date: today, Title: "3 oktober", URL: "https://nl.wikipedia.org/wiki/3_oktober", Events: pick}, "", "")
+	if body := get(a.routes("/"), "GET", "/api/today", nil).Body.String(); !strings.Contains(body, `"on_this_day":{`) || !strings.Contains(body, `"events":[{"year":`) {
+		t.Errorf("today handler: %s", body[:min(len(body), 300)])
+	}
+	a.threats.ok("wiki:onthisday", OnThisDay{Date: "2000-01-01", Title: "1 januari", Events: pick}, "", "")
+	if body := get(a.routes("/"), "GET", "/api/today", nil).Body.String(); strings.Contains(body, `"events":[`) {
+		t.Error("yesterday's events must not be served")
+	}
+}
+
+func TestTidesAndSea(t *testing.T) {
+	b, err := os.ReadFile("testdata/rws-tides.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts, err := parseTides(b)
+	if err != nil || len(ts) < 6 {
+		t.Fatalf("tides: %v %d", err, len(ts))
+	}
+	if ts[0].High || ts[0].CM != -59 || !ts[1].High || ts[1].CM != 95 || !ts[0].Time.Equal(time.Date(2026, 10, 3, 1, 14, 0, 0, time.UTC)) {
+		t.Errorf("first tides (low -59 at 02:14+01:00, high 95): %+v", ts[:2])
+	}
+	for i := 1; i < len(ts); i++ {
+		if ts[i].High == ts[i-1].High {
+			t.Errorf("high and low alternate: %+v", ts)
+			break
+		}
+	}
+	if _, err := parseTides([]byte(`{"Succesvol":false,"Foutmelding":"Geen gegevens gevonden!"}`)); err == nil || !strings.Contains(err.Error(), "Geen gegevens") {
+		t.Errorf("error reply: %v", err)
+	}
+	m, err := os.ReadFile("testdata/openmeteo-marine.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, err := parseMarine(m)
+	if err != nil || s.Temp == nil || s.Wave == nil || *s.Temp < 0 || *s.Temp > 30 || s.WaveMax == nil {
+		t.Errorf("sea: %v %+v", err, s)
+	}
+	if _, err := parseMarine([]byte(`{"current":{"wave_height":null}}`)); err == nil {
+		t.Error("no values must be an error")
+	}
+	for _, c := range []struct {
+		lat, lon float64
+		want     string
+	}{{52.08, 4.31, "Scheveningen"}, {51.44, 3.57, "Vlissingen"}, {53.18, 5.42, "Harlingen"}, {52.09, 5.12, "IJmuiden"}, {53.22, 6.57, "Delfzijl"}} {
+		if st, _ := nearestCoast(c.lat, c.lon); st.Name != c.want {
+			t.Errorf("nearest to %.2f,%.2f: %s, want %s", c.lat, c.lon, st.Name, c.want)
+		}
+	}
+	a := newTestApp(t, validConfig)
+	a.tides.get("scheveningen", time.Hour, func() ([]Tide, error) {
+		now := time.Now().UTC()
+		return []Tide{{now.Add(-3 * time.Hour), false, -50}, {now.Add(2 * time.Hour), true, 110}, {now.Add(8 * time.Hour), false, -60}, {now.Add(14 * time.Hour), true, 100}, {now.Add(20 * time.Hour), false, -55}}, nil
+	})
+	a.sea.get("scheveningen", time.Hour, func() (SeaNow, error) { return s, nil })
+	body := get(a.routes("/"), "GET", "/api/sea?lat=52.08&lon=4.31", nil).Body.String()
+	if !strings.Contains(body, `"name":"Scheveningen"`) || strings.Contains(body, `"cm":-50`) || !strings.Contains(body, `"cm":110`) || !strings.Contains(body, `"temp":`) {
+		t.Errorf("sea handler (past tides dropped): %s", body)
+	}
+	if code := get(a.routes("/"), "GET", "/api/sea?lat=x", nil).Code; code != 400 {
+		t.Errorf("bad lat: %d", code)
+	}
+}

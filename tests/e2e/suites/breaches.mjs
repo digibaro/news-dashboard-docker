@@ -56,7 +56,7 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   const [ctx, p] = await page(w, 'light', prefs({ lang: 'en' }));
   await p.waitForTimeout(500);
   const t = await p.evaluate(() => ({ head: document.querySelector('#panel-breaches h2').textContent.trim(),
-    h3: [...document.querySelectorAll('#panel-breaches h3')].map(x => x.textContent), meta: [...document.querySelectorAll('#panel-breaches .m')[0].children].map(x => x.textContent).join(' · '),
+    h3: [...document.querySelectorAll('#panel-breaches .bgrp h3')].map(x => x.textContent), meta: [...document.querySelectorAll('#panel-breaches .m')[0].children].map(x => x.textContent).join(' · '),
     dc: document.querySelector('#panel-breaches .bdc')?.textContent, foot: document.querySelector('#panel-breaches .pfoot')?.textContent }));
   console.log(JSON.stringify(t));
   ok(t.head === 'Data breaches' && t.h3.join() === 'Netherlands,Elsewhere', 'English headings');

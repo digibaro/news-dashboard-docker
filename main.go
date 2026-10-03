@@ -190,6 +190,9 @@ type Config struct {
 		Interval   Duration          `yaml:"interval"`
 		Units      string            `yaml:"units"`
 		MeteoAlarm map[string]string `yaml:"meteoalarm"` // country code (nl, be) -> Atom feed URL
+		Sea        bool              `yaml:"sea"`        // Zee en getij: tides and sea at the nearest coastal station
+		TidesURL   string            `yaml:"tides_url"`  // Rijkswaterstaat water data, OphalenWaarnemingen
+		MarineURL  string            `yaml:"marine_url"` // Open-Meteo Marine
 	} `yaml:"weather"`
 	Threats struct {
 		Enabled       bool     `yaml:"enabled"`
@@ -258,6 +261,8 @@ type Config struct {
 	Today struct {
 		Enabled   bool   `yaml:"enabled"`
 		SchoolURL string `yaml:"school_url"`
+		OnThisDay bool   `yaml:"on_this_day"` // Op deze dag: events on today's date from Dutch Wikipedia
+		WikiURL   string `yaml:"wiki_url"`
 	} `yaml:"today"`
 	// Ransomware: Ransomware NL panel (ransomware.live API v2; free for personal use).
 	Ransomware struct {
@@ -272,6 +277,8 @@ type Config struct {
 		URL              string   `yaml:"url"`
 		Interval         Duration `yaml:"interval"`
 		IncludeSensitive bool     `yaml:"include_sensitive"` // e.g. adult sites; off by default
+		Phishing         bool     `yaml:"phishing"`          // Oplichting en phishing: Fraudehelpdesk warnings
+		PhishingURL      string   `yaml:"phishing_url"`
 	} `yaml:"breaches"`
 	Outages struct {
 		Enabled   bool           `yaml:"enabled"`
@@ -497,6 +504,10 @@ func defaultConfig() *Config {
 	c.Trains.Enabled, c.Trains.URL, c.Trains.Interval = true, "https://gateway.apiportal.ns.nl/disruptions/v3?isActive=true", Duration(5*time.Minute)
 	c.Politics.Enabled, c.Politics.Base, c.Politics.Interval = true, "https://gegevensmagazijn.tweedekamer.nl/OData/v4/2.0", Duration(30*time.Minute)
 	c.Today.Enabled, c.Today.SchoolURL = true, "https://opendata.rijksoverheid.nl/v1/infotypes/schoolholidays?output=json"
+	c.Today.OnThisDay, c.Today.WikiURL = true, "https://nl.wikipedia.org"
+	c.Breaches.Phishing, c.Breaches.PhishingURL = true, "https://www.fraudehelpdesk.nl/feed/?post_type=alert"
+	c.Weather.Sea, c.Weather.TidesURL = true, "https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenWaarnemingen"
+	c.Weather.MarineURL = "https://marine-api.open-meteo.com/v1/marine"
 	c.Ransomware.Enabled, c.Ransomware.Base, c.Ransomware.Countries, c.Ransomware.Interval = true, "https://api.ransomware.live/v2", []string{"NL"}, Duration(time.Hour)
 	c.Breaches.Enabled = true
 	c.Breaches.URL = "https://haveibeenpwned.com/api/v3/breaches"
@@ -931,6 +942,15 @@ func (c *Config) validate() error {
 			}
 		}
 	}
+	if c.Today.Enabled && c.Today.OnThisDay && !httpsURL(c.Today.WikiURL) {
+		fail("today.wiki_url must be an https URL")
+	}
+	if c.Breaches.Enabled && c.Breaches.Phishing && !httpsURL(c.Breaches.PhishingURL) {
+		fail("breaches.phishing_url must be an https URL")
+	}
+	if c.Weather.Sea && (!httpsURL(c.Weather.TidesURL) || !httpsURL(c.Weather.MarineURL)) {
+		fail("weather.tides_url and weather.marine_url must be https URLs")
+	}
 	if c.Today.Enabled && !httpsURL(c.Today.SchoolURL) {
 		fail("today.school_url must be an https URL")
 	}
@@ -1126,6 +1146,8 @@ type App struct {
 	solar     *ttlCache[[]SolarDay]     // solar yield per ~10 km cell, tilt and direction
 	icons     *iconCache                // news site icons per host
 	skyClouds *ttlCache[[]cloudPoint]   // cloud cover per ~10 km cell
+	tides     *ttlCache[[]Tide]         // tide extremes per coastal station
+	sea       *ttlCache[SeaNow]         // sea temperature and waves per coastal station
 	wasteIdx  wasteIndex                // address -> municipal calendar
 	push      *pushHub                  // Web Push subscriptions and watcher state
 }
@@ -1286,7 +1308,7 @@ func run(cfgPath string) error {
 	a := &App{cfgPath: cfgPath, level: level, started: time.Now(), news: newNewsCache(), sched: newScheduler(), wx: newWeatherCaches(),
 		threats: newStateStore(), geo: newGeoCache(10000), metrics: newHTTPMetrics(),
 		alarms: newTTLCache[[]Alarm](500), air: newTTLCache[[]AirComponent](200), pollen: newTTLCache[PollenData](300), p2k: newP2KCounters(),
-		push: newPushHub(), waste: newTTLCache[WasteResult](1000), insects: newTTLCache[InsectData](300), wikiCache: newTTLCache[WikiSummary](200), solar: newTTLCache[[]SolarDay](500), icons: newIconCache(), skyClouds: newTTLCache[[]cloudPoint](300)}
+		push: newPushHub(), waste: newTTLCache[WasteResult](1000), insects: newTTLCache[InsectData](300), wikiCache: newTTLCache[WikiSummary](200), solar: newTTLCache[[]SolarDay](500), icons: newIconCache(), skyClouds: newTTLCache[[]cloudPoint](300), tides: newTTLCache[[]Tide](50), sea: newTTLCache[SeaNow](50)}
 	if st, err := os.Stat(cfgPath); err == nil {
 		a.cfgMod = st.ModTime()
 	}
@@ -1520,6 +1542,7 @@ func (a *App) routes(basePath string) http.Handler {
 	handle("GET /api/satellite/image", a.handleSatelliteFile(false))
 	handle("GET /api/satellite/overlay", a.handleSatelliteFile(true))
 	handle("GET /api/sky", a.handleSky)
+	handle("GET /api/sea", a.handleSea)
 	handle("GET /api/sports", a.handleSports)
 	handle("GET /api/push", a.handlePushInfo)
 	handle("POST /api/push/subscribe", a.handlePushSubscribe)
@@ -1922,6 +1945,9 @@ func (a *App) otherFeeds(cfg *Config) []FeedStatus {
 	}
 	if cfg.Breaches.Enabled {
 		add("hibp:breaches", "Have I Been Pwned · datalekken", "breach")
+		if cfg.Breaches.Phishing {
+			add("fhd:alerts", "Fraudehelpdesk · oplichting en phishing", "breach")
+		}
 	}
 	if cfg.Energy.Enabled {
 		add("energyzero", "EnergyZero · energieprijzen", "daily")
@@ -1938,6 +1964,9 @@ func (a *App) otherFeeds(cfg *Config) []FeedStatus {
 	}
 	if cfg.Today.Enabled {
 		add("rijk:schoolholidays", "Rijksoverheid · schoolvakanties", "daily")
+		if cfg.Today.OnThisDay {
+			add("wiki:onthisday", "Wikipedia · op deze dag", "daily")
+		}
 	}
 	if cfg.Ransomware.Enabled {
 		for _, cc := range cfg.Ransomware.Countries {
