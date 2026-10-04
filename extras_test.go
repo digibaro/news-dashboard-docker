@@ -1900,3 +1900,52 @@ func TestRadarNL(t *testing.T) {
 		t.Errorf("radar handler (token never in the reply): %s", body)
 	}
 }
+
+func TestGHSAAndFortinet(t *testing.T) {
+	b, err := os.ReadFile("testdata/github-advisories-opnsense.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := AdvisorySource{ID: "opnsense", Name: "OPNsense", Format: "ghsa", Group: "edge"}
+	as, err := parseGHSA(src, b)
+	if err != nil || len(as) < 5 || as[0].ID != "GHSA-x3q7-cc7h-gj3v" || as[0].Severity != "medium" || !strings.HasPrefix(as[0].URL, "https://github.com/opnsense/core/security/advisories/") || as[0].Source != "opnsense" {
+		t.Fatalf("ghsa: %v %+v", err, as[:min(1, len(as))])
+	}
+	if _, err := parseGHSA(src, []byte(`{"message":"API rate limit exceeded"}`)); err == nil {
+		t.Error("an error object (rate limit) must be an error")
+	}
+	if l, _ := parseGHSA(src, []byte(`[{"ghsa_id":"GHSA-x","html_url":"https://github.com/x","state":"draft","published_at":null}]`)); len(l) != 0 {
+		t.Errorf("drafts are skipped: %+v", l)
+	}
+	forti := AdvisorySource{ID: "fortinet", URL: "https://filestore.fortinet.com/fortiguard/rss/ir.xml"}
+	if p := fortiProduct(forti, "Arbitrary process termination", "An Unverified Ownership Vulnerability [CWE-283] in FortiClient Windows fortimon3 driver may allow"); p != "FortiClient Windows" {
+		t.Errorf("product: %q", p)
+	}
+	if p := fortiProduct(forti, "FortiOS - heap overflow", "in FortiOS"); p != "" {
+		t.Error("a title that already names the product is left alone")
+	}
+	if p := fortiProduct(AdvisorySource{URL: "https://example.org/rss"}, "x", "FortiGate"); p != "" {
+		t.Error("only for Fortinet feeds")
+	}
+	raws := []rawItem{{Title: "Improper Authentication", Link: "https://www.fortiguard.com/psirt/FG-IR-26-001", Summary: "CVSSv3 Score: 9.1 An improper authentication in FortiPAM Server may allow", Date: "Tue, 08 Sep 2026 00:00:00 +0000"}}
+	if a := normalizeAdvisories(forti, raws, time.Now()); len(a) != 1 || a[0].Title != "FortiPAM: Improper Authentication" || a[0].Severity != "critical" {
+		t.Errorf("fortinet advisory: %+v", a)
+	}
+}
+
+func TestPageID(t *testing.T) {
+	a := newTestApp(t, validConfig)
+	page := get(a.routes("/"), "GET", "/", nil)
+	if !regexp.MustCompile(`^[0-9a-f]{16}$`).MatchString(pageID) || !strings.Contains(page.Body.String(), `<meta name="ndb-page" content="`+pageID+`">`) || strings.Contains(page.Body.String(), "__PAGE_ID__") {
+		t.Fatalf("page must carry the build id %q", pageID)
+	}
+	if rr := get(a.routes("/"), "GET", "/api/today", nil); rr.Header().Get("X-NDB-Page") != pageID || !strings.Contains(rr.Header().Get("Vary"), "X-NDB-Page") {
+		t.Errorf("API header %q, Vary %q", rr.Header().Get("X-NDB-Page"), rr.Header().Get("Vary"))
+	}
+	if got := get(a.routes("/"), "GET", "/api/sea?lat=x", nil).Header().Get("X-NDB-Page"); got != pageID {
+		t.Errorf("errors carry the header too: %q", got)
+	}
+	if buildCSP(indexHTML) != buildCSP([]byte(page.Body.String())) {
+		t.Error("the stamped page must keep the same script hashes (CSP)")
+	}
+}

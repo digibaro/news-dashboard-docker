@@ -76,7 +76,7 @@ threats:
   threatfox_url: "https://threatfox-api.abuse.ch/api/v1/"
 
 # Extra feeds verified with -check-feeds on 2026-09-24: cert-eu, cisa, cisa-ics, bsi-wid, msrc.
-# Security advisories. format: ncsc (parses [kans/schade]) or rss (any RSS/Atom, keyword severity).
+# Security advisories. format: ncsc (parses [kans/schade]), rss (any RSS/Atom, keyword severity) or ghsa (GitHub advisories).
 advisories:
   - { id: ncsc, name: "NCSC-NL", format: ncsc, url: "https://advisories.ncsc.nl/rss/advisories", homepage: "https://advisories.ncsc.nl", interval: 15m }
   - { id: cert-eu, name: "CERT-EU", format: rss, url: "https://cert.europa.eu/publications/security-advisories-rss", homepage: "https://cert.europa.eu", enabled: false }
@@ -90,10 +90,11 @@ advisories:
   - { id: msrc, name: "Microsoft MSRC", format: rss, url: "https://api.msrc.microsoft.com/update-guide/rss", homepage: "https://msrc.microsoft.com/update-guide", enabled: false }
   # Vendor PSIRT feeds (group: edge): shown in the tab "Edge-apparaten". Severity comes from the feed (Cisco
   # "Security Impact Rating", Palo Alto "Severity", Fortinet CVSS score). Citrix has no working feed (checked 2026-10).
+  # format: ghsa reads the GitHub security advisories of a repository (OPNsense publishes there; no key, 60 requests/hour).
   - { id: fortinet, name: "Fortinet PSIRT", format: rss, group: edge, url: "https://filestore.fortinet.com/fortiguard/rss/ir.xml", homepage: "https://www.fortiguard.com/psirt", interval: 1h }
   - { id: paloalto, name: "Palo Alto Networks", format: rss, group: edge, url: "https://security.paloaltonetworks.com/rss.xml", homepage: "https://security.paloaltonetworks.com", interval: 1h }
   - { id: cisco, name: "Cisco PSIRT", format: rss, group: edge, url: "https://sec.cloudapps.cisco.com/security/center/psirtrss20/CiscoSecurityAdvisory.xml", homepage: "https://sec.cloudapps.cisco.com/security/center/publicationListing.x", interval: 1h }
-  - { id: ivanti, name: "Ivanti", format: rss, group: edge, url: "https://www.ivanti.com/blog/topics/security-advisory/rss", homepage: "https://www.ivanti.com/blog/topics/security-advisory", interval: 6h }
+  - { id: opnsense, name: "OPNsense", format: ghsa, group: edge, url: "https://api.github.com/repos/opnsense/core/security-advisories?per_page=30", homepage: "https://github.com/opnsense/core/security/advisories", interval: 2h }
 
 # Security-adviezen, tab "Exploits": the newest public exploits (Exploit-DB RSS, hourly) and the CVEs whose EPSS
 # score (FIRST: chance of exploitation in 30 days) rose most in a week (two daily files of ~3 MB, every 6 hours).

@@ -129,6 +129,25 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   ok(errs.length === 0, 'no page errors ' + errs.join('|'));
   await ctx.close();
 }
+{ // 1.31.1: a page from another build refreshes itself (once), then offers a Reload button
+  const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 }, serviceWorkers: 'block' }); // page.route cannot see requests a service worker makes
+  await ctx.addInitScript(() => { if (!sessionStorage.getItem('t-init')) { sessionStorage.setItem('t-init', '1'); localStorage.setItem('ndb:prefs', JSON.stringify({ v: 2, onboarded: true })); } });
+  const p = await ctx.newPage(); let loads = 0; p.on('load', () => loads++);
+  await p.goto(BASEURL); await p.waitForSelector('#stream .item');
+  const same = await p.evaluate(async () => { const id = document.querySelector('meta[name="ndb-page"]').content; const r = await fetch('api/today'); return { id, hdr: r.headers.get('X-NDB-Page'), vary: r.headers.get('Vary') }; });
+  ok(/^[0-9a-f]{16}$/.test(same.id) && same.hdr === same.id && !(await p.$('.updbar')), `page and server share the build id ${same.id}: no reload, no bar`);
+  ok(/X-NDB-Page/.test(same.vary || ''), `answers vary by build id, so caches keep builds apart (Vary: ${same.vary})`);
+  await p.route('**/api/alerts*', async r => { const res = await r.fetch(); return r.fulfill({ response: res, headers: { ...res.headers(), 'x-ndb-page': 'aaaaaaaaaaaaaaaa' } }); });
+  loads = 0; await p.reload(); await p.waitForSelector('.updbar', { timeout: 20000 }); await p.waitForTimeout(500);
+  ok(loads === 2, `a different server build: the page reloads itself once (${loads} loads)`);
+  ok(/Er is een nieuwe versie van Nieuws Hub\./.test(await p.textContent('.updbar')) && !!(await p.$('.updbar button')), 'still different after that reload: a bar with Vernieuwen');
+  const r = await new AxeBuilder({ page: p }).include('.updbar').analyze();
+  ok(r.violations.length === 0, `update bar axe: ${r.violations.map(v => v.id).join(', ') || 0}`);
+  await p.unroute('**/api/alerts*');
+  await Promise.all([p.waitForEvent('load'), p.click('.updbar button')]); await p.waitForSelector('#stream .item'); await p.waitForTimeout(800);
+  ok(!(await p.$('.updbar')), 'Vernieuwen reloads; with matching builds the bar is gone');
+  await ctx.close();
+}
 await b.close();
 console.log(fails ? `${fails} FAILED` : 'ALL PASSED');
 process.exit(fails ? 1 : 0);

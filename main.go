@@ -52,6 +52,13 @@ import (
 //go:embed web/index.html
 var indexHTML []byte
 
+// pageID identifies this build's page. The page carries it in <meta name="ndb-page"> and every API answer
+// in the header X-NDB-Page, so a browser that still runs an older page notices and refreshes itself.
+var pageID = func() string {
+	sum := sha256.Sum256(append([]byte(version), indexHTML...))
+	return hex.EncodeToString(sum[:8])
+}()
+
 var version = "dev"
 
 // ---------------------------------------------------------------------------
@@ -133,6 +140,7 @@ type AdvisorySource struct {
 	Enabled  *bool    `yaml:"enabled" json:"-"`
 	Interval Duration `yaml:"interval" json:"-"`
 	Group    string   `yaml:"group" json:"group,omitempty"` // "edge": vendor PSIRT feeds, shown in the tab Edge-apparaten
+	// Format ghsa: the GitHub security advisories of a repository (REST API, no key), e.g. OPNsense.
 }
 
 func (s AdvisorySource) IsEnabled() bool { return s.Enabled == nil || *s.Enabled }
@@ -1031,8 +1039,8 @@ func (c *Config) validate() error {
 		if s.IsEnabled() && !isHTTPURL(s.URL) {
 			fail("%s: url must be an absolute http(s) URL", where)
 		}
-		if s.Format != "ncsc" && s.Format != "rss" {
-			fail("%s: format must be ncsc or rss", where)
+		if s.Format != "ncsc" && s.Format != "rss" && s.Format != "ghsa" {
+			fail("%s: format must be ncsc, rss or ghsa", where)
 		}
 		if s.Interval != 0 && s.Interval.D() < 5*time.Minute {
 			fail("%s: interval must be at least 5m", where)
@@ -1537,7 +1545,7 @@ func pushPostPath(p string) bool {
 func (a *App) routes(basePath string) http.Handler {
 	mux := http.NewServeMux()
 	handle := func(pattern string, h http.HandlerFunc) { mux.Handle(pattern, a.metrics.count(pattern, h)) }
-	idx := newStaticAsset(indexHTML, "text/html; charset=utf-8")
+	idx := newStaticAsset(bytes.Replace(indexHTML, []byte("__PAGE_ID__"), []byte(pageID), 1), "text/html; charset=utf-8")
 	handle("GET /{$}", idx.serve)
 	for name, asset := range pwaAssets(idx.etag) {
 		handle("GET /"+name, asset.serve)
@@ -1696,7 +1704,8 @@ func writeJSON(w http.ResponseWriter, r *http.Request, status int, maxAge int, v
 		h.Set("Cache-Control", "no-store")
 	}
 	h.Set("ETag", etag)
-	h.Set("Vary", "Accept-Encoding")
+	h.Set("Vary", "Accept-Encoding, X-NDB-Page") // the page sends its build id: caches keep builds apart
+	h.Set("X-NDB-Page", pageID)
 	if status == http.StatusOK && etagMatch(r.Header.Get("If-None-Match"), etag) {
 		w.WriteHeader(http.StatusNotModified)
 		return

@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="ndb-page" content="__PAGE_ID__">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
@@ -929,6 +930,9 @@ textarea.json {
 .fnote { font-size: 12px; color: var(--text-3); margin: 2px 0 0; }
 .tag.lvl-yellow, .tag.lvl-orange, .tag.lvl-red, .tag.lvl-green { border-color: var(--lvl); border-left-width: 4px; color: var(--text); } /* yellow text would be unreadable */
 .hsmog { margin-top: 4px; }
+.updbar { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 60; display: flex; align-items: center; gap: 12px;
+  max-width: calc(100vw - 32px); padding: 10px 12px 10px 16px; border: 1px solid var(--line-strong); border-radius: 10px;
+  background: var(--surface); color: var(--text); box-shadow: 0 6px 24px rgb(0 0 0 / .2); font-size: 14px; }
 .ddtrend { display: flex; align-items: flex-end; gap: 4px; height: 42px; margin: 2px 0 6px; }
 .ddtrend span { flex: 1; min-width: 6px; border-radius: 2px 2px 0 0; background: var(--accent); opacity: .85; }
 .iocs { list-style: none; margin: 2px 0 6px; padding: 0; font-size: 12px; }
@@ -1160,6 +1164,11 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.31.1</h3>
+    <ul>
+      <li>Edge-apparaten: Ivanti vervangen door OPNsense. Fortinet-adviezen beginnen nu met de productnaam (bijvoorbeeld FortiClient Windows).</li>
+      <li>Na een update ververst de pagina zichzelf: een browser die nog de oude versie toont, laadt de nieuwe automatisch (of toont een knop Vernieuwen).</li>
+    </ul>
     <h3>Versie 1.31.0</h3>
     <ul>
       <li>Security-adviezen: tabbladen <b>Adviezen</b>, <b>Edge-apparaten</b> (Fortinet, Palo Alto, Cisco, Ivanti; kritiek eerst) en <b>Exploits</b> (nieuwe publieke exploits en de CVE’s waarvan de kans op misbruik deze week het sterkst steeg).</li>
@@ -1399,6 +1408,11 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.31.1</h3>
+    <ul>
+      <li>Edge devices: Ivanti replaced by OPNsense. Fortinet advisories now start with the product name (for example FortiClient Windows).</li>
+      <li>After an update the page refreshes itself: a browser that still shows the old version loads the new one automatically (or shows a Reload button).</li>
+    </ul>
     <h3>Version 1.31.0</h3>
     <ul>
       <li>Security advisories: tabs <b>Advisories</b>, <b>Edge devices</b> (Fortinet, Palo Alto, Cisco, Ivanti; critical first) and <b>Exploits</b> (new public exploits and the CVEs whose chance of exploitation rose most this week).</li>
@@ -1953,10 +1967,33 @@ function hue(id) { // deterministic colour per source id (FNV-1a)
   return (x >>> 0) % 360;
 }
 function fold(s) { return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+// The server stamps every answer with its page ID; a different one means this page is from an older (or newer)
+// build: right after loading, clear the service worker's copies and reload once; later, offer a reload button.
+const PAGE_ID = document.querySelector('meta[name="ndb-page"]')?.content || '';
+const PAGE_KNOWN = /^[0-9a-f]{16}$/.test(PAGE_ID);
+let newVersionSeen = false;
+async function hardRefresh() {
+  try { for (const reg of await navigator.serviceWorker?.getRegistrations?.() || []) await reg.unregister(); } catch { /* no service worker */ }
+  try { for (const k of await caches.keys()) if (k.startsWith('ndb-')) await caches.delete(k); } catch { /* no cache storage */ }
+  location.reload();
+}
+function onNewVersion(server) {
+  if (newVersionSeen) return;
+  newVersionSeen = true;
+  let tried = null;
+  try { tried = sessionStorage.getItem('ndb-upd'); sessionStorage.setItem('ndb-upd', server); } catch { /* private mode */ }
+  if (performance.now() < 20000 && tried !== server) { hardRefresh(); return; } // just opened: reload quietly, once per version
+  const bar = h('div', { class: 'updbar', role: 'status' }, h('span', { text: t('Er is een nieuwe versie van Nieuws Hub.') }),
+    h('button', { class: 'btn', type: 'button', text: t('Vernieuwen'), onclick: hardRefresh }));
+  document.body.append(bar);
+}
 async function api(path) {
-  const r = await fetch(path, { headers: { Accept: 'application/json' } });
+  // the server answers with Vary: X-NDB-Page, so answers cached by one build are never used by another
+  const r = await fetch(path, { headers: PAGE_KNOWN ? { Accept: 'application/json', 'X-NDB-Page': PAGE_ID } : { Accept: 'application/json' } });
   if (r.headers.get('X-NDB-Offline')) setOffline(true); // answered from the service worker cache
   else if (r.ok) setOffline(false);
+  const sv = r.headers.get('X-NDB-Page');
+  if (PAGE_KNOWN && sv && sv !== PAGE_ID && !r.headers.get('X-NDB-Offline')) onNewVersion(sv);
   if (!r.ok) {
     let msg = 'HTTP ' + r.status;
     try { const j = await r.json(); if (j && typeof j.error === 'string') msg = j.error; } catch { /* not JSON */ }
@@ -2904,6 +2941,7 @@ const EN = {
   "{h} hijacks en {l} route leaks waarbij Nederlandse netwerken betrokken zijn": "{h} hijacks and {l} route leaks involving Dutch networks",
   "Bronnen: je nieuwsbronnen": "Sources: your news sources",
   "Dreigingsbeeld NL": "Threat picture NL",
+  "Er is een nieuwe versie van Nieuws Hub.": "A new version of Nieuws Hub is available.", "Vernieuwen": "Reload",
   "Hoogwater en stormvloed": "High water and storm surge", "Rijkswaterstaat is niet bereikbaar ({err}).": "Rijkswaterstaat cannot be reached ({err}).",
   "Overal code groen: geen hoogwater.": "Code green everywhere: no high water.", "Verwacht: {code} vanaf {t}.": "Expected: {code} from {t}.",
   "Stormvloedkering dicht": "Storm-surge barrier closed", "Stormvloedkeringen: alle {n} open.": "Storm-surge barriers: all {n} open.",

@@ -1589,6 +1589,66 @@ func explicitSeverity(s string) string {
 	return ""
 }
 
+var fortiProductRe = regexp.MustCompile(`\b(Forti[A-Z][A-Za-z]+(?: (?:Windows|macOS|Linux|EMS|Cloud|Manager))?)`)
+
+// fortiProduct: the Fortinet product an advisory is about ("FortiClient Windows"), from its description.
+func fortiProduct(src AdvisorySource, title, desc string) string {
+	if !strings.Contains(src.URL, "fortinet.com") || strings.Contains(title, "Forti") {
+		return ""
+	}
+	if m := fortiProductRe.FindStringSubmatch(desc); m != nil {
+		return m[1]
+	}
+	return ""
+}
+
+func advAccept(s AdvisorySource) string {
+	if s.Format == "ghsa" {
+		return "application/vnd.github+json"
+	}
+	return feedAccept
+}
+
+// parseGHSA reads GET /repos/{owner}/{repo}/security-advisories: published advisories with
+// their GHSA id, CVE, severity and summary.
+func parseGHSA(src AdvisorySource, body []byte) ([]Advisory, error) {
+	var list []struct {
+		GHSA      string     `json:"ghsa_id"`
+		CVE       *string    `json:"cve_id"`
+		URL       string     `json:"html_url"`
+		Summary   string     `json:"summary"`
+		Severity  string     `json:"severity"`
+		State     string     `json:"state"`
+		Published *time.Time `json:"published_at"`
+		Updated   *time.Time `json:"updated_at"`
+	}
+	if err := json.Unmarshal(body, &list); err != nil {
+		return nil, fmt.Errorf("github advisories: %w", err)
+	}
+	out := []Advisory{}
+	for _, x := range list {
+		if x.State != "" && x.State != "published" || x.Published == nil || !strings.HasPrefix(x.URL, "https://github.com/") {
+			continue
+		}
+		a := Advisory{ID: x.GHSA, Source: src.ID, Title: truncate(plainText(x.Summary), 200), URL: x.URL, Published: x.Published.UTC(), CVEs: []string{}, Products: []string{}}
+		switch strings.ToLower(x.Severity) {
+		case "critical", "high", "medium", "low":
+			a.Severity = strings.ToLower(x.Severity)
+		default:
+			a.Severity = "unknown"
+		}
+		if x.CVE != nil && *x.CVE != "" {
+			a.CVEs = []string{*x.CVE}
+		}
+		if x.Updated != nil && x.Updated.Sub(*x.Published) > 24*time.Hour {
+			u := x.Updated.UTC()
+			a.Updated = &u
+		}
+		out = append(out, a)
+	}
+	return out, nil
+}
+
 func keywordSeverity(s string) string {
 	s = strings.ToLower(s)
 	switch {
@@ -1634,6 +1694,9 @@ func normalizeAdvisories(src AdvisorySource, raws []rawItem, now time.Time) []Ad
 			}
 		} else {
 			a.ID = firstNonEmpty(r.GUID, link)
+			if p := fortiProduct(src, title, desc); p != "" { // Fortinet titles name the weakness, not the product
+				title = p + ": " + title
+			}
 			a.Title = truncate(title, 200)
 			if a.Severity = explicitSeverity(title + " " + desc); a.Severity == "" {
 				a.Severity = keywordSeverity(title + " " + desc)
@@ -1882,7 +1945,10 @@ func (a *App) threatJobs(cfg *Config) []Job {
 			iv = s.Interval.D()
 		}
 		jobs = append(jobs, Job{Key: "adv:" + s.ID, Sig: s.URL + "|" + s.Format, Interval: iv,
-			Run: a.fetchJob("adv:"+s.ID, func() string { return s.URL }, feedAccept, nil, func(b []byte) (any, error) {
+			Run: a.fetchJob("adv:"+s.ID, func() string { return s.URL }, advAccept(s), nil, func(b []byte) (any, error) {
+				if s.Format == "ghsa" {
+					return parseGHSA(s, b)
+				}
 				raws, err := parseFeed(b, "")
 				if err != nil {
 					return nil, err

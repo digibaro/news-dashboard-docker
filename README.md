@@ -14,7 +14,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
   - geolocation via ip-api.com
   - the ISC Infocon level
   - Autoriteit Persoonsgegevens enforcement news (panel "Autoriteit Persoonsgegevens") (last 14 days)
-- **Security advisories**: NCSC-NL, with the `[kans/schade]` rating parsed into badges, plus optional CERT-EU, CISA, BSI and MSRC. Tabs **Edge-apparaten** (PSIRT feeds of Fortinet, Palo Alto, Cisco and Ivanti, severity from the feed, critical first, at most 8 per vendor) and **Exploits** (new public exploits from Exploit-DB and the CVEs whose EPSS score rose most in a week, marked when in CISA KEV).
+- **Security advisories**: NCSC-NL, with the `[kans/schade]` rating parsed into badges, plus optional CERT-EU, CISA, BSI and MSRC. Tabs **Edge-apparaten** (Fortinet, Palo Alto, Cisco and OPNsense, severity from the source, critical first, at most 8 per vendor; Fortinet titles get the product name) and **Exploits** (new public exploits from Exploit-DB and the CVEs whose EPSS score rose most in a week, marked when in CISA KEV).
 - **Dreigingsbeeld NL:** incidents at Dutch organisations from your Dutch-language news (last 7 days), DDoS attacks on the Netherlands (trend, attack types, origin countries) and BGP hijacks and route leaks involving Dutch networks (Cloudflare Radar; needs a free API token).
 - **Top bar:** the current KNMI weather code (only while there is a warning), the number of P2000 alerts in the last hour per service for a configured area (default Den Haag), an active NL-Alert with its place (only while one is active), and the NCTV terrorism threat level.
 - **Vandaag:** date and week number, sunrise and sunset, moon phase, the next public holiday, the next clock change, and school holidays for regio Noord, Midden and Zuid (the visitor's region highlighted). **Op deze dag**: four events on today's date from the Dutch Wikipedia day page (Dutch ones first).
@@ -206,7 +206,7 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 | `alarms` | `enabled`, `city` (default city slug, e.g. `den-haag`), `base` (feed URL prefix), `interval` (cache per city, min. 1m); `counts` for the top bar: `label`, `cities` (one or more slugs, e.g. a whole safety region), `interval` (1m–10m) |
 | `breaches` | Datalekken panel: `enabled`, `url` (HIBP breach list), `interval` (min. 1h, default 3h), `include_sensitive` (default `false`), `phishing` (default true) and `phishing_url` (Fraudehelpdesk alerts RSS, read every 2 hours) |
 | `outages` | `enabled`, `interval` (min. 5m), `internet` (`enabled`, `base`, `country`, `networks`: `asn` + `name`, max. 10, `interval` min. 10m), `providers`: `id`, `name`, `url`, `homepage`, `format` (`statuspage` for any Atlassian Statuspage `summary.json` / `rss` / `m365` / `gcp` for Google Cloud's `incidents.json`) |
-| `advisories` | advisory feeds: `format: ncsc` (parses the NCSC title) or `rss` (any feed; severity from the feed when it states one, such as a CVSS score, otherwise from keywords); `group: edge` puts a feed in the tab Edge-apparaten |
+| `advisories` | advisory feeds: `format: ncsc` (parses the NCSC title) `rss` (any feed; severity from the feed when it states one, such as a CVSS score, otherwise from keywords) or `ghsa` (the GitHub security advisories of a repository, e.g. `https://api.github.com/repos/opnsense/core/security-advisories`); `group: edge` puts a feed in the tab Edge-apparaten |
 | `categories`, `sources` | news categories (`short` = chip label; `name_en`/`short_en` for the English interface) and feeds (`region` = province, for the "Mijn regio" preset) |
 | `presets` | topics offered on the first visit and under Instellingen → Bronnen: a list of `sources`, or `region: true` for the broadcaster matching the visitor's weather province; `name_en`/`description_en` for the English interface |
 
@@ -568,7 +568,7 @@ The server fetches everything; browsers only talk to the dashboard itself.
 | [abuse.ch Feodo Tracker](https://feodotracker.abuse.ch/) | botnet C2 list | CC0. An `Auth-Key` is sent when configured. |
 | [abuse.ch URLhaus](https://urlhaus.abuse.ch/) | Cyberdreigingen: Malware in NL | The country feed for NL (CSV, ~10 MB), every 3 hours; only URLs still online are counted. CC0. Network names via Shadowserver's public ASN lookup. |
 | [abuse.ch ThreatFox](https://threatfox.abuse.ch/) | Cyberdreigingen: IOC's | `get_iocs` for the last 24 hours, hourly; needs the free abuse.ch Auth-Key. CC0. |
-| Vendor PSIRT feeds | Security-adviezen: Edge-apparaten | Fortinet (filestore.fortinet.com), Palo Alto Networks, Cisco and Ivanti RSS. Citrix has no working feed. |
+| Vendor PSIRT feeds | Security-adviezen: Edge-apparaten | Fortinet (filestore.fortinet.com), Palo Alto Networks and Cisco RSS; OPNsense via the GitHub security advisories API (no key). Citrix has no working feed. |
 | [Exploit-DB](https://www.exploit-db.com/) | Security-adviezen: Exploits | The RSS feed of new exploits, hourly. |
 | [FIRST EPSS](https://www.first.org/epss/) | Security-adviezen: Exploits | Two daily score files (~3 MB each: today and a week ago), compared every 6 hours. |
 | [Cloudflare Radar](https://radar.cloudflare.com/) | Dreigingsbeeld NL | Layer-3 attack trend and types, layer-7 attack origins, BGP hijacks (confidence ≥ 5) and route leaks for NL; 5 requests per 30 minutes with your API token. CC BY-NC 4.0. |
@@ -810,6 +810,10 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.31.1
+- **Edge-apparaten:** Ivanti replaced by **OPNsense** (new advisory format `ghsa`: the GitHub security advisories of a repository, no key). Fortinet advisories now start with the product name ("FortiClient Windows: …"), because Fortinet's own titles only name the weakness.
+- **Refresh after an update:** the page carries its build ID (`<meta name="ndb-page">`) and every API answer the server's (`X-NDB-Page`). When they differ, a page that was just opened clears the service worker and its caches and reloads once; a page that has been open for a while shows "Er is een nieuwe versie · Vernieuwen". API requests send the build ID in the header `X-NDB-Page` and answers carry `Vary: X-NDB-Page`, so cached answers of one build are never used by another.
 
 ### 1.31.0
 - **Security-adviezen:** tabs **Adviezen**, **Edge-apparaten** (new advisory sources `fortinet`, `paloalto`, `cisco`, `ivanti` with `group: edge`; severity read from the feed: Cisco Security Impact Rating, Palo Alto Severity, Fortinet CVSS score) and **Exploits** (Exploit-DB and EPSS risers; new endpoint `/api/exploits`).
