@@ -1155,6 +1155,11 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.30.0</h3>
+    <ul>
+      <li>Hooikoorts en Teken en muggen zijn samen één paneel: <b>Gezondheid</b>.</li>
+      <li>Het paneel met RIVM-meldingen heet nu <b>RIVM</b>; Autoriteit Persoonsgegevens acties heet <b>Autoriteit Persoonsgegevens</b>; Ransomware NL heet <b>Ransomware</b>.</li>
+    </ul>
     <h3>Versie 1.29.0</h3>
     <ul>
       <li>Weer: <b>Zee en getij</b> bij het dichtstbijzijnde kuststation, met de volgende hoog- en laagwaters (Rijkswaterstaat), de zeewatertemperatuur en de golven.</li>
@@ -1382,6 +1387,11 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.30.0</h3>
+    <ul>
+      <li>Hay fever and Ticks and mosquitoes are now one panel: <b>Health</b>.</li>
+      <li>The panel with RIVM alerts is now called <b>RIVM</b>; Data Protection Authority actions is now <b>Data Protection Authority</b>; Ransomware NL is now <b>Ransomware</b>.</li>
+    </ul>
     <h3>Version 1.29.0</h3>
     <ul>
       <li>Weather: <b>Sea and tide</b> at the nearest coastal station, with the next high and low tides (Rijkswaterstaat), the sea temperature and the waves.</li>
@@ -1820,8 +1830,7 @@ const PANELS = {
   today: 'Vandaag',
   waste: 'Afvalkalender',
   air: 'Luchtkwaliteit',
-  pollen: 'Hooikoorts',
-  insects: 'Teken en muggen',
+  pollen: 'Gezondheid',
   sky: 'Vanavond aan de hemel',
   traffic: 'Verkeer',
   trains: 'Treinstoringen',
@@ -1837,11 +1846,11 @@ const PANELS = {
   threats: 'Cyberdreigingen',
   advisories: 'Security-adviezen',
   breaches: 'Datalekken',
-  ransomware: 'Ransomware NL',
+  ransomware: 'Ransomware',
   utilities: 'Kritieke infrastructuur',
   outages: 'Internetstoringen',
-  ap: 'Autoriteit Persoonsgegevens acties',
-  health: 'Gezondheid',
+  ap: 'Autoriteit Persoonsgegevens',
+  health: 'RIVM',
 };
 const PANEL_IDS = Object.keys(PANELS);
 const SPORT_IDS = ['f1', 'road', 'mtb', 'athletics', 'football']; // before sanitize() runs on the stored prefs
@@ -1971,7 +1980,7 @@ const EN = {
   'Kies eerst een weerlocatie in de instellingen.': 'Choose a weather location in the settings first.',
   // panel names
   'Weer': 'Weather', 'Verkeer': 'Traffic', 'Alarmeringen': 'Emergency alerts', 'Cyberdreigingen': 'Cyber threats', 'Security-adviezen': 'Security advisories',
-  'Storingen': 'Outages', 'Internetstoringen': 'Internet outages', 'Autoriteit Persoonsgegevens acties': 'Dutch Data Protection Authority actions', 'Gezondheid': 'Health',
+  'Storingen': 'Outages', 'Internetstoringen': 'Internet outages', 'Autoriteit Persoonsgegevens acties': 'Dutch Data Protection Authority actions', 'Autoriteit Persoonsgegevens': 'Dutch Data Protection Authority', 'Gezondheid': 'Health', 'RIVM': 'RIVM', 'Ransomware': 'Ransomware',
   // weather
   'wijzigen': 'change', 'Neerslag komende 2 uur': 'Rain in the next 2 hours', 'Komende 24 uur': 'Next 24 hours', '7 dagen': '7 days', 'droog': 'dry',
   'wind (Beaufort)': 'wind (Beaufort)', 'details': 'details', 'Bronnen: ': 'Sources: ', 'Bron: ': 'Source: ', 'standaardlocatie': 'default location',
@@ -2652,7 +2661,9 @@ const EN = {
   // telefoonweergave
   "Weergave op de telefoon": "View on the phone",
   // 1.14: hemel, sport, teken en muggen, kwetsbaarheden, onweer, delen
-  "Teken en muggen": "Ticks and mosquitoes",
+  "Teken en muggen": "Ticks and mosquitoes", "Plaats voor gezondheid wijzigen (nu {name})": "Change the place for health (now {name})",
+  "Hooikoorts staat uit in config.yaml (pollen.enabled).": "Hay fever is disabled in config.yaml (pollen.enabled).", "Teken en muggen staat uit in config.yaml (insects.enabled).": "Ticks and mosquitoes is disabled in config.yaml (insects.enabled).",
+  "Dit paneel staat uit in config.yaml (pollen.enabled en insects.enabled).": "This panel is disabled in config.yaml (pollen.enabled and insects.enabled).",
   "Vanavond aan de hemel": "Tonight's sky",
   "Sportagenda": "Sports calendar",
   "Plaats voor teken en muggen wijzigen (nu {name})": "Change the place for ticks and mosquitoes (now {name})",
@@ -3065,6 +3076,8 @@ function sanitize(p) {
       if (pp[k] && typeof pp[k] === 'object') for (const id of PANEL_IDS) if (pp[k][id] === true) d.panels[k][id] = true;
     }
     if (pp.page && typeof pp.page === 'object') for (const id of PANEL_IDS) if (pp.page[id] === 'a' || pp.page[id] === 'b') d.panels.page[id] = pp.page[id];
+    // 1.30: Teken en muggen joined Hooikoorts in Gezondheid; likewise
+    if (d.panels.hidden.pollen && Array.isArray(pp.order) && pp.order.includes('insects') && pp.hidden?.insects !== true) delete d.panels.hidden.pollen;
     // 1.24: Wereldwijd joined Aardbevingen; whoever kept Wereldwijd visible keeps the combined panel visible
     if (d.panels.hidden.quakes && Array.isArray(pp.order) && pp.order.includes('world') && pp.hidden?.world !== true) delete d.panels.hidden.quakes;
   }
@@ -3659,9 +3672,9 @@ const summaryOf = {
   waste: () => { const p = panelData.waste?.data?.pickups?.[0]; return p ? `${dayWord(p.date)}: ${tr(p.type)}` : null; },
   air: () => { const a = panelData.air?.data; if (!a?.lki) return null; const [, label] = lkiLevel(a.lki.value);
     const rad = panelData.radiation?.data?.data; return [`${Math.round(a.lki.value)} · ${t(label)}`, rad?.raised ? t('straling verhoogd') : null, alertsData?.knmi?.status?.heat ? t('hitteplan actief') : null].filter(Boolean).join(' · '); },
-  pollen: () => { const d = panelData.pollen?.data?.data; if (!d) return null; const ps = pollenSummary(d);
-    return ps.lv > 0 ? t('{level} ({type})', { level: t(POLLEN_LV[ps.lv]), type: t(POLLEN[ps.typ][0]) }) : t('nauwelijks pollen'); },
-  insects: () => { const d = panelData.insects?.data?.data?.days?.[0]; return d ? t('teken {a} · muggen {b}', { a: t(INSECT_LV[d.ticks]), b: t(INSECT_LV[d.mosquito]) }) : null; },
+  pollen: () => { const d = panelData.pollen?.data?.data, ps = d && pollenSummary(d), ins = panelData.insects?.data?.data?.days?.[0];
+    return [ps ? (ps.lv > 0 ? t('{level} ({type})', { level: t(POLLEN_LV[ps.lv]), type: t(POLLEN[ps.typ][0]) }) : t('nauwelijks pollen')) : null,
+      ins ? t('teken {a} · muggen {b}', { a: t(INSECT_LV[ins.ticks]), b: t(INSECT_LV[ins.mosquito]) }) : null].filter(Boolean).join(' · ') || null; },
   sky: () => { const d = panelData.sky?.data?.data; if (!d?.dark) return null;
     return [t('donker vanaf {t}', { t: fmt.time.format(new Date(d.dark)) }), d.clouds != null ? t('{n}% bewolkt', { n: d.clouds }) : null, d.aurora >= 2 ? t('kans op noorderlicht') : null].filter(Boolean).join(' · '); },
   traffic: () => { const d = panelData.traffic?.data?.data; if (!d) return null;
@@ -3711,7 +3724,6 @@ const freshOf = {
   ap: () => { const s = panelData.ap?.status; return s && { ts: s.fetched_at, max: 65, stale: !!s.error }; },
   alarms: () => { const d = panelData.alarms?.data; return d?.enabled && { ts: d.fetched_at, max: 6, stale: !!d.stale }; },
   traffic: () => { const d = panelData.traffic?.data; return d?.enabled && { ts: d.fetched_at, max: 15, stale: !!d.error }; },
-  insects: () => { const d = panelData.insects?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 130, stale: !!d.error }; },
   satellite: () => { const d = panelData.satellite?.data; return d?.enabled && d.time && { ts: d.time, max: 75, stale: !!d.error }; },
   sky: () => { const d = panelData.sky?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 400, stale: !!d.error }; },
   sports: () => { const d = panelData.sports?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 130, stale: !!d.f1?.error }; },
@@ -3746,10 +3758,9 @@ const panelRenderers = {
   air: renderAir,
   today: renderToday,
   ransomware: renderRansomware,
-  pollen: renderPollen,
+  pollen: renderGezond,
   economy: renderEconomy,
   nlalert: renderNLAlert,
-  insects: renderInsects,
   satellite: renderSatellite,
   sky: renderSky,
   sports: renderSports,
@@ -4788,7 +4799,7 @@ function updateAirHint() {
   el.textContent = prefs.air ? t('Nu: {name}.', { name: tr(prefs.air.name) }) : t('Nu: zelfde als je weerlocatie ({name}).', { name: airLocName() });
 }
 function setAirLocation(loc, msg) {
-  queueMicrotask(() => { panelData.insects = null; renderPanel('insects'); loadInsects(); });
+  queueMicrotask(() => { panelData.insects = null; renderPanel('pollen'); loadInsects(); });
   prefs.air = loc ? sanitize({ air: loc }).air : null;
   savePrefs(); updateAirHint();
   $('#air-results').replaceChildren();
@@ -5043,14 +5054,22 @@ function pollenSummary(d) {
   }
   return best;
 }
-function renderPollen(body, extra) {
-  const st = panelData.pollen;
+// Gezondheid: hay fever (pollen) and ticks and mosquitoes, both for the visitor's air-quality place.
+function renderGezond(body, extra) {
   extra.replaceChildren(h('span', { text: airLocName() + ' · ' }),
-    h('button', { class: 'linkbtn', type: 'button', onclick: () => openSettings('air'), 'aria-label': t('Plaats voor hooikoorts wijzigen (nu {name})', { name: airLocName() }), text: t('wijzigen') }));
-  if (!st) { body.replaceChildren(h('div', { class: 'tsk polsk', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:85%' }))); return; }
+    h('button', { class: 'linkbtn', type: 'button', onclick: () => openSettings('air'), 'aria-label': t('Plaats voor gezondheid wijzigen (nu {name})', { name: airLocName() }), text: t('wijzigen') }));
+  const sec = (ico, title, nodes) => h('div', { class: 'wsec' }, h('h3', null, h('span', { 'aria-hidden': 'true', text: ico + ' ' }), t(title)), nodes);
+  const out = [];
+  if (catalog?.pollen !== false) out.push(sec('🌾', 'Hooikoorts', pollenNodes()));
+  if (catalog?.insects !== false) out.push(sec('🕷️', 'Teken en muggen', insectNodes()));
+  body.replaceChildren(...(out.length ? out : [h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (pollen.enabled en insects.enabled).' })]));
+}
+function pollenNodes() {
+  const st = panelData.pollen;
+  if (!st) return [h('div', { class: 'tsk polsk', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:85%' }))];
   const r = st.data;
-  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('De pollenverwachting kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
-  if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (pollen.enabled).' })); return; }
+  if (!r) return [h('p', { class: 'pnote', text: t('De pollenverwachting kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })];
+  if (!r.enabled) return [h('p', { class: 'pnote', text: 'Hooikoorts staat uit in config.yaml (pollen.enabled).' })];
   const d = r.data, out = [];
   const present = Object.keys(POLLEN).filter(typ => d.days.some(x => (x.max[typ] || 0) >= 1));
   const sum = pollenSummary(d);
@@ -5066,7 +5085,7 @@ function renderPollen(body, extra) {
     out.push(h('p', { class: 'pnote', text: t('Er zijn de komende dagen nauwelijks pollen in de lucht.') }));
   }
   out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://open-meteo.com/', 'Open-Meteo'), t(' (CAMS, Copernicus) · indicatieve drempels per pollensoort')));
-  body.replaceChildren(...out);
+  return out;
 }
 
 // ---------------------------------------------------------------- kritieke infrastructuur (netbeheerders)
@@ -5756,17 +5775,15 @@ async function loadInsects() {
   const l = airLoc();
   try { panelData.insects = { data: await api('api/insects' + (l ? `?lat=${l.lat}&lon=${l.lon}` : '')) }; }
   catch (e) { panelData.insects = { ...(panelData.insects || {}), error: e }; }
-  renderPanel('insects');
+  renderPanel('pollen'); // Gezondheid
 }
-function renderInsects(body, extra) {
+function insectNodes() {
   const st = panelData.insects;
-  extra.replaceChildren(h('span', { text: airLocName() + ' · ' }),
-    h('button', { class: 'linkbtn', type: 'button', onclick: () => openSettings('air'), 'aria-label': t('Plaats voor teken en muggen wijzigen (nu {name})', { name: airLocName() }), text: t('wijzigen') }));
-  if (!st) { body.replaceChildren(h('div', { class: 'tsk insk', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:85%' }))); return; }
+  if (!st) return [h('div', { class: 'tsk insk', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:85%' }))];
   const r = st.data;
-  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('De verwachting kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
-  if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (insects.enabled).' })); return; }
-  if (!r.data) { body.replaceChildren(h('p', { class: 'pnote', text: t('Open-Meteo is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: r.error || '?' }) })); return; }
+  if (!r) return [h('p', { class: 'pnote', text: t('De verwachting kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })];
+  if (!r.enabled) return [h('p', { class: 'pnote', text: 'Teken en muggen staat uit in config.yaml (insects.enabled).' })];
+  if (!r.data) return [h('p', { class: 'pnote', text: t('Open-Meteo is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: r.error || '?' }) })];
   const days = r.data.days;
   const lvl = (v, what) => h('span', { class: 'ilv i' + v, text: t(INSECT_LV[v]), 'aria-label': t('{what}: {level}', { what: t(what), level: t(INSECT_LV[v]) }) });
   const out = [h('table', { class: 'itab' },
@@ -5776,7 +5793,7 @@ function renderInsects(body, extra) {
       h('td', null, lvl(d.ticks, 'Teken')), h('td', null, lvl(d.mosquito, 'Muggen'))))))];
   out.push(h('p', { class: 'pfoot' }, t('Indicatie op basis van temperatuur, vocht en wind (Open-Meteo), geen metingen · Meer: '),
     extLink('https://www.tekenradar.nl/', 'Tekenradar'), ', ', extLink('https://www.naturetoday.com/intl/nl/observations/mosquito-radar/', t('Muggenradar'))));
-  body.replaceChildren(...out);
+  return out;
 }
 
 // ---------------------------------------------------------------- satellietbeeld (EUMETSAT, served by this server)

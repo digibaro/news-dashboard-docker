@@ -36,7 +36,7 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   if (w === 1440 && scheme === 'light') console.log(JSON.stringify({ day: t.day, rows: t.rows, school: t.school, rwLines: t.rwLines, rwItems: t.rwItems.slice(0, 2) }, null, 1));
   ok(t.title === 'Nieuws Hub' && t.brand === 'Nieuws Hub', `${w} ${scheme}: name "Nieuws Hub"`);
   ok(t.order.indexOf('satellite') === t.order.indexOf('weather') + 1 && t.order.indexOf('today') === t.order.indexOf('satellite') + 1 && t.order.indexOf('ransomware') === t.order.indexOf('breaches') + 1 && t.order.indexOf('utilities') === t.order.indexOf('ransomware') + 1, 'Vandaag after Weer, Ransomware NL after Datalekken');
-  ok(t.heads.join() === 'Vandaag,Ransomware NL', 'panel names');
+  ok(t.heads.join() === 'Vandaag,Ransomware', 'panel names');
   ok(new RegExp(`week ${api.week}$`).test(t.day || ''), `date and week: ${t.day}`);
   ok(t.rows.some(r => /Zon op \d\d:\d\d, onder \d\d:\d\d/.test(r)) && t.rows.some(r => /maan|kwartier/i.test(r)) && t.rows.some(r => /Volgende feestdag: /.test(r)), 'sun, moon and next public holiday');
   ok(!api.clock_change || t.rows.some(r => /Klok: .* een uur (terug|vooruit)/.test(r)), 'clock change shown when within 60 days');
@@ -67,7 +67,7 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   const [ctx, p] = await open(1440, 'light', { lang: 'en' });
   const e = await p.evaluate(() => ({ heads: ['today', 'ransomware'].map(id => document.querySelector(`#panel-${id} h2`).textContent.trim()),
     today: document.querySelector('#panel-today .pbody').innerText, rw: document.querySelector('#panel-ransomware .pbody').innerText }));
-  ok(e.heads.join() === 'Today,Ransomware NL', `English names: ${e.heads}`);
+  ok(e.heads.join() === 'Today,Ransomware', `English names: ${e.heads}`);
   ok(/Sunrise \d\d:\d\d/.test(e.today) && /School holidays/.test(e.today) && /Next public holiday: /.test(e.today) && /Middle/.test(e.today), 'English Vandaag');
   ok(/claims in the last 30 days/.test(e.rw) && /not verified/.test(e.rw), 'English Ransomware NL');
   await ctx.close();

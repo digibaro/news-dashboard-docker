@@ -13,12 +13,12 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
   - abuse.ch Feodo botnet C2 servers
   - geolocation via ip-api.com
   - the ISC Infocon level
-  - Autoriteit Persoonsgegevens enforcement news (last 14 days)
+  - Autoriteit Persoonsgegevens enforcement news (panel "Autoriteit Persoonsgegevens") (last 14 days)
 - **Security advisories**: NCSC-NL, with the `[kans/schade]` rating parsed into badges, plus optional CERT-EU, CISA, BSI and MSRC.
 - **Top bar:** the current KNMI weather code (only while there is a warning), the number of P2000 alerts in the last hour per service for a configured area (default Den Haag), an active NL-Alert with its place (only while one is active), and the NCTV terrorism threat level.
 - **Vandaag:** date and week number, sunrise and sunset, moon phase, the next public holiday, the next clock change, and school holidays for regio Noord, Midden and Zuid (the visitor's region highlighted). **Op deze dag**: four events on today's date from the Dutch Wikipedia day page (Dutch ones first).
 - **Luchtkwaliteit:** the air quality index (1–11) and NO₂, PM2.5, PM10 and O₃ from the nearest Luchtmeetnet station. The place is chosen per visitor (default: their weather location). Below it the **radiation** (gamma dose rate) at the nearest RIVM station, with the national range; when several stations measure raised levels, a notice appears in the top bar and a push message can go out. Then **Hitte en smog**: whether the Nationaal Hitteplan is active (KNMI heat warning), RIVM's smog warnings, and the ozone forecast for 3 days.
-- **Hooikoorts:** the pollen forecast (grass, birch, alder, mugwort, ragweed) for 3 days at the visitor's air-quality place, with indicative levels.
+- **Gezondheid:** two sections for the visitor's air-quality place. **Hooikoorts**: the pollen forecast (grass, birch, alder, mugwort, ragweed) for 3 days at the visitor's air-quality place, with indicative levels. **Teken en muggen**: an estimate of tick and mosquito activity for 3 days, from the weather.
 - **Aardbevingen en natuurrampen:** two tabs. **Nederland**: earthquakes from KNMI (14 days), the KNMI wind warning when there is one, the natuurbrandrisico phase per safety region (Brandweer Nederland), and **high water and storm surge**: Rijkswaterstaat's water-safety code per river, lake and coast sector, the highest code expected in the next 24 hours, and whether the storm-surge barriers are open. At code orange or red, or with a closed barrier, a notice appears in the top bar and a push message can go out. **Wereld**: big earthquakes from USGS (M6+, last 24 hours, with tsunami warning and expected impact) and active natural disasters from NASA EONET (hurricanes and typhoons with wind speed, volcanic eruptions, floods, large wildfires). A summary line above the tabs; the panel remembers the chosen tab.
 - **Kritieke infrastructuur:** current electricity and gas outages at Liander and Stedin (place, status, expected repair time, customers affected), planned work and outages resolved in the last 24 h.
 - **AMBER Alert and Vermist Kind Alert:** while a child is being searched for, a prominent banner at the top with the name, description, photo and "call 112" (a Vermist Kind Alert only for visitors whose weather location lies in its area), plus a push notification. Source: the police's Burgernet open API.
@@ -28,7 +28,6 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Zonnestroom** in Energieprijzen: the expected yield of your solar panels today and tomorrow, and the sunniest 3 hours. Each visitor enters kWp, direction and tilt under Instellingen.
 - **Satellietbeeld:** the latest Meteosat image of the Benelux from EUMETSAT, every 10 minutes: true colour by day, clouds and city lights at night, with coastlines and borders. The server fetches it and serves it itself.
 - **Vanavond aan de hemel:** when it gets dark, the moon, the planets you can see tonight (when and in which direction), the chance of northern lights, the clouds and active meteor showers, **space weather** (the NOAA scales for geomagnetic storms, radiation storms and radio blackouts, now and for 3 days, and the strongest solar flare of the day) and the next rocket launches (Launch Library 2).
-- **Teken en muggen:** an estimate of tick and mosquito activity for 3 days, from the weather.
 - **Sportagenda:** Formula 1 (next race with qualifying, last podium, standings) and the important races and tournaments of road cycling (classics, grand tours, EK, WK), mountain biking (EK, WK), athletics (NK, EK, WK, big marathons) and football (EK and WK only): per sport what is on now and the next three, with matching headlines while an event is on. Visitors choose their sports.
 - **Brandstofprijzen:** the national average recommended pump price (GLA) for Euro95, diesel and LPG, with the change since yesterday.
 - **Treinstoringen:** current rail disruptions and engineering works from the NS Disruptions API (needs a free key).
@@ -39,9 +38,9 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Verkeer:** jams, accidents and road closures from NDW open data (Rijkswaterstaat), with readable road names.
 - **Alarmeringen:** the latest P2000 alerts for your city from Zwaailicht.nl, grouped as Brandweer, Ambulance, Politie and Lifeliner (at most 2 each). The city is chosen per visitor under Instellingen.
 - **Datalekken:** the latest 3 Dutch and 3 other data breaches at organisations, from Have I Been Pwned: number of accounts, leak date, and what data leaked. Below them **Oplichting en phishing**: the latest scam warnings of the Fraudehelpdesk.
-- **Ransomware NL:** organisations claimed by ransomware groups on their leak sites (ransomware.live), with counts, the most active groups and the latest claims. No links to leak sites and no descriptions.
+- **Ransomware:** organisations claimed by ransomware groups on their leak sites (ransomware.live), with counts, the most active groups and the latest claims. No links to leak sites and no descriptions.
 - **Internetstoringen:** **internet in the Netherlands** on top, then the status of Akamai, AWS, Cloudflare, Microsoft Azure, Microsoft 365, Google Cloud and STACKIT (in the order of `config.yaml`); internet: outages detected by IODA for the country and KPN, VodafoneZiggo, Odido and DELTA Fiber. Any service with an Atlassian Statuspage or RSS status feed can be added in `config.yaml`.
-- **Gezondheid:** RIVM news of the last 14 days, filtered to health alerts (infectious diseases, vaccination, heat, smog).
+- **RIVM:** RIVM news of the last 14 days, filtered to health alerts (infectious diseases, vaccination, heat, smog).
 - **Themes**: Licht / Donker (true black) / Auto.
 - **Language**: Nederlands / English / Auto (browser language), switchable at the top and under Instellingen → Weergave. Only the interface is translated; news, advisories and alerts stay in their original language.
 
@@ -797,6 +796,10 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.30.0
+- **Gezondheid:** Hooikoorts and Teken en muggen are one panel with two sections. Saved layouts are migrated (whoever kept Teken en muggen visible keeps the combined panel visible).
+- **Renamed:** Gezondheid (RIVM alerts) → **RIVM**, Autoriteit Persoonsgegevens acties → **Autoriteit Persoonsgegevens**, Ransomware NL → **Ransomware**.
 
 ### 1.29.0
 - **Zee en getij** (Weer): the next high and low tides at the nearest of 19 coastal stations (Rijkswaterstaat), with the sea temperature and waves (Open-Meteo Marine). New endpoint `/api/sea`.

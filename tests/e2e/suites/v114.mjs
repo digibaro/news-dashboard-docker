@@ -9,7 +9,7 @@ async function open(w, prefs = {}, scheme = 'light') {
   await ctx.addInitScript(v => { if (!sessionStorage.getItem('s')) { localStorage.setItem('ndb:prefs', v); sessionStorage.setItem('s', '1'); } }, JSON.stringify({ v: 2, onboarded: true, ...prefs }));
   const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
   await p.goto(URL);
-  for (const s of ['#panel-insects .itab', '#panel-sky .trow', '#panel-sports .spsec', '.wxthunder', '#stream .item'])
+  for (const s of ['#panel-pollen .itab', '#panel-sky .trow', '#panel-sports .spsec', '.wxthunder', '#stream .item'])
     await p.waitForSelector(s, { state: 'attached', timeout: 60000 });
   await p.waitForTimeout(400);
   return [ctx, p, errs];
@@ -23,10 +23,10 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   if (w < 700) { await p.click('#mv-panels'); await p.waitForTimeout(200); }
   const t = await p.evaluate(() => ({
     order: [...document.querySelectorAll('.panel')].map(x => x.id.replace('panel-', '')),
-    heads: ['insects', 'sky', 'sports'].map(id => document.querySelector(`#panel-${id} h2`).textContent.trim()),
-    vulnsPanel: !!document.querySelector('#panel-vulns'), tip: document.querySelector('#panel-insects .pbody').textContent,
-    irows: [...document.querySelectorAll('#panel-insects tbody tr')].map(r => [...r.querySelectorAll('.ilv')].map(x => x.textContent).join('/')),
-    iextra: document.querySelector('#p-insects-extra').textContent,
+    heads: ['pollen', 'sky', 'sports'].map(id => document.querySelector(`#panel-${id} h2`).textContent.trim()),
+    vulnsPanel: !!document.querySelector('#panel-vulns'), tip: document.querySelector('#panel-pollen .pbody').textContent,
+    irows: [...document.querySelectorAll('#panel-pollen tbody tr')].map(r => [...r.querySelectorAll('.ilv')].map(x => x.textContent).join('/')),
+    iextra: document.querySelector('#p-pollen-extra').textContent,
     sky: [...document.querySelectorAll('#panel-sky .trow')].map(x => x.textContent), skyFoot: document.querySelector('#panel-sky .pfoot').textContent,
     sp: [...document.querySelectorAll('#panel-sports .spsec h3')].map(x => x.lastChild.textContent), f1: document.querySelector('#panel-sports .spsec')?.textContent,
     thunder: document.querySelector('.wxthunder').textContent,
@@ -35,8 +35,8 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   }));
   if (w === 1440 && scheme === 'light') console.log(JSON.stringify({ ...t, order: t.order.join() }, null, 1).slice(0, 1800));
   const i = n => t.order.indexOf(n);
-  ok(i('insects') === i('pollen') + 1 && i('sky') === i('insects') + 1 && i('sports') === i('markets') + 1 && i('breaches') === i('advisories') + 1, `${w} ${scheme}: panel positions`);
-  ok(t.heads.join('|') === 'Teken en muggen|Vanavond aan de hemel|Sportagenda', 'panel names');
+  ok(i('sky') === i('pollen') + 1 && i('sports') === i('markets') + 1 && i('breaches') === i('advisories') + 1, `${w} ${scheme}: panel positions`);
+  ok(t.heads.join('|') === 'Gezondheid|Vanavond aan de hemel|Sportagenda', 'panel names (Teken en muggen is part of Gezondheid since 1.30)');
   ok(!t.vulnsPanel && vulnsAPI.status === 404 && !/lange broek|ramen dicht|Tip:/.test(t.tip), 'Kwetsbaarheden panel removed (404), no tips in Teken en muggen');
   ok(t.irows.length === 3 && t.irows.every(r => /^(geen|laag|matig|hoog)\/(geen|laag|matig|hoog)$/.test(r)) && /wijzigen/.test(t.iextra), `ticks/mosquitoes: ${t.irows.join(', ')} [${t.iextra}]`);
   ok(/^🌆Donker vanaf \d\d:\d\d \(zon onder \d\d:\d\d\) tot \d\d:\d\d$/.test(t.sky[0]) && t.sky.some(x => /^🌙Maan: /.test(x)) && t.sky.some(x => /^🌌Noorderlicht: /.test(x)) &&
@@ -45,7 +45,7 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   ok(/^⚡ Onweer komende 24 uur: (geen|kleine|matige|grote) kans/.test(t.thunder), `thunder: ${t.thunder}`);
   ok(t.accent === (scheme === 'dark' ? t.accent : '#007da7') && t.accent !== '#0b5cad' && t.accent !== '#6cb4ff', `accent from config.yaml: ${t.accent}`);
   ok(t.sw <= w && errs.length === 0, `${w}: no horizontal scroll, no page errors ${errs.join('|')}`);
-  const r = await new AxeBuilder({ page: p }).include(['#panel-insects', '#panel-sky', '#panel-sports', '#panel-weather']).analyze();
+  const r = await new AxeBuilder({ page: p }).include(['#panel-pollen', '#panel-sky', '#panel-sports', '#panel-weather']).analyze();
   ok(r.violations.length === 0, `${w} ${scheme}: axe (incl. contrast with the accent): ${r.violations.map(v => v.id + ' ' + v.nodes[0].target).join(', ') || 0}`);
   await ctx.close();
 }
@@ -103,9 +103,9 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
 // English
 {
   const [ctx, p] = await open(1440, { lang: 'en' });
-  const e = await p.evaluate(() => ({ heads: ['insects', 'sky', 'sports'].map(id => document.querySelector(`#panel-${id} h2`).textContent.trim()),
+  const e = await p.evaluate(() => ({ heads: ['pollen', 'sky', 'sports'].map(id => document.querySelector(`#panel-${id} h2`).textContent.trim()),
     sky: document.querySelector('#panel-sky .pbody').innerText, th: document.querySelector('.wxthunder').textContent }));
-  ok(e.heads.join('|') === "Ticks and mosquitoes|Tonight's sky|Sports calendar", `English names: ${e.heads}`);
+  ok(e.heads.join('|') === "Health|Tonight's sky|Sports calendar", `English names: ${e.heads}`);
   ok(/Dark from/.test(e.sky) && /Northern lights/.test(e.sky) && /Thunderstorms in the next 24 hours/.test(e.th), 'English texts');
   await ctx.close();
 }

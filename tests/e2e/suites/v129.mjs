@@ -98,6 +98,23 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   ok(errs.length === 0, 'no page errors ' + errs.join('|'));
   await ctx.close();
 }
+{ // 1.30: Gezondheid = Hooikoorts + Teken en muggen; renamed panels; old layouts migrate
+  const [ctx, p, errs] = await open(1440, { live: true });
+  await p.waitForSelector('#panel-pollen .itab');
+  const g = await p.evaluate(() => ({ h2: document.querySelector('#panel-pollen h2').textContent, secs: [...document.querySelectorAll('#panel-pollen .wsec h3')].map(x => x.textContent.trim()),
+    insects: !!document.querySelector('#panel-insects'), names: ['health', 'ap', 'ransomware'].map(id => document.querySelector(`#panel-${id} h2`)?.textContent).join('|') }));
+  ok(g.h2 === 'Gezondheid' && g.secs.join('|') === '🌾 Hooikoorts|🕷️ Teken en muggen' && !g.insects, `one panel Gezondheid with two sections: ${g.secs.join(' | ')}`);
+  ok(g.names === 'RIVM|Autoriteit Persoonsgegevens|Ransomware', `renamed panels: ${g.names}`);
+  await axe(p, '#panel-pollen', 'Gezondheid');
+  await p.locator('#panel-pollen').screenshot({ path: `${OUT}/gezondheid.png` });
+  ok(errs.length === 0, 'no page errors ' + errs.join('|'));
+  await ctx.close();
+  const c2 = await b.newContext({ viewport: { width: 1440, height: 1000 }, serviceWorkers: 'block' });
+  await c2.addInitScript(() => localStorage.setItem('ndb:prefs', JSON.stringify({ v: 2, onboarded: true, panels: { order: ['weather', 'pollen', 'insects', 'sky'], hidden: { pollen: true }, collapsed: {} } })));
+  const p2 = await c2.newPage(); await p2.goto(BASEURL); await p2.waitForSelector('#stream .item');
+  ok(!!(await p2.$('#panel-pollen')), 'Hooikoorts hidden but Teken en muggen visible: the combined panel stays visible');
+  await c2.close();
+}
 await b.close();
 console.log(fails ? `${fails} FAILED` : 'ALL PASSED');
 process.exit(fails ? 1 : 0);

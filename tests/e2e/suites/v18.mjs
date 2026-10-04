@@ -39,7 +39,7 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   if (w === 1440 && scheme === 'light') console.log(JSON.stringify(t, null, 1));
   const i = n => t.order.indexOf(n);
   ok(i('pollen') === i('air') + 1 && i('quakes') === i('nlalert') + 1 && i('utilities') === i('ransomware') + 1 && i('outages') === i('utilities') + 1, `${w} ${scheme}: panel positions`);
-  ok(t.heads.join() === 'Hooikoorts,Kritieke infrastructuur,Aardbevingen en natuurrampen', `panel names: ${t.heads}`);
+  ok(t.heads.join() === 'Gezondheid,Kritieke infrastructuur,Aardbevingen en natuurrampen', `panel names: ${t.heads}`);
   ok(/^Vandaag: /.test(t.pollen || '') && /Utrecht/.test(t.pollenX || ''), `hooikoorts: "${t.pollen}", place follows the air/weather location`);
   ok(t.ops.length === 2 && t.ops[0].name === 'Liander' && t.ops[1].name === 'Stedin' && t.ops.every(o => /liander\.nl|stedin\.net/.test(o.href)), `grid operators: ${t.ops.map(o => `${o.name} (${o.st})`).join(', ')}`);
   ok(t.ops[0].items === Math.min(4, ut.operators[0].active.length) && t.ops[1].items === Math.min(4, ut.operators[1].active.length), 'up to 4 active outages per operator');
@@ -91,7 +91,7 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   const [ctx, p] = await open(1440, 'light', { lang: 'en' });
   const e = await p.evaluate(() => ({ heads: ['pollen', 'utilities', 'quakes'].map(id => document.querySelector(`#panel-${id} h2`).textContent.trim()),
     ut: document.querySelector('#panel-utilities .pbody').innerText, q: document.querySelector('#panel-quakes .pbody').innerText, inet: document.querySelector('#panel-outages .inet').innerText }));
-  ok(e.heads.join() === 'Hay fever,Critical infrastructure,Earthquakes and natural disasters', `English names: ${e.heads}`);
+  ok(e.heads.join() === 'Health,Critical infrastructure,Earthquakes and natural disasters', `English names: ${e.heads}`);
   ok(/electricity/.test(e.ut) && !/Drinking water/.test(e.ut) && /earthquake/.test(e.q) && /Internet in the Netherlands/.test(e.inet), 'English texts');
   await ctx.close();
 }
