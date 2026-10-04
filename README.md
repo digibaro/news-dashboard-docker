@@ -811,6 +811,9 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 
 ## Changelog
 
+### 1.31.2
+- **Security-adviezen:** the tab row (Adviezen · Edge-apparaten · Exploits) had the CSS class `advt`, which EasyList hides on every site with the generic rule `##.advt`; with uBlock Origin, AdBlock Plus or AdGuard the tabs were invisible (seen in Firefox on Windows and Android). Renamed to `sectabs`. The e2e suite now checks every class and id on the rendered page against the current EasyList and EasyList Dutch.
+
 ### 1.31.1
 - **Edge-apparaten:** Ivanti replaced by **OPNsense** (new advisory format `ghsa`: the GitHub security advisories of a repository, no key). Fortinet advisories now start with the product name ("FortiClient Windows: …"), because Fortinet's own titles only name the weakness.
 - **Refresh after an update:** the page carries its build ID (`<meta name="ndb-page">`) and every API answer the server's (`X-NDB-Page`). When they differ, a page that was just opened clears the service worker and its caches and reloads once; a page that has been open for a while shows "Er is een nieuwe versie · Vernieuwen". API requests send the build ID in the header `X-NDB-Page` and answers carry `Vary: X-NDB-Page`, so cached answers of one build are never used by another.

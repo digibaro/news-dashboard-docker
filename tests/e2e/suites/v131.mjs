@@ -49,14 +49,14 @@ async function open(w, { scheme = 'light', lang = 'nl', mobile = false, nl = RAD
   return [ctx, p, errs];
 }
 const txt = (p, sel) => p.evaluate(s => document.querySelector(s)?.innerText.replace(/\s+/g, ' ').trim() || '', sel);
-const chip = (p, sel, label) => p.click(`${sel} .advt .chip:has-text("${label}")`);
+const chip = (p, sel, label) => p.click(`${sel} .sectabs .chip:has-text("${label}")`);
 
 for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   const tag = `${w} ${scheme}`, mobile = w === 360;
   const [ctx, p, errs] = await open(w, { scheme, mobile });
   if (mobile) { await p.click('#mv-panels2'); await p.waitForTimeout(300); }
   // Security-adviezen
-  const tabs = await p.$$eval('#panel-advisories .advt .chip', l => l.map(x => x.textContent + ':' + x.getAttribute('aria-pressed')));
+  const tabs = await p.$$eval('#panel-advisories .sectabs .chip', l => l.map(x => x.textContent + ':' + x.getAttribute('aria-pressed')));
   ok(tabs.join() === 'Adviezen:true,Edge-apparaten:false,Exploits:false', `${tag}: advisory tabs ${tabs}`);
   ok(!/TESTEDGE/.test(await txt(p, '#panel-advisories')), `${tag}: vendor advisories are not in the Adviezen tab`);
   await chip(p, '#panel-advisories', 'Edge-apparaten'); await p.waitForTimeout(200);
@@ -102,8 +102,8 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   await p.route('**/api/threats', async r => { const res = await r.fetch(); const j = await res.json(); j.threatfox = { missing_key: true }; j.urlhaus = URLHAUS; return r.fulfill({ response: res, json: j }); });
   const nl = await txt(p, '#panel-nlthreat');
   ok(/gratis Cloudflare-token nodig \(Radar: Read\) in CLOUDFLARE_RADAR_TOKEN/.test(nl) && await p.$eval('#panel-nlthreat a[href*="dash.cloudflare.com"]', a => !!a), 'no token: a note with a link to create one');
-  await chip(p, '#panel-advisories', 'Edge-apparaten'); await p.reload(); await p.waitForSelector('#panel-advisories .advt'); await p.waitForTimeout(1500);
-  ok(await p.getAttribute('#panel-advisories .advt .chip:has-text("Edge-apparaten")', 'aria-pressed') === 'true', 'the advisory tab is remembered after a reload');
+  await chip(p, '#panel-advisories', 'Edge-apparaten'); await p.reload(); await p.waitForSelector('#panel-advisories .sectabs'); await p.waitForTimeout(1500);
+  ok(await p.getAttribute('#panel-advisories .sectabs .chip:has-text("Edge-apparaten")', 'aria-pressed') === 'true', 'the advisory tab is remembered after a reload');
   await p.click('#tt-threatfox'); await p.waitForTimeout(200);
   ok(/gratis abuse\.ch-sleutel nodig/.test(await txt(p, '#tp-threatfox')), "IOC's without a key: how to get one");
   ok(errs.length === 0, 'no page errors ' + errs.join('|'));
@@ -111,7 +111,7 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
 }
 { // English
   const [ctx, p] = await open(1440, { lang: 'en' });
-  const tabs = await p.$$eval('#panel-advisories .advt .chip', l => l.map(x => x.textContent));
+  const tabs = await p.$$eval('#panel-advisories .sectabs .chip', l => l.map(x => x.textContent));
   ok(tabs.join() === 'Advisories,Edge devices,Exploits', `English advisory tabs: ${tabs}`);
   ok(/Threat picture NL/.test(await txt(p, '#panel-nlthreat h2')) && /2 hijacks and 5 route leaks involving Dutch networks/.test(await txt(p, '#panel-nlthreat')), 'English panel');
   ok(/Malware in NL/.test(await txt(p, '#tt-urlhaus')) && /IOCs/.test(await txt(p, '#tt-threatfox')), 'English threat tabs');
@@ -126,6 +126,19 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   ok(ex.enabled && (ex.exploitdb.items?.length > 0 || ex.exploitdb.error === undefined), `live exploits: ${ex.exploitdb.items?.length ?? 0} from Exploit-DB${ex.epss.date ? ', EPSS ' + ex.epss.date : ''}`);
   const adv = await p.evaluate(() => fetch('api/advisories?limit=30').then(r => r.json()));
   ok(Object.values(adv.groups || {}).filter(g => g === 'edge').length === 4, `live: four vendor feeds in the edge group (${Object.keys(adv.groups || {}).join(', ')})`);
+  // 1.31.1: ad blockers hide elements by generic class/id rules (EasyList "##.advt" hid the tab row in Firefox
+  // with uBlock Origin). Check every class and id on the rendered page against the current lists.
+  const lists = await Promise.all(['https://easylist.to/easylist/easylist.txt', 'https://easylist-downloads.adblockplus.org/easylistdutch.txt']
+    .map(u => fetch(u).then(r => r.ok ? r.text() : '').catch(() => '')));
+  const rules = new Set(lists.join('\n').split('\n').filter(l => /^##[.#][A-Za-z0-9_-]+$/.test(l)).map(l => l.slice(2)));
+  if (rules.size < 1000) ok(true, `ad-block lists not reachable (${rules.size} rules): check skipped`);
+  else {
+    await p.click('#panel-advisories .sectabs .chip:has-text("Exploits")').catch(() => {});
+    await p.click('#tt-threatfox').catch(() => {});
+    const names = await p.evaluate(() => { const s = new Set(); for (const e of document.querySelectorAll('*')) { for (const c of e.classList) s.add('.' + c); if (e.id) s.add('#' + e.id); } return [...s]; });
+    const hidden = names.filter(n => rules.has(n));
+    ok(hidden.length === 0, `no class or id on the page matches a generic ad-block rule (${names.length} names, ${rules.size} rules)${hidden.length ? ': ' + hidden.join(', ') : ''}`);
+  }
   ok(errs.length === 0, 'no page errors ' + errs.join('|'));
   await ctx.close();
 }

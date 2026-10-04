@@ -496,8 +496,8 @@ table.tt { width: 100%; border-collapse: collapse; font-size: 12px; }
 .kevl .m { flex-wrap: wrap; }
 
 /* ---------- Advisories ---------- */
-.advf, .advt { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
-.advf .chip, .advt .chip { height: 26px; font-size: 12px; }
+.advf, .sectabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.advf .chip, .sectabs .chip { height: 26px; font-size: 12px; }
 .advs { list-style: none; margin: 0; padding: 0; }
 .adv { padding: 8px 0; border-top: 1px solid var(--line); }
 .adv:first-child { border-top: 0; padding-top: 2px; }
@@ -1164,6 +1164,10 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.31.2</h3>
+    <ul>
+      <li>De tabbladen van Security-adviezen (Adviezen, Edge-apparaten, Exploits) werden door adblockers zoals uBlock Origin verborgen; dat is opgelost.</li>
+    </ul>
     <h3>Versie 1.31.1</h3>
     <ul>
       <li>Edge-apparaten: Ivanti vervangen door OPNsense. Fortinet-adviezen beginnen nu met de productnaam (bijvoorbeeld FortiClient Windows).</li>
@@ -1408,6 +1412,10 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.31.2</h3>
+    <ul>
+      <li>The Security advisories tabs (Advisories, Edge devices, Exploits) were hidden by ad blockers such as uBlock Origin; fixed.</li>
+    </ul>
     <h3>Version 1.31.1</h3>
     <ul>
       <li>Edge devices: Ivanti replaced by OPNsense. Fortinet advisories now start with the product name (for example FortiClient Windows).</li>
@@ -4370,9 +4378,9 @@ function renderAdvisories(body, extra) {
   const groups = d.groups || {}, hasEdge = Object.values(groups).includes('edge'), hasExpl = !!panelData.exploits?.data?.enabled;
   const tabs = [['adv', 'Adviezen'], ...(hasEdge ? [['edge', 'Edge-apparaten']] : []), ...(hasExpl ? [['exploits', 'Exploits']] : [])];
   const tab = tabs.some(([id]) => id === prefs.advTab) ? prefs.advTab : 'adv';
-  const tabRow = tabs.length > 1 ? h('div', { class: 'advt', role: 'group', 'aria-label': t('Soort informatie') }, tabs.map(([id, label]) =>
+  const tabRow = tabs.length > 1 ? h('div', { class: 'sectabs', role: 'group', 'aria-label': t('Soort informatie') }, tabs.map(([id, label]) =>
     h('button', { class: 'chip', type: 'button', 'aria-pressed': String(tab === id), text: t(label),
-      onclick: () => { prefs.advTab = id; advShown = 10; savePrefs(); renderPanel('advisories'); $('#panel-advisories .advt [aria-pressed="true"]')?.focus(); } }))) : null;
+      onclick: () => { prefs.advTab = id; advShown = 10; savePrefs(); renderPanel('advisories'); $('#panel-advisories .sectabs [aria-pressed="true"]')?.focus(); } }))) : null;
   if (tab === 'exploits') { body.replaceChildren(...[tabRow, ...exploitsNodes()].filter(Boolean)); return; }
   const inTab = a => tab === 'edge' ? groups[a.source] === 'edge' : groups[a.source] !== 'edge';
   const tabSources = d.sources.filter(x => tab === 'edge' ? groups[x.id] === 'edge' : groups[x.id] !== 'edge');
