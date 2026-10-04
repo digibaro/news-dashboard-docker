@@ -84,6 +84,7 @@ type FetchReq struct {
 	Header              map[string]string
 	Body                []byte
 	Timeout             time.Duration // overrides fetch.timeout for a slow source (0 = the configured timeout)
+	MaxBody             int           // overrides the 5 MB response limit for a known large file (0 = 5 MB)
 }
 
 type FetchResp struct {
@@ -177,12 +178,16 @@ func (f *Fetcher) Do(ctx context.Context, fr FetchReq) (*FetchResp, error) {
 		out.NotModified = true
 		return out, nil
 	}
-	b, err := io.ReadAll(io.LimitReader(resp.Body, maxBody+1))
+	limit := maxBody
+	if fr.MaxBody > 0 {
+		limit = fr.MaxBody
+	}
+	b, err := io.ReadAll(io.LimitReader(resp.Body, int64(limit)+1))
 	if err != nil {
 		return nil, fmt.Errorf("read body: %w", shortErr(err))
 	}
-	if len(b) > maxBody {
-		return nil, errors.New("response larger than 5 MB")
+	if len(b) > limit {
+		return nil, fmt.Errorf("response larger than %d MB", limit>>20)
 	}
 	out.Body = b
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {

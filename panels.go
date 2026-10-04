@@ -1552,6 +1552,43 @@ func extractCVEs(s string) []string {
 	return out
 }
 
+var (
+	sevRatingRe = regexp.MustCompile(`(?i)(?:security impact rating|severity)\s*:\s*(critical|high|medium|moderate|low|informational)`)
+	sevCVSSRe   = regexp.MustCompile(`(?i)cvss(?:v?3(?:\.\d)?)?\s*(?:base\s*)?score\s*:\s*(\d{1,2}(?:\.\d)?)`)
+)
+
+// explicitSeverity reads a severity that vendor feeds state outright: Cisco "Security Impact
+// Rating: Critical", Palo Alto "(Severity: HIGH)", Fortinet "CVSSv3 Score: 9.8". Empty = none.
+func explicitSeverity(s string) string {
+	s = strings.ReplaceAll(s, "\u00a0", " ")
+	if m := sevRatingRe.FindStringSubmatch(s); m != nil {
+		switch strings.ToLower(m[1]) {
+		case "critical":
+			return "critical"
+		case "high":
+			return "high"
+		case "medium", "moderate":
+			return "medium"
+		default:
+			return "low"
+		}
+	}
+	if m := sevCVSSRe.FindStringSubmatch(s); m != nil {
+		f, _ := strconv.ParseFloat(m[1], 64)
+		switch {
+		case f >= 9:
+			return "critical"
+		case f >= 7:
+			return "high"
+		case f >= 4:
+			return "medium"
+		case f > 0:
+			return "low"
+		}
+	}
+	return ""
+}
+
 func keywordSeverity(s string) string {
 	s = strings.ToLower(s)
 	switch {
@@ -1598,7 +1635,9 @@ func normalizeAdvisories(src AdvisorySource, raws []rawItem, now time.Time) []Ad
 		} else {
 			a.ID = firstNonEmpty(r.GUID, link)
 			a.Title = truncate(title, 200)
-			a.Severity = keywordSeverity(title + " " + desc)
+			if a.Severity = explicitSeverity(title + " " + desc); a.Severity == "" {
+				a.Severity = keywordSeverity(title + " " + desc)
+			}
 		}
 		// keep the highest version per advisory id
 		if old, ok := byID[a.ID]; ok {
@@ -1760,6 +1799,21 @@ func (a *App) threatJobs(cfg *Config) []Job {
 		jobs = append(jobs, Job{Key: "eonet:events", Sig: fmt.Sprint(w.EONETURL, w.FireMinHa), Interval: w.Interval.D(),
 			Run: a.fetchJob("eonet:events", func() string { return a.config().World.EONETURL }, "application/json", nil,
 				func(b []byte) (any, error) { return parseEONET(b, w.FireMinHa, 7*24, time.Now()) }, nil)})
+	}
+	if cfg.Threats.Enabled && cfg.Threats.URLhausNL {
+		jobs = append(jobs, Job{Key: "urlhaus:nl", Sig: cfg.Threats.URLhausNLURL, Interval: 3 * time.Hour, Run: a.runURLhausNL})
+	}
+	if cfg.Threats.Enabled && cfg.Threats.ThreatFox && cfg.Keys.AbusechAuthKey != "" {
+		jobs = append(jobs, Job{Key: "threatfox:iocs", Sig: cfg.Threats.ThreatFoxURL + cfg.Keys.AbusechAuthKey[:min(4, len(cfg.Keys.AbusechAuthKey))], Interval: time.Hour, Run: a.runThreatFox})
+	}
+	if cfg.Exploits.Enabled {
+		jobs = append(jobs, Job{Key: "exploitdb", Sig: cfg.Exploits.ExploitDBURL, Interval: time.Hour,
+			Run: a.fetchJob("exploitdb", func() string { return a.config().Exploits.ExploitDBURL }, "application/rss+xml, application/xml", nil,
+				func(b []byte) (any, error) { return parseExploitDB(b, time.Now()) }, nil)})
+		jobs = append(jobs, Job{Key: "epss:risers", Sig: cfg.Exploits.EPSSURL, Interval: 6 * time.Hour, Run: a.runEPSS})
+	}
+	if cfg.NLThreat.Enabled && cfg.Keys.CloudflareRadarToken != "" {
+		jobs = append(jobs, Job{Key: "radar:nl", Sig: cfg.NLThreat.RadarURL + cfg.NLThreat.Country + cfg.Keys.CloudflareRadarToken[:min(4, len(cfg.Keys.CloudflareRadarToken))], Interval: cfg.NLThreat.Interval.D(), Run: a.runRadarNL})
 	}
 	if cfg.Sky.Enabled {
 		jobs = append(jobs, Job{Key: "noaa:kp", Sig: cfg.Sky.KpURL, Interval: 3 * time.Hour,
@@ -1956,6 +2010,26 @@ func (a *App) handleThreats(w http.ResponseWriter, r *http.Request) {
 		sources = append(sources, a.threats.info("cisa:kev", "kev", "CISA Known Exploited Vulnerabilities",
 			"https://www.cisa.gov/known-exploited-vulnerabilities-catalog", "publiek domein"))
 	}
+	if cfg.Threats.URLhausNL {
+		e := a.feedEntry("urlhaus:nl")
+		if v, ok := a.threats.get("urlhaus:nl").Data.(URLhausNL); ok {
+			e["data"] = v
+		}
+		resp["urlhaus"] = e
+		sources = append(sources, a.threats.info("urlhaus:nl", "urlhaus", "abuse.ch URLhaus", "https://urlhaus.abuse.ch/", "CC0"))
+	}
+	if cfg.Threats.ThreatFox {
+		e := a.feedEntry("threatfox:iocs")
+		if cfg.Keys.AbusechAuthKey == "" {
+			e["missing_key"] = true
+		} else if v, ok := a.threats.get("threatfox:iocs").Data.(ThreatFoxData); ok {
+			e["data"] = v
+		}
+		resp["threatfox"] = e
+		if cfg.Keys.AbusechAuthKey != "" {
+			sources = append(sources, a.threats.info("threatfox:iocs", "threatfox", "abuse.ch ThreatFox", "https://threatfox.abuse.ch/", "CC0"))
+		}
+	}
 	resp["sources"] = sources
 	writeJSON(w, r, http.StatusOK, 60, resp)
 }
@@ -1972,16 +2046,24 @@ func (a *App) handleAdvisories(w http.ResponseWriter, r *http.Request) {
 	if v, err := strconv.Atoi(r.URL.Query().Get("limit")); err == nil {
 		limit = min(max(v, 1), 100)
 	}
-	var all []Advisory
+	var all, edge []Advisory
 	sources := []SourceInfo{}
+	groups := map[string]string{}
 	for _, s := range cfg.Advisories {
 		if !s.IsEnabled() || (len(want) > 0 && !want[s.ID]) {
 			continue
 		}
 		key := "adv:" + s.ID
 		sources = append(sources, a.threats.info(key, s.ID, s.Name, firstNonEmpty(s.Homepage, s.URL), ""))
+		if s.Group != "" {
+			groups[s.ID] = s.Group
+		}
 		if v, ok := a.threats.get(key).Data.([]Advisory); ok {
-			all = append(all, v...)
+			if s.Group == "edge" {
+				edge = append(edge, v...)
+			} else {
+				all = append(all, v...)
+			}
 		}
 	}
 	ts := func(a Advisory) time.Time {
@@ -1990,14 +2072,27 @@ func (a *App) handleAdvisories(w http.ResponseWriter, r *http.Request) {
 		}
 		return a.Published
 	}
-	sort.SliceStable(all, func(i, j int) bool { return ts(all[i]).After(ts(all[j])) })
-	if len(all) > limit {
-		all = all[:limit]
+	trim := func(l []Advisory) []Advisory { // each tab gets its own limit, so busy vendor feeds never push out NCSC
+		sort.SliceStable(l, func(i, j int) bool { return ts(l[i]).After(ts(l[j])) })
+		if len(l) > limit {
+			l = l[:limit]
+		}
+		return l
 	}
+	// vendor feeds differ a lot in volume (Cisco publishes daily): at most 8 per vendor in the edge tab
+	perVendor := map[string]int{}
+	sort.SliceStable(edge, func(i, j int) bool { return ts(edge[i]).After(ts(edge[j])) })
+	capped := edge[:0]
+	for _, x := range edge {
+		if perVendor[x.Source]++; perVendor[x.Source] <= 8 {
+			capped = append(capped, x)
+		}
+	}
+	all = append(trim(all), trim(capped)...)
 	if all == nil {
 		all = []Advisory{}
 	}
-	writeJSON(w, r, http.StatusOK, 60, map[string]any{"items": all, "sources": sources})
+	writeJSON(w, r, http.StatusOK, 60, map[string]any{"items": all, "sources": sources, "groups": groups})
 }
 
 // ---------------------------------------------------------------------------

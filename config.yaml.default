@@ -47,6 +47,7 @@ features:
 keys:                             # all optional; env vars override
   abusech_auth_key: ""            # optional, free key from https://auth.abuse.ch/ (or ABUSECH_AUTH_KEY)
   ns_api_key: ""                  # NS Disruptions API for Treinstoringen (or NS_API_KEY)
+  cloudflare_radar_token: ""      # Dreigingsbeeld NL: Cloudflare API token with "Radar: Read" (or CLOUDFLARE_RADAR_TOKEN)
 
 weather:
   # region (province) is matched against MeteoAlarm warning areas; country picks the warning feed.
@@ -67,6 +68,12 @@ threats:
   interval: 15m                   # SANS ISC asks clients to cache; do not go below 15m
   daily_interval: 1h              # ISC 30-day summary
   cisa_kev: false                 # "Actief misbruikte kwetsbaarheden" (CISA KEV, ~1.5 MB JSON per hour)
+  urlhaus_nl: true                # tab "Malware NL": active malware URLs hosted in the Netherlands (abuse.ch URLhaus,
+                                  # country feed ~10 MB, every 3 hours; URLs are only shown defanged, never as links)
+  urlhaus_nl_url: "https://urlhaus.abuse.ch/feeds/country/NL/"
+  threatfox: true                 # tab "IOC's": newest indicators and malware families (abuse.ch ThreatFox, hourly;
+                                  # needs keys.abusech_auth_key)
+  threatfox_url: "https://threatfox-api.abuse.ch/api/v1/"
 
 # Extra feeds verified with -check-feeds on 2026-09-24: cert-eu, cisa, cisa-ics, bsi-wid, msrc.
 # Security advisories. format: ncsc (parses [kans/schade]) or rss (any RSS/Atom, keyword severity).
@@ -81,6 +88,27 @@ advisories:
   # TODO: z-cert.nl returns HTTP 403 for /feed/ and the homepage; no feed URL could be verified.
   - { id: z-cert, name: "Z-CERT (zorg)", format: rss, url: "https://www.z-cert.nl/feed/", homepage: "https://www.z-cert.nl", enabled: false }
   - { id: msrc, name: "Microsoft MSRC", format: rss, url: "https://api.msrc.microsoft.com/update-guide/rss", homepage: "https://msrc.microsoft.com/update-guide", enabled: false }
+  # Vendor PSIRT feeds (group: edge): shown in the tab "Edge-apparaten". Severity comes from the feed (Cisco
+  # "Security Impact Rating", Palo Alto "Severity", Fortinet CVSS score). Citrix has no working feed (checked 2026-10).
+  - { id: fortinet, name: "Fortinet PSIRT", format: rss, group: edge, url: "https://filestore.fortinet.com/fortiguard/rss/ir.xml", homepage: "https://www.fortiguard.com/psirt", interval: 1h }
+  - { id: paloalto, name: "Palo Alto Networks", format: rss, group: edge, url: "https://security.paloaltonetworks.com/rss.xml", homepage: "https://security.paloaltonetworks.com", interval: 1h }
+  - { id: cisco, name: "Cisco PSIRT", format: rss, group: edge, url: "https://sec.cloudapps.cisco.com/security/center/psirtrss20/CiscoSecurityAdvisory.xml", homepage: "https://sec.cloudapps.cisco.com/security/center/publicationListing.x", interval: 1h }
+  - { id: ivanti, name: "Ivanti", format: rss, group: edge, url: "https://www.ivanti.com/blog/topics/security-advisory/rss", homepage: "https://www.ivanti.com/blog/topics/security-advisory", interval: 6h }
+
+# Security-adviezen, tab "Exploits": the newest public exploits (Exploit-DB RSS, hourly) and the CVEs whose EPSS
+# score (FIRST: chance of exploitation in 30 days) rose most in a week (two daily files of ~3 MB, every 6 hours).
+exploits:
+  enabled: true
+  exploitdb_url: "https://www.exploit-db.com/rss.xml"
+  epss_url: "https://epss.empiricalsecurity.com"
+
+# Dreigingsbeeld NL: incidents at Dutch organisations from your news sources, DDoS attacks on the Netherlands and BGP
+# hijacks and route leaks involving Dutch networks (Cloudflare Radar; needs keys.cloudflare_radar_token).
+nlthreat:
+  enabled: true
+  radar_url: "https://api.cloudflare.com/client/v4/radar"
+  country: NL
+  interval: 30m                   # 5 Radar requests per interval; min. 15m
 
 # short: label on the category chips (defaults to name)
 # Top bar. NCTV has no feed: only the sentence "… niveau N op een schaal van 5" is read from
@@ -533,7 +561,7 @@ presets:
   - { id: kort,    name: "Snel overzicht",  description: "Het belangrijkste nieuws van NOS en NU.nl", name_en: "Quick overview", description_en: "The main news from NOS and NU.nl", sources: [nos-algemeen, nu-algemeen] }
   - { id: nl,      name: "Nederland",       description: "Binnenland, politiek en de landelijke kranten", name_en: "Netherlands", description_en: "Domestic news, politics and the national papers", sources: [nos-binnenland, nos-politiek, volkskrant, nrc, trouw] }
   - { id: regio,   name: "Mijn regio",      description: "De regionale omroep bij je weerlocatie", name_en: "My region", description_en: "The regional broadcaster for your weather location", region: true }
-  - { id: tech,    name: "Tech & security", description: "Tweakers, Security.NL, Bits of Freedom en meer", description_en: "Tweakers, Security.NL, Bits of Freedom and more", sources: [tweakers, security-nl, nos-tech, bits-of-freedom, bleepingcomputer, the-record] }
+  - { id: tech,    name: "Tech & security", description: "Tweakers, Security.NL, Bits of Freedom en meer", description_en: "Tweakers, Security.NL, Bits of Freedom and more", sources: [tweakers, security-nl, nos-tech, bits-of-freedom, bleepingcomputer, the-record, hackernews] }
   - { id: finance, name: "Economie",        description: "Economie en financiële markten", name_en: "Economy", description_en: "Economy and financial markets", sources: [nos-economie, nu-economie, telegraaf-dft, bbc-business] }
   - { id: onderzoek, name: "Onderzoek",     description: "Follow the Money, De Correspondent, Investico, De Groene en meer", name_en: "Investigative", description_en: "Follow the Money, De Correspondent, Investico, De Groene and more", sources: [ftm, correspondent, investico, groene, lighthouse-reports, bellingcat] }
   - { id: sport,   name: "Sport",           description: "Voetbal, wielrennen en ander sportnieuws", description_en: "Football, cycling and other sports news", sources: [nos-sport, nos-voetbal, nu-sport, wielerflits] }
@@ -592,6 +620,7 @@ sources:
   - { id: hacker-news,    name: "Hacker News",    category: tech, url: "https://hnrss.org/frontpage", homepage: "https://news.ycombinator.com", lang: en }
   - { id: ars-technica,   name: "Ars Technica",   category: tech, url: "https://feeds.arstechnica.com/arstechnica/index", homepage: "https://arstechnica.com", lang: en }
   - { id: bleepingcomputer, name: "BleepingComputer", category: tech, url: "https://www.bleepingcomputer.com/feed/", homepage: "https://www.bleepingcomputer.com", lang: en }
+  - { id: hackernews,     name: "Hacker News",    category: tech, url: "https://hnrss.org/frontpage?points=100", homepage: "https://news.ycombinator.com", lang: en }
   - { id: krebs,          name: "Krebs on Security", category: tech, url: "https://krebsonsecurity.com/feed/", homepage: "https://krebsonsecurity.com", lang: en }
   - { id: the-register,   name: "The Register · Security", category: tech, url: "https://www.theregister.com/security/headlines.atom", homepage: "https://www.theregister.com/security/", lang: en }
   - { id: the-verge,      name: "The Verge",      category: tech, url: "https://www.theverge.com/rss/index.xml", homepage: "https://www.theverge.com", lang: en }

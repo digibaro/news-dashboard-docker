@@ -31,7 +31,7 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [768, 'light'], [360
   ok(/^Infocon (groen|geel|oranje|rood)$/.test(t.infocon), `${w} ${scheme}: Infocon badge "${t.infocon}"`);
   ok(/unieke bronnen op/.test(t.kpi) && /gemiddelde/.test(t.delta) && t.sparkPts >= 25, `${w} ${scheme}: 30-day KPI + sparkline (${t.sparkPts} points)`);
   ok(/Meest aangevallen poorten/.test(t.portsH) && t.ports.length === 3, `${w} ${scheme}: ports ${t.ports.join(', ')}`);
-  ok(t.tabs.length === 2 && t.ipRows === 10 && t.countries.length > 0, `${w} ${scheme}: origin tabs ${t.tabs.join(' / ')}, 10 IP rows`);
+  ok(t.tabs.length === 4 && t.ipRows === 10 && t.countries.length > 0, `${w} ${scheme}: origin tabs ${t.tabs.join(' / ')}, 10 IP rows`);
   ok(/SANS Internet Storm Center/.test(t.foot) && /Feodo/.test(t.foot) && /ip-api/.test(t.foot) && /CC BY-NC-SA/.test(t.foot), `${w} ${scheme}: sources + licence footer`);
   ok(t.advs >= 5 && /NCSC-\d{4}-\d{4}/.test(t.adv0) && /kans: /.test(t.adv0) && /schade: /.test(t.adv0), `${w} ${scheme}: advisories with kans/schade badges`);
   ok(t.sw <= t.iw, `${w} ${scheme}: no horizontal scroll (${t.sw}/${t.iw})`);
@@ -53,9 +53,9 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [768, 'light'], [360
   ok(s1.active === 'tt-feodo' && s1.sel === 'true' && s1.hidden && s1.rows > 0, `ArrowRight switches to Feodo tab (${s1.rows} rows: "${s1.text}")`);
   await p.keyboard.press('End'); await p.keyboard.press('Home');
   ok(await p.evaluate(() => document.activeElement.id === 'tt-ips'), 'Home returns to first tab');
-  await p.keyboard.press('ArrowLeft'); // wraps to last
-  await p.reload(); await p.waitForSelector('#tt-feodo');
-  ok(await p.getAttribute('#tt-feodo', 'aria-selected') === 'true', 'selected tab persists after reload');
+  await p.keyboard.press('ArrowLeft'); // wraps to last (IOC's since 1.31)
+  await p.reload(); await p.waitForSelector('#tt-threatfox');
+  ok(await p.getAttribute('#tt-threatfox', 'aria-selected') === 'true', 'selected tab persists after reload');
   await p.screenshot({ path: `${OUT}/feodo-tab.png`, clip: await p.locator('#panel-threats .tsec:nth-of-type(3)').boundingBox() });
   const total = await p.locator('#panel-advisories .adv').count();
   await p.click('#panel-advisories .advf .chip:nth-child(2)');

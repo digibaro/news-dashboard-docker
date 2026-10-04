@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"crypto/aes"
 	"crypto/cipher"
@@ -1750,5 +1751,152 @@ func TestTidesAndSea(t *testing.T) {
 	}
 	if code := get(a.routes("/"), "GET", "/api/sea?lat=x", nil).Code; code != 400 {
 		t.Errorf("bad lat: %d", code)
+	}
+}
+
+func TestExploitsAndEPSS(t *testing.T) {
+	b, err := os.ReadFile("testdata/exploitdb.xml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ex, err := parseExploitDB(b, time.Date(2026, 10, 4, 12, 0, 0, 0, time.UTC))
+	if err != nil || len(ex) < 5 || ex[0].Kind != "remote" || !strings.HasPrefix(ex[0].Title, "Teltonika_RutOS") || ex[0].ID != "52692" {
+		t.Fatalf("exploits: %v %+v", err, ex[:min(2, len(ex))])
+	}
+	gz := func(date string, rows ...string) []byte {
+		var buf bytes.Buffer
+		zw := gzip.NewWriter(&buf)
+		fmt.Fprintf(zw, "#model_version:v2025.03.14,score_date:%sT00:00:00+0000\ncve,epss,percentile\n", date)
+		for i := 0; i < 1200; i++ { // filler: a real file has ~380,000 rows
+			fmt.Fprintf(zw, "CVE-2000-%04d,0.00100,0.10000\n", i)
+		}
+		for _, r := range rows {
+			fmt.Fprintln(zw, r)
+		}
+		zw.Close()
+		return buf.Bytes()
+	}
+	older := gz("2026-09-26", "CVE-2026-1000,0.01000,0.50000", "CVE-2026-2000,0.40000,0.90000", "CVE-2026-3000,0.05000,0.70000")
+	newer := gz("2026-10-03", "CVE-2026-1000,0.62000,0.99000", "CVE-2026-2000,0.42000,0.95000", "CVE-2026-3000,0.30000,0.96000", "CVE-2026-4000,0.15000,0.93000")
+	d, err := epssRisers(older, newer, 10)
+	if err != nil || d.Date != "2026-10-03" || d.Since != "2026-09-26" {
+		t.Fatalf("epss: %v %+v", err, d)
+	}
+	got := []string{}
+	for _, r := range d.Risers {
+		got = append(got, r.CVE)
+	}
+	// 1000 rose 61 points, 3000 rose 25, 4000 is new (15); 2000 rose only 2 points
+	if strings.Join(got, ",") != "CVE-2026-1000,CVE-2026-3000,CVE-2026-4000" || d.Risers[0].Prev != float64(float32(0.01)) {
+		t.Errorf("risers: %v %+v", got, d.Risers)
+	}
+	if _, err := epssRisers([]byte("not gzip"), newer, 10); err == nil {
+		t.Error("a broken file must be an error")
+	}
+	a := newTestApp(t, validConfig)
+	a.threats.ok("exploitdb", ex, "", "")
+	a.threats.ok("epss:risers", d, "", "")
+	a.threats.ok("cisa:kev", []KEVItem{{CVE: "CVE-2026-3000"}}, "", "")
+	body := get(a.routes("/"), "GET", "/api/exploits", nil).Body.String()
+	if !strings.Contains(body, `"risers":[{"cve":"CVE-2026-1000"`) || !strings.Contains(body, `"kev":["CVE-2026-3000"]`) || !strings.Contains(body, `"kind":"remote"`) {
+		t.Errorf("exploits handler: %s", body[:min(len(body), 400)])
+	}
+}
+
+func TestVendorSeverity(t *testing.T) {
+	for in, want := range map[string]string{
+		"Cisco IOS XE … Security Impact Rating:  Critical …":                  "critical",
+		"CVE-2026-0307 GlobalProtect App: Local Privilege (Severity: MEDIUM)": "medium",
+		"CVSSv3 Score: 9.8 An Improper Limitation of a Pathname":              "critical",
+		"CVSSv3 Score: 7.2 Heap overflow":                                     "high",
+		"CVSS Base Score: 4.7":                                                "medium",
+		"September 2026 Security Update":                                      "",
+	} {
+		if got := explicitSeverity(in); got != want {
+			t.Errorf("%q: %q, want %q", in, got, want)
+		}
+	}
+	a := newTestApp(t, validConfig+`
+advisories:
+  - { id: ncsc, name: "NCSC-NL", format: ncsc, url: "https://advisories.ncsc.nl/rss/advisories" }
+  - { id: cisco, name: "Cisco", format: rss, group: edge, url: "https://sec.cloudapps.cisco.com/x.xml" }
+`)
+	now := time.Now()
+	var many []Advisory
+	for i := 0; i < 40; i++ {
+		many = append(many, Advisory{ID: fmt.Sprint("c", i), Source: "cisco", Title: "x", URL: "https://x", Published: now.Add(-time.Duration(i) * time.Minute), Severity: "high", CVEs: []string{}, Products: []string{}})
+	}
+	a.threats.ok("adv:cisco", many, "", "")
+	a.threats.ok("adv:ncsc", []Advisory{{ID: "NCSC-1", Source: "ncsc", Title: "y", URL: "https://y", Published: now.Add(-48 * time.Hour), Severity: "medium", CVEs: []string{}, Products: []string{}}}, "", "")
+	body := get(a.routes("/"), "GET", "/api/advisories?limit=30", nil).Body.String()
+	if !strings.Contains(body, `"NCSC-1"`) || strings.Count(body, `"source":"cisco"`) != 8 || !strings.Contains(body, `"groups":{"cisco":"edge"}`) {
+		t.Errorf("advisories: an older NCSC advisory survives 40 vendor items, at most 8 per vendor; groups listed: %s", body[len(body)-200:])
+	}
+}
+
+func TestThreatIntel(t *testing.T) {
+	if got := defang("http://176.65.148.144/bins/Hilix.ppc"); got != "hxxp://176.65.148.144/bins/Hilix[.]ppc" {
+		t.Errorf("defang url: %q", got)
+	}
+	if got := defang("petroazaran.com"); got != "petroazaran[.]com" {
+		t.Errorf("defang domain: %q", got)
+	}
+	b, err := os.ReadFile("testdata/urlhaus-nl.csv")
+	if err != nil {
+		t.Fatal(err)
+	}
+	u, err := parseURLhausNL(b, time.Date(2026, 10, 4, 14, 0, 0, 0, time.UTC))
+	if err != nil || u.Online != 120 || len(u.ASNs) == 0 || len(u.Newest) != 5 || !strings.HasPrefix(u.Newest[0].URL, "hxxp") || u.Threats["malware_download"] == 0 {
+		t.Fatalf("urlhaus: %v online=%d asns=%+v newest=%+v", err, u.Online, u.ASNs, u.Newest[:min(1, len(u.Newest))])
+	}
+	if _, err := parseURLhausNL([]byte("# empty\n"), time.Now()); err == nil {
+		t.Error("no rows must be an error")
+	}
+	f, err := os.ReadFile("testdata/threatfox-iocs.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tf, err := parseThreatFox(f)
+	if err != nil || tf.Total != 40 || len(tf.Families) == 0 || tf.Families[0].Count < tf.Families[len(tf.Families)-1].Count {
+		t.Fatalf("threatfox: %v %+v", err, tf)
+	}
+	for _, i := range tf.Newest {
+		if strings.Contains(i.IOC, "http://") || i.Confidence < 75 || (!strings.Contains(i.Type, "hash") && !strings.Contains(i.IOC, "[.]") && !strings.Contains(i.IOC, "hxxp")) { // hashes have nothing to defang
+			t.Errorf("ioc not defanged or low confidence: %+v", i)
+		}
+	}
+	if _, err := parseThreatFox([]byte(`{"query_status":"unknown_auth_key"}`)); err == nil || !strings.Contains(err.Error(), "unknown_auth_key") {
+		t.Errorf("auth error: %v", err)
+	}
+	if fam, _ := parseThreatFox([]byte(`{"query_status":"ok","data":[{"ioc":"1.2.3.4:443","malware_printable":"Emotet","threat_type":"botnet_cc","confidence_level":100}]}`)); len(fam.Families) != 0 {
+		t.Errorf("families already in Feodo Tracker are left out: %+v", fam.Families)
+	}
+	a := newTestApp(t, validConfig)
+	a.threats.ok("urlhaus:nl", u, "", "")
+	if body := get(a.routes("/"), "GET", "/api/threats", nil).Body.String(); !strings.Contains(body, `"urlhaus":{`) || !strings.Contains(body, `"online":120`) || !strings.Contains(body, `"threatfox":{`) || !strings.Contains(body, `"missing_key":true`) {
+		t.Errorf("threats handler: %s", body[:min(len(body), 300)])
+	}
+}
+
+func TestRadarNL(t *testing.T) {
+	sh := radarShares(map[string]string{"SYN Flood": "62.19", "UDP Flood": "23.9", "other": "0.6", "ACK Flood": "0.7"}, 2)
+	if len(sh) != 2 || sh[0].Name != "SYN Flood" || sh[1].Name != "UDP Flood" {
+		t.Errorf("shares: %+v", sh)
+	}
+	if !radarTime("2026-10-04T10:00:35.809").Equal(time.Date(2026, 10, 4, 10, 0, 35, 809e6, time.UTC)) || radarTime("x") != (time.Time{}) {
+		t.Error("radar time")
+	}
+	a := newTestApp(t, validConfig)
+	if body := get(a.routes("/"), "GET", "/api/nlthreat", nil).Body.String(); !strings.Contains(body, `"missing_key":true`) {
+		t.Errorf("no token: %s", body)
+	}
+	cfg := *a.config()
+	cfg.Keys.CloudflareRadarToken = "test"
+	a.mu.Lock()
+	a.cfg = &cfg
+	a.mu.Unlock()
+	a.threats.ok("radar:nl", RadarNL{Trend: []float64{0.2, 1}, Vectors: sh, Hijacks: []BGPEvent{{ASN: 60781, Score: 8}}, HijacksN: 1, ASNames: map[int]string{60781: "LeaseWeb Netherlands B.V."}}, "", "")
+	if body := get(a.routes("/"), "GET", "/api/nlthreat", nil).Body.String(); !strings.Contains(body, `"hijacks":[{"at":`) || !strings.Contains(body, "LeaseWeb") || strings.Contains(body, "test") {
+		t.Errorf("radar handler (token never in the reply): %s", body)
 	}
 }

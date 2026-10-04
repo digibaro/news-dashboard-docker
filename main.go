@@ -132,6 +132,7 @@ type AdvisorySource struct {
 	Format   string   `yaml:"format" json:"-"`
 	Enabled  *bool    `yaml:"enabled" json:"-"`
 	Interval Duration `yaml:"interval" json:"-"`
+	Group    string   `yaml:"group" json:"group,omitempty"` // "edge": vendor PSIRT feeds, shown in the tab Edge-apparaten
 }
 
 func (s AdvisorySource) IsEnabled() bool { return s.Enabled == nil || *s.Enabled }
@@ -181,9 +182,10 @@ type Config struct {
 	// Upstream fetching is set separately (fetch/weather/threats/... intervals).
 	Refresh map[string]Duration `yaml:"refresh"`
 	Keys    struct {
-		AbusechAuthKey string `yaml:"abusech_auth_key"`
-		NSAPIKey       string `yaml:"ns_api_key"`  // NS Disruptions API (Treinstoringen)
-		NVDAPIKey      string `yaml:"nvd_api_key"` // no longer used (the Kwetsbaarheden panel was removed)
+		AbusechAuthKey       string `yaml:"abusech_auth_key"`
+		NSAPIKey             string `yaml:"ns_api_key"`             // NS Disruptions API (Treinstoringen)
+		CloudflareRadarToken string `yaml:"cloudflare_radar_token"` // Dreigingsbeeld NL (Cloudflare API token, Radar read)
+		NVDAPIKey            string `yaml:"nvd_api_key"`            // no longer used (the Kwetsbaarheden panel was removed)
 	} `yaml:"keys"`
 	Weather struct {
 		Location   Location          `yaml:"location"`
@@ -199,7 +201,24 @@ type Config struct {
 		Interval      Duration `yaml:"interval"`       // ISC top ports / top IPs / infocon, Feodo
 		DailyInterval Duration `yaml:"daily_interval"` // ISC 30-day summary
 		CISAKEV       bool     `yaml:"cisa_kev"`       // optional "actief misbruikte kwetsbaarheden"
+		URLhausNL     bool     `yaml:"urlhaus_nl"`     // tab Malware NL: active malware URLs hosted in the Netherlands
+		URLhausNLURL  string   `yaml:"urlhaus_nl_url"` // abuse.ch URLhaus country feed (CSV, ~10 MB, every 3 hours)
+		ThreatFox     bool     `yaml:"threatfox"`      // tab IOC's: newest indicators (needs the abuse.ch key)
+		ThreatFoxURL  string   `yaml:"threatfox_url"`
 	} `yaml:"threats"`
+	// Exploits: tab Exploits in Security-adviezen (Exploit-DB and EPSS risers).
+	Exploits struct {
+		Enabled      bool   `yaml:"enabled"`
+		ExploitDBURL string `yaml:"exploitdb_url"`
+		EPSSURL      string `yaml:"epss_url"` // folder with the daily EPSS files (epss_scores-YYYY-MM-DD.csv.gz)
+	} `yaml:"exploits"`
+	// NLThreat: panel Dreigingsbeeld NL (Cloudflare Radar; incidents from the news in the page).
+	NLThreat struct {
+		Enabled  bool     `yaml:"enabled"`
+		RadarURL string   `yaml:"radar_url"`
+		Country  string   `yaml:"country"`
+		Interval Duration `yaml:"interval"`
+	} `yaml:"nlthreat"`
 	Advisories []AdvisorySource `yaml:"advisories"`
 	Alerts     struct {
 		NCTV struct {
@@ -565,6 +584,10 @@ func defaultConfig() *Config {
 	c.Threats.Enabled = true
 	c.Threats.Interval = Duration(15 * time.Minute)
 	c.Threats.DailyInterval = Duration(time.Hour)
+	c.Threats.URLhausNL, c.Threats.URLhausNLURL = true, "https://urlhaus.abuse.ch/feeds/country/NL/"
+	c.Threats.ThreatFox, c.Threats.ThreatFoxURL = true, "https://threatfox-api.abuse.ch/api/v1/"
+	c.Exploits.Enabled, c.Exploits.ExploitDBURL, c.Exploits.EPSSURL = true, "https://www.exploit-db.com/rss.xml", "https://epss.empiricalsecurity.com"
+	c.NLThreat.Enabled, c.NLThreat.RadarURL, c.NLThreat.Country, c.NLThreat.Interval = true, "https://api.cloudflare.com/client/v4/radar", "NL", Duration(30*time.Minute)
 	c.Weather.MeteoAlarm = map[string]string{
 		"nl": "https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-netherlands",
 		"be": "https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-belgium",
@@ -631,6 +654,7 @@ func (c *Config) applyEnv() {
 	}
 	set(&c.Keys.AbusechAuthKey, "ABUSECH_AUTH_KEY")
 	set(&c.Keys.NSAPIKey, "NS_API_KEY")
+	set(&c.Keys.CloudflareRadarToken, "CLOUDFLARE_RADAR_TOKEN")
 	set(&c.Waste.HomeAssistant.Token, "NDB_HA_TOKEN")
 	set(&c.Push.VAPIDPrivateKey, "NDB_VAPID_PRIVATE_KEY")
 	if v := os.Getenv("NDB_TRUSTED_PROXIES"); v != "" { // e.g. the Docker gateway range
@@ -767,6 +791,15 @@ func (c *Config) validate() error {
 		}
 	}
 	httpsURL := func(u string) bool { return isHTTPURL(u) && strings.HasPrefix(u, "https://") }
+	if c.Threats.Enabled && ((c.Threats.URLhausNL && !httpsURL(c.Threats.URLhausNLURL)) || (c.Threats.ThreatFox && !httpsURL(c.Threats.ThreatFoxURL))) {
+		fail("threats.urlhaus_nl_url and threats.threatfox_url must be https URLs")
+	}
+	if c.Exploits.Enabled && (!httpsURL(c.Exploits.ExploitDBURL) || !httpsURL(c.Exploits.EPSSURL)) {
+		fail("exploits.exploitdb_url and exploits.epss_url must be https URLs")
+	}
+	if c.NLThreat.Enabled && (!httpsURL(c.NLThreat.RadarURL) || !regexp.MustCompile(`^[A-Z]{2}$`).MatchString(c.NLThreat.Country) || c.NLThreat.Interval.D() < 15*time.Minute) {
+		fail("nlthreat: radar_url must be an https URL, country a two-letter code (e.g. NL), interval at least 15m")
+	}
 	if c.Energy.Enabled && (c.Energy.Interval.D() < 15*time.Minute || !httpsURL(c.Energy.URL) || c.Energy.VAT < 0 || c.Energy.VAT > 1 ||
 		math.Abs(c.Energy.ElectricityExtra) > 2 || math.Abs(c.Energy.GasExtra) > 5) {
 		fail("energy: interval must be at least 15m, url https, vat 0–1, extras within ±2 €/kWh and ±5 €/m³")
@@ -992,6 +1025,9 @@ func (c *Config) validate() error {
 		if strings.TrimSpace(s.Name) == "" {
 			fail("%s: name is empty", where)
 		}
+		if s.Group != "" && s.Group != "edge" {
+			fail("%s: group must be empty or \"edge\"", where)
+		}
 		if s.IsEnabled() && !isHTTPURL(s.URL) {
 			fail("%s: url must be an absolute http(s) URL", where)
 		}
@@ -1147,9 +1183,11 @@ type App struct {
 	icons     *iconCache                // news site icons per host
 	skyClouds *ttlCache[[]cloudPoint]   // cloud cover per ~10 km cell
 	tides     *ttlCache[[]Tide]         // tide extremes per coastal station
-	sea       *ttlCache[SeaNow]         // sea temperature and waves per coastal station
-	wasteIdx  wasteIndex                // address -> municipal calendar
-	push      *pushHub                  // Web Push subscriptions and watcher state
+	asnMu     sync.Mutex
+	asnNames  map[int]string    // AS number -> organisation (public Shadowserver lookup)
+	sea       *ttlCache[SeaNow] // sea temperature and waves per coastal station
+	wasteIdx  wasteIndex        // address -> municipal calendar
+	push      *pushHub          // Web Push subscriptions and watcher state
 }
 
 func (a *App) config() *Config {
@@ -1308,7 +1346,7 @@ func run(cfgPath string) error {
 	a := &App{cfgPath: cfgPath, level: level, started: time.Now(), news: newNewsCache(), sched: newScheduler(), wx: newWeatherCaches(),
 		threats: newStateStore(), geo: newGeoCache(10000), metrics: newHTTPMetrics(),
 		alarms: newTTLCache[[]Alarm](500), air: newTTLCache[[]AirComponent](200), pollen: newTTLCache[PollenData](300), p2k: newP2KCounters(),
-		push: newPushHub(), waste: newTTLCache[WasteResult](1000), insects: newTTLCache[InsectData](300), wikiCache: newTTLCache[WikiSummary](200), solar: newTTLCache[[]SolarDay](500), icons: newIconCache(), skyClouds: newTTLCache[[]cloudPoint](300), tides: newTTLCache[[]Tide](50), sea: newTTLCache[SeaNow](50)}
+		push: newPushHub(), waste: newTTLCache[WasteResult](1000), insects: newTTLCache[InsectData](300), wikiCache: newTTLCache[WikiSummary](200), solar: newTTLCache[[]SolarDay](500), icons: newIconCache(), skyClouds: newTTLCache[[]cloudPoint](300), tides: newTTLCache[[]Tide](50), sea: newTTLCache[SeaNow](50), asnNames: map[int]string{}}
 	if st, err := os.Stat(cfgPath); err == nil {
 		a.cfgMod = st.ModTime()
 	}
@@ -1543,6 +1581,8 @@ func (a *App) routes(basePath string) http.Handler {
 	handle("GET /api/satellite/overlay", a.handleSatelliteFile(true))
 	handle("GET /api/sky", a.handleSky)
 	handle("GET /api/sea", a.handleSea)
+	handle("GET /api/exploits", a.handleExploits)
+	handle("GET /api/nlthreat", a.handleNLThreat)
 	handle("GET /api/sports", a.handleSports)
 	handle("GET /api/push", a.handlePushInfo)
 	handle("POST /api/push/subscribe", a.handlePushSubscribe)
@@ -1923,9 +1963,22 @@ func (a *App) otherFeeds(cfg *Config) []FeedStatus {
 		add("isc:daily", "SANS ISC · 30-daagse trend", "threat")
 		add("isc:topips", "SANS ISC · top bron-IP's", "threat")
 		add("abusech:feodo", "abuse.ch Feodo Tracker", "threat")
+		if cfg.Threats.URLhausNL {
+			add("urlhaus:nl", "abuse.ch URLhaus · malware in NL", "threat")
+		}
+		if cfg.Threats.ThreatFox && cfg.Keys.AbusechAuthKey != "" {
+			add("threatfox:iocs", "abuse.ch ThreatFox · IOC's", "threat")
+		}
 		if cfg.Threats.CISAKEV {
 			add("cisa:kev", "CISA KEV", "threat")
 		}
+	}
+	if cfg.Exploits.Enabled {
+		add("exploitdb", "Exploit-DB · exploits", "threat")
+		add("epss:risers", "FIRST EPSS · stijgers", "threat")
+	}
+	if cfg.NLThreat.Enabled && cfg.Keys.CloudflareRadarToken != "" {
+		add("radar:nl", "Cloudflare Radar · aanvallen en BGP", "threat")
 	}
 	for _, s := range cfg.Advisories {
 		if s.IsEnabled() {

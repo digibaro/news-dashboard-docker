@@ -10,11 +10,12 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Weather** for a configurable location: Open-Meteo forecast, Buienradar rain for the next 2 hours, and KNMI/KMI warnings via MeteoAlarm. **Zee en getij** at the coastal station nearest to the weather location: the next high and low tides (Rijkswaterstaat), sea temperature and waves (Open-Meteo Marine).
 - **Live cyber threats**:
   - SANS ISC/DShield top ports, 30-day attacker trend and top source IPs
-  - abuse.ch Feodo botnet C2 servers
+  - abuse.ch Feodo botnet C2 servers, **Malware in NL** (active URLhaus malware URLs on Dutch servers, per network) and **IOC's** (ThreatFox indicators and malware families; needs the free abuse.ch key). Malware URLs and indicators are shown defanged, never as links.
   - geolocation via ip-api.com
   - the ISC Infocon level
   - Autoriteit Persoonsgegevens enforcement news (panel "Autoriteit Persoonsgegevens") (last 14 days)
-- **Security advisories**: NCSC-NL, with the `[kans/schade]` rating parsed into badges, plus optional CERT-EU, CISA, BSI and MSRC.
+- **Security advisories**: NCSC-NL, with the `[kans/schade]` rating parsed into badges, plus optional CERT-EU, CISA, BSI and MSRC. Tabs **Edge-apparaten** (PSIRT feeds of Fortinet, Palo Alto, Cisco and Ivanti, severity from the feed, critical first, at most 8 per vendor) and **Exploits** (new public exploits from Exploit-DB and the CVEs whose EPSS score rose most in a week, marked when in CISA KEV).
+- **Dreigingsbeeld NL:** incidents at Dutch organisations from your Dutch-language news (last 7 days), DDoS attacks on the Netherlands (trend, attack types, origin countries) and BGP hijacks and route leaks involving Dutch networks (Cloudflare Radar; needs a free API token).
 - **Top bar:** the current KNMI weather code (only while there is a warning), the number of P2000 alerts in the last hour per service for a configured area (default Den Haag), an active NL-Alert with its place (only while one is active), and the NCTV terrorism threat level.
 - **Vandaag:** date and week number, sunrise and sunset, moon phase, the next public holiday, the next clock change, and school holidays for regio Noord, Midden and Zuid (the visitor's region highlighted). **Op deze dag**: four events on today's date from the Dutch Wikipedia day page (Dutch ones first).
 - **Luchtkwaliteit:** the air quality index (1–11) and NO₂, PM2.5, PM10 and O₃ from the nearest Luchtmeetnet station. The place is chosen per visitor (default: their weather location). Below it the **radiation** (gamma dose rate) at the nearest RIVM station, with the national range; when several stations measure raised levels, a notice appears in the top bar and a push message can go out. Then **Hitte en smog**: whether the Nationaal Hitteplan is active (KNMI heat warning), RIVM's smog warnings, and the ozone forecast for 3 days.
@@ -102,6 +103,7 @@ cat > .env <<'ENV'
 NDB_USER_AGENT=Nieuwsdashboard/1.0 (+https://nieuws.example.nl; beheer@example.nl)
 ABUSECH_AUTH_KEY=
 NS_API_KEY=
+CLOUDFLARE_RADAR_TOKEN=
 ENV
 chmod 600 .env
 docker compose pull && docker compose up -d      # ready-made image from ghcr.io
@@ -111,6 +113,7 @@ docker compose pull && docker compose up -d      # ready-made image from ghcr.io
 - **`NDB_USER_AGENT`:** SANS ISC requires a User-Agent with your own site and e-mail.
 - **`ABUSECH_AUTH_KEY`:** optional; a free key from <https://auth.abuse.ch/>.
 - **`NS_API_KEY`:** for Treinstoringen; a free key from <https://apiportal.ns.nl>.
+- **`CLOUDFLARE_RADAR_TOKEN`** (optional): for DDoS attacks and BGP events in Dreigingsbeeld NL; a free Cloudflare API token with the permission *Account → Radar → Read* (<https://dash.cloudflare.com/profile/api-tokens>).
 - **`NDB_TAG`** (optional): which published image to download. `1` (default) is the newest 1.x, `1.7` the newest 1.7.x, `1.7.2` exactly that version.
 
 **Download or build: your choice, every time.** The compose file has both an `image:` and a `build:` entry:
@@ -168,7 +171,7 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 | `cache` | `max_items_per_source`, `max_age`, `snapshot_path` (empty = no disk writes, see below), `icon_cache_path` (only the site icons; ~85 KB, written about weekly) |
 | `features` | `show_images` (keep feed images), `proxy_images` (serve them through `/api/img`, see below), `source_icons` (the news sites' own icons, default on), `icon_services` (fallback to DuckDuckGo's and Google's favicon services for sites that block the server, default on), `geolocation` (ip-api lookups), `allow_custom_feeds` (reserved, see below) |
 | `refresh` | how often an open browser tab asks the server for new data, per panel: `news`, `alerts`, `weather`, `today`, `air`, `pollen`, `traffic`, `trains`, `alarms`, `quakes`, `nlalert`, `energy`, `fuel`, `economy`, `markets`, `waste`, `trending`, `amber`, `insects`, `sky`, `sports`, `satellite`, `radiation`, `solar`, `world`, `politics`, `threats`, `advisories`, `breaches`, `ransomware`, `utilities`, `outages`, `ap`, `health` (1m–24h, see below) |
-| `keys` | `abusech_auth_key` (optional), `ns_api_key` (Treinstoringen) |
+| `keys` | `abusech_auth_key` (optional; also ThreatFox), `ns_api_key` (Treinstoringen), `cloudflare_radar_token` (Dreigingsbeeld NL; or `CLOUDFLARE_RADAR_TOKEN`) |
 | `energy` | Energieprijzen: `enabled`, `url`, `interval` (min. 15m), `vat` (0.21), `electricity_extra` / `gas_extra` (€ added per kWh / m³, e.g. energy tax and markup; default 0) |
 | `air` | Luchtkwaliteit: `enabled`, `base` (Luchtmeetnet API), `stations_url` (RIVM station list, CSV), `interval` (min. 15m), `heat_smog` (Hitte en smog, default true; the ozone forecast comes with the pollen request) |
 | `trains` | Treinstoringen: `enabled`, `url` (NS Disruptions API v3), `interval` (min. 2m). Needs `keys.ns_api_key` |
@@ -195,13 +198,15 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 | `ransomware` | Ransomware NL: `enabled`, `base` (ransomware.live API v2), `countries` (ISO codes, default `[NL]`, max. 5), `interval` (min. 10m) |
 | `politics` | Politiek vandaag: `enabled`, `base` (Tweede Kamer OData), `interval` (min. 10m) |
 | `weather` | default `location` (`name`, `lat`, `lon`, `region` = province for warnings, `country`), `interval`, MeteoAlarm feed URLs, `sea` (Zee en getij, default true), `tides_url` (Rijkswaterstaat water data) and `marine_url` (Open-Meteo Marine) |
-| `threats` | `enabled`, `interval` (min. 15m, ISC's request), `daily_interval`, `cisa_kev` |
+| `threats` | `enabled`, `interval` (min. 15m, ISC's request), `daily_interval`, `cisa_kev`, `urlhaus_nl` + `urlhaus_nl_url` (tab Malware in NL, every 3 hours), `threatfox` + `threatfox_url` (tab IOC's, hourly) |
+| `exploits` | tab Exploits in Security-adviezen: `enabled`, `exploitdb_url` (RSS, hourly), `epss_url` (folder with the daily EPSS files, every 6 hours) |
+| `nlthreat` | Dreigingsbeeld NL: `enabled`, `radar_url` (Cloudflare Radar API), `country` (default NL), `interval` (default 30m, min. 15m) |
 | `alerts` | top bar: `nctv` (`enabled`, `url`, `interval`, min. 1h) and `knmi` (`true`/`false`) |
 | `traffic` | `enabled`, `interval` (min. 2m), `url` (NDW DATEX II publication), `vild_base` (where the VILD location tables live) |
 | `alarms` | `enabled`, `city` (default city slug, e.g. `den-haag`), `base` (feed URL prefix), `interval` (cache per city, min. 1m); `counts` for the top bar: `label`, `cities` (one or more slugs, e.g. a whole safety region), `interval` (1m–10m) |
 | `breaches` | Datalekken panel: `enabled`, `url` (HIBP breach list), `interval` (min. 1h, default 3h), `include_sensitive` (default `false`), `phishing` (default true) and `phishing_url` (Fraudehelpdesk alerts RSS, read every 2 hours) |
 | `outages` | `enabled`, `interval` (min. 5m), `internet` (`enabled`, `base`, `country`, `networks`: `asn` + `name`, max. 10, `interval` min. 10m), `providers`: `id`, `name`, `url`, `homepage`, `format` (`statuspage` for any Atlassian Statuspage `summary.json` / `rss` / `m365` / `gcp` for Google Cloud's `incidents.json`) |
-| `advisories` | advisory feeds: `format: ncsc` (parses the NCSC title) or `rss` (any feed, severity from keywords) |
+| `advisories` | advisory feeds: `format: ncsc` (parses the NCSC title) or `rss` (any feed; severity from the feed when it states one, such as a CVSS score, otherwise from keywords); `group: edge` puts a feed in the tab Edge-apparaten |
 | `categories`, `sources` | news categories (`short` = chip label; `name_en`/`short_en` for the English interface) and feeds (`region` = province, for the "Mijn regio" preset) |
 | `presets` | topics offered on the first visit and under Instellingen → Bronnen: a list of `sources`, or `region: true` for the broadcaster matching the visitor's weather province; `name_en`/`description_en` for the English interface |
 
@@ -218,6 +223,7 @@ Environment variables override the file, so Docker users rarely need to edit it:
 | `NDB_ICON_CACHE_PATH` | `cache.icon_cache_path` |
 | `ABUSECH_AUTH_KEY` | `keys.abusech_auth_key` |
 | `NS_API_KEY` | `keys.ns_api_key` |
+| `CLOUDFLARE_RADAR_TOKEN` | `keys.cloudflare_radar_token` |
 | `NDB_TRUSTED_PROXIES` | `server.trusted_proxies` (comma-separated IPs/CIDRs) |
 | `NDB_METRICS` | `server.metrics` (`true`/`false`) |
 
@@ -560,6 +566,12 @@ The server fetches everything; browsers only talk to the dashboard itself.
 | [MeteoAlarm](https://meteoalarm.org/) | KNMI/KMI warnings | CC BY 4.0 (see MeteoAlarm terms). |
 | [SANS ISC / DShield](https://isc.sans.edu/) | ports, trend, top IPs, Infocon | CC BY-NC-SA, **non-commercial**. Requires a User-Agent with contact info; polled at most every 15 min (daily summary hourly). |
 | [abuse.ch Feodo Tracker](https://feodotracker.abuse.ch/) | botnet C2 list | CC0. An `Auth-Key` is sent when configured. |
+| [abuse.ch URLhaus](https://urlhaus.abuse.ch/) | Cyberdreigingen: Malware in NL | The country feed for NL (CSV, ~10 MB), every 3 hours; only URLs still online are counted. CC0. Network names via Shadowserver's public ASN lookup. |
+| [abuse.ch ThreatFox](https://threatfox.abuse.ch/) | Cyberdreigingen: IOC's | `get_iocs` for the last 24 hours, hourly; needs the free abuse.ch Auth-Key. CC0. |
+| Vendor PSIRT feeds | Security-adviezen: Edge-apparaten | Fortinet (filestore.fortinet.com), Palo Alto Networks, Cisco and Ivanti RSS. Citrix has no working feed. |
+| [Exploit-DB](https://www.exploit-db.com/) | Security-adviezen: Exploits | The RSS feed of new exploits, hourly. |
+| [FIRST EPSS](https://www.first.org/epss/) | Security-adviezen: Exploits | Two daily score files (~3 MB each: today and a week ago), compared every 6 hours. |
+| [Cloudflare Radar](https://radar.cloudflare.com/) | Dreigingsbeeld NL | Layer-3 attack trend and types, layer-7 attack origins, BGP hijacks (confidence ≥ 5) and route leaks for NL; 5 requests per 30 minutes with your API token. CC BY-NC 4.0. |
 | [ip-api.com](https://ip-api.com/) | IP → country/AS | Free tier is **non-commercial only**, HTTP-only, 15 batch requests/min (honoured via `X-Rl`/`X-Ttl`). Results cached 24 h. Can be disabled: `features.geolocation: false`. |
 | [NCSC-NL](https://advisories.ncsc.nl/) | advisories | Public RSS. |
 | [Autoriteit Persoonsgegevens](https://www.autoriteitpersoonsgegevens.nl/) | AP actions panel | Public RSS. |
@@ -703,7 +715,9 @@ All JSON responses:
 | `GET /api/weather?lat=&lon=&region=&cc=` | current, 24 h, 7 days, rain 2 h, warnings (defaults to the configured location) |
 | `GET /api/sea?lat=&lon=` | Zee en getij: the nearest coastal `station` (`name`, `km`), the next `tides` (`time`, `high`, `cm`) and `sea` (`temp`, `wave`, `wave_dir`, `wave_max`) |
 | `GET /api/geocode?q=` | place search, NL/BE first (rate-limited per IP) |
-| `GET /api/threats` | Infocon, top ports, 30-day trend, top IPs + countries, Feodo C2, optional KEV, sources/licences |
+| `GET /api/threats` | Infocon, top ports, 30-day trend, top IPs + countries, Feodo C2, optional KEV, `urlhaus` (NL: `online`, `week`, `threats`, `asns`, `newest` defanged), `threatfox` (`total`, `families`, `newest` defanged; `missing_key`), sources/licences |
+| `GET /api/exploits` | Tab Exploits: `exploitdb` (`items`: `id`, `title`, `kind`, `url`, `published`) and `epss` (`date`, `since`, `risers`: `cve`, `epss`, `prev`, `percentile`; `kev`) |
+| `GET /api/nlthreat` | Dreigingsbeeld NL: `radar` (`data`: `trend`, `days`, `vectors`, `origins`, `hijacks`, `leaks`, `hijacks_n`, `leaks_n`, `as_names`; or `missing_key`) |
 | `GET /api/alerts` | top bar: NCTV level (`level`, `name`, `since`) KNMI summary (`level`, `active`, `onset`, `types`, `areas`, `heat`) and `water` (`level`, `sectors`, `peak`, `peak_at`, `barriers`, `outlook`) |
 | `GET /api/traffic` | jams (road, direction, from/to, delay), accidents, closure count, VILD version |
 | `GET /api/alarms?city=` | P2000 alerts for a city slug (default from config): per service at most 2, with urgency, units and detail; Lifeliner falls back to national when the city has none |
@@ -737,7 +751,7 @@ All JSON responses:
 | `GET /api/ransomware` | Ransomware NL: `last7` / `last30` / `last365` counts, `top_groups` (90 days), the 8 newest `victims` (name, website, sector, group, date) and per-country `sources` |
 | `GET /api/breaches` | Datalekken: the latest 3 Dutch (`nl`) and 3 other (`other`) breaches with `title`, `domain`, `url`, `breach_date`, `added`, `count`, `data_classes`, plus `total`/`shown`, `phishing` (`items`: `title`, `url`, `published`) |
 | `GET /api/outages` | per provider: status (`ok`/`minor`/`major`) and incidents; `internet`: IODA events per country/network |
-| `GET /api/advisories?sources=&limit=` | normalised advisories: `{id, source, title, url, published, updated, severity, probability, impact, cves, products, exploited}` |
+| `GET /api/advisories?sources=&limit=` | normalised advisories: `{id, source, title, url, published, updated, severity, probability, impact, cves, products, exploited}`; `groups` (source id → `edge`); the limit applies per tab |
 | `GET /healthz` | `{"status":"ok", …}` + per-source status for news (`sources`) and threat/advisory feeds (`feeds`) |
 | `GET /metrics` | Prometheus metrics (only when enabled) |
 
@@ -796,6 +810,13 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.31.0
+- **Security-adviezen:** tabs **Adviezen**, **Edge-apparaten** (new advisory sources `fortinet`, `paloalto`, `cisco`, `ivanti` with `group: edge`; severity read from the feed: Cisco Security Impact Rating, Palo Alto Severity, Fortinet CVSS score) and **Exploits** (Exploit-DB and EPSS risers; new endpoint `/api/exploits`).
+- **Cyberdreigingen:** tabs **Malware in NL** (URLhaus country feed) and **IOC's** (ThreatFox, needs the abuse.ch key). Defanged, never links.
+- **New panel Dreigingsbeeld NL** (`/api/nlthreat`): incidents from your Dutch news, DDoS attacks on NL and BGP hijacks and leaks (Cloudflare Radar, `CLOUDFLARE_RADAR_TOKEN`).
+- **News:** new source Hacker News (front page, 100+ points), category Tech, in the Tech & security preset.
+- The fetcher accepts a larger response for known large files (`MaxBody`).
 
 ### 1.30.0
 - **Gezondheid:** Hooikoorts and Teken en muggen are one panel with two sections. Saved layouts are migrated (whoever kept Teken en muggen visible keeps the combined panel visible).

@@ -495,8 +495,8 @@ table.tt { width: 100%; border-collapse: collapse; font-size: 12px; }
 .kevl .m { flex-wrap: wrap; }
 
 /* ---------- Advisories ---------- */
-.advf { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
-.advf .chip { height: 26px; font-size: 12px; }
+.advf, .advt { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.advf .chip, .advt .chip { height: 26px; font-size: 12px; }
 .advs { list-style: none; margin: 0; padding: 0; }
 .adv { padding: 8px 0; border-top: 1px solid var(--line); }
 .adv:first-child { border-top: 0; padding-top: 2px; }
@@ -929,6 +929,11 @@ textarea.json {
 .fnote { font-size: 12px; color: var(--text-3); margin: 2px 0 0; }
 .tag.lvl-yellow, .tag.lvl-orange, .tag.lvl-red, .tag.lvl-green { border-color: var(--lvl); border-left-width: 4px; color: var(--text); } /* yellow text would be unreadable */
 .hsmog { margin-top: 4px; }
+.ddtrend { display: flex; align-items: flex-end; gap: 4px; height: 42px; margin: 2px 0 6px; }
+.ddtrend span { flex: 1; min-width: 6px; border-radius: 2px 2px 0 0; background: var(--accent); opacity: .85; }
+.iocs { list-style: none; margin: 2px 0 6px; padding: 0; font-size: 12px; }
+.iocs li { padding: 2px 0; overflow-wrap: anywhere; }
+.exh { margin: 10px 0 4px; font-size: 12px; font-weight: 650; color: var(--text-2); text-transform: uppercase; letter-spacing: .03em; }
 .seab, .otd { margin-top: 10px; }
 .seab h3, .otd h3 { margin: 0 0 4px; font-size: 12px; font-weight: 650; color: var(--text-2); text-transform: uppercase; letter-spacing: .03em; }
 .seab h3 .m { text-transform: none; letter-spacing: 0; font-weight: 400; }
@@ -1155,6 +1160,13 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.31.0</h3>
+    <ul>
+      <li>Security-adviezen: tabbladen <b>Adviezen</b>, <b>Edge-apparaten</b> (Fortinet, Palo Alto, Cisco, Ivanti; kritiek eerst) en <b>Exploits</b> (nieuwe publieke exploits en de CVE’s waarvan de kans op misbruik deze week het sterkst steeg).</li>
+      <li>Cyberdreigingen: tabbladen <b>Malware in NL</b> (actieve malware-URL’s op Nederlandse servers, per netwerk) en <b>IOC’s</b> (nieuwste indicatoren en malwarefamilies). Adressen worden onklikbaar getoond.</li>
+      <li>Nieuw paneel <b>Dreigingsbeeld NL</b>: incidenten bij Nederlandse organisaties uit je nieuws, DDoS-aanvallen op Nederland en BGP-hijacks en route leaks.</li>
+      <li>Nieuwe nieuwsbron: Hacker News (categorie Tech).</li>
+    </ul>
     <h3>Versie 1.30.0</h3>
     <ul>
       <li>Hooikoorts en Teken en muggen zijn samen één paneel: <b>Gezondheid</b>.</li>
@@ -1387,6 +1399,13 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.31.0</h3>
+    <ul>
+      <li>Security advisories: tabs <b>Advisories</b>, <b>Edge devices</b> (Fortinet, Palo Alto, Cisco, Ivanti; critical first) and <b>Exploits</b> (new public exploits and the CVEs whose chance of exploitation rose most this week).</li>
+      <li>Cyber threats: tabs <b>Malware in NL</b> (active malware URLs on Dutch servers, per network) and <b>IOCs</b> (newest indicators and malware families). Addresses are shown defanged.</li>
+      <li>New panel <b>Threat picture NL</b>: incidents at Dutch organisations from your news, DDoS attacks on the Netherlands and BGP hijacks and route leaks.</li>
+      <li>New news source: Hacker News (category Tech).</li>
+    </ul>
     <h3>Version 1.30.0</h3>
     <ul>
       <li>Hay fever and Ticks and mosquitoes are now one panel: <b>Health</b>.</li>
@@ -1844,6 +1863,7 @@ const PANELS = {
   sports: 'Sportagenda',
   politics: 'Politiek vandaag',
   threats: 'Cyberdreigingen',
+  nlthreat: 'Dreigingsbeeld NL',
   advisories: 'Security-adviezen',
   breaches: 'Datalekken',
   ransomware: 'Ransomware',
@@ -1857,7 +1877,7 @@ const SPORT_IDS = ['f1', 'road', 'mtb', 'athletics', 'football']; // before sani
 const MIN = 60e3;
 const DEFAULTS = {
   v: 2, theme: 'auto', sources: null, known: [], pageSize: 60, summaries: true,
-  density: 'compact', category: 'all', weather: null, threatTab: 'ips', advFilter: 'all',
+  density: 'compact', category: 'all', weather: null, threatTab: 'ips', advTab: 'adv', advFilter: 'all',
   lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, trending: true, pushTopics: null, waste: null, sports: null, sportsSeen: null, solar: null, saver: 'auto', hazardTab: 'nl', watch: [], mute: [],
   panels: { order: PANEL_IDS.slice(), collapsed: {}, hidden: {}, page: {} },
 };
@@ -2831,6 +2851,59 @@ const EN = {
   "Zee en getij": "Sea and tide", " ({km} km)": " ({km} km)", "hoogwater": "high tide", "laagwater": "low tide",
   "Getijden nu niet beschikbaar (Rijkswaterstaat).": "Tides unavailable right now (Rijkswaterstaat).", "zeewater {v}°": "sea water {v}°",
   "golven {v} m": "waves {v} m", " uit het {dir}": " from the {dir}", "vandaag tot {v} m": "today up to {v} m", "Getij t.o.v. NAP: ": "Tide relative to NAP: ", " · zee: ": " · sea: ",
+  "Malware in NL": "Malware in NL",
+  "IOC's": "IOCs",
+  "Hiervoor is een gratis abuse.ch-sleutel nodig (keys.abusech_auth_key of ABUSECH_AUTH_KEY). ": "This needs a free abuse.ch key (keys.abusech_auth_key or ABUSECH_AUTH_KEY). ",
+  "Sleutel aanvragen": "Request a key",
+  "{name} is niet bereikbaar ({err}).": "{name} cannot be reached ({err}).",
+  " actieve malware-URL’s op servers in Nederland · {n} nieuw in 7 dagen": " active malware URLs on servers in the Netherlands · {n} new in 7 days",
+  "Netwerken met de meeste actieve malware-URL’s": "Networks with the most active malware URLs",
+  "AS": "AS",
+  "URL’s": "URLs",
+  "Nieuwste (onklikbaar gemaakt): ": "Newest (defanged): ",
+  "malwaredownload": "malware download",
+  "botnet-C2": "botnet C2",
+  "malwareverspreiding": "malware distribution",
+  "malwarebestand": "malware file",
+  " · misbruik melden bij de hostingprovider of via ": " · report abuse to the hosting provider or via ",
+  " nieuwe indicatoren in 24 uur": " new indicators in 24 hours",
+  "Meest gemelde malwarefamilies": "Most reported malware families",
+  "Nieuwste met hoge zekerheid (onklikbaar gemaakt): ": "Newest with high confidence (defanged): ",
+  " · families die Feodo Tracker al toont staan bij Botnet-C2": " · families Feodo Tracker already shows are under Botnet C2",
+  "Soort informatie": "Kind of information",
+  "Adviezen": "Advisories",
+  "Edge-apparaten": "Edge devices",
+  "Exploits": "Exploits",
+  "EPSS-stijgers (7 dagen)": "EPSS risers (7 days)",
+  "kans op misbruik binnen 30 dagen · hoger dan {p} van alle CVE’s": "chance of exploitation within 30 days · higher than {p} of all CVEs",
+  "EPSS is niet bereikbaar ({err}).": "EPSS cannot be reached ({err}).",
+  "Geen grote stijgers deze week.": "No big risers this week.",
+  "Nieuwe publieke exploits": "New public exploits",
+  "Exploit-DB is niet bereikbaar ({err}).": "Exploit-DB cannot be reached ({err}).",
+  " ({since} → {date})": " ({since} → {date})",
+  "misbruik: CISA KEV": "exploitation: CISA KEV",
+  "1 incident in het nieuws": "1 incident in the news",
+  "{n} incidenten in het nieuws": "{n} incidents in the news",
+  "{h} hijacks, {l} route leaks": "{h} hijacks, {l} route leaks",
+  "Het dreigingsbeeld kon niet worden opgehaald ({err}).": "The threat picture could not be loaded ({err}).",
+  "Incidenten in het nieuws (7 dagen)": "Incidents in the news (7 days)",
+  "Geen berichten over hacks, datalekken of cyberaanvallen in je Nederlandstalige bronnen.": "No reports of hacks, data breaches or cyber attacks in your Dutch-language sources.",
+  "Aanvallen en routing": "Attacks and routing",
+  "Voor DDoS-aanvallen en BGP-meldingen is een gratis Cloudflare-token nodig (Radar: Read) in CLOUDFLARE_RADAR_TOKEN. ": "DDoS attacks and BGP events need a free Cloudflare token (Radar: Read) in CLOUDFLARE_RADAR_TOKEN. ",
+  "Token maken": "Create a token",
+  "Cloudflare Radar is niet bereikbaar ({err}).": "Cloudflare Radar cannot be reached ({err}).",
+  "DDoS-aanvallen op Nederland (7 dagen)": "DDoS attacks on the Netherlands (7 days)",
+  "Aanvallen per dag, relatief: {list}": "Attacks per day, relative: {list}",
+  "Soort: ": "Type: ",
+  "Herkomst (webaanvallen): ": "Origin (web attacks): ",
+  "kondigde {p} aan": "announced {p}",
+  " van {v}": " of {v}",
+  "lekte routes": "leaked routes",
+  "nog bezig": "ongoing",
+  "Routing (BGP, 7 dagen)": "Routing (BGP, 7 days)",
+  "{h} hijacks en {l} route leaks waarbij Nederlandse netwerken betrokken zijn": "{h} hijacks and {l} route leaks involving Dutch networks",
+  "Bronnen: je nieuwsbronnen": "Sources: your news sources",
+  "Dreigingsbeeld NL": "Threat picture NL",
   "Hoogwater en stormvloed": "High water and storm surge", "Rijkswaterstaat is niet bereikbaar ({err}).": "Rijkswaterstaat cannot be reached ({err}).",
   "Overal code groen: geen hoogwater.": "Code green everywhere: no high water.", "Verwacht: {code} vanaf {t}.": "Expected: {code} from {t}.",
   "Stormvloedkering dicht": "Storm-surge barrier closed", "Stormvloedkeringen: alle {n} open.": "Storm-surge barriers: all {n} open.",
@@ -3024,7 +3097,8 @@ function sanitize(p) {
   if (typeof p.summaries === 'boolean') d.summaries = p.summaries;
   if (['compact', 'comfortable'].includes(p.density)) d.density = p.density;
   if (typeof p.category === 'string' && p.category.length < 50) d.category = p.category;
-  if (['ips', 'feodo'].includes(p.threatTab)) d.threatTab = p.threatTab;
+  if (['ips', 'feodo', 'urlhaus', 'threatfox'].includes(p.threatTab)) d.threatTab = p.threatTab;
+  if (['adv', 'edge', 'exploits'].includes(p.advTab)) d.advTab = p.advTab;
   if (typeof p.alarmCity === 'string' && /^[a-z0-9][a-z0-9-]{1,48}$/.test(p.alarmCity)) {
     d.alarmCity = p.alarmCity;
     d.alarmCityName = typeof p.alarmCityName === 'string' ? p.alarmCityName.slice(0, 60) : null;
@@ -3366,7 +3440,7 @@ function matchesFilter(it) {
   if (prefs.hideRead && isRead(it)) return false;
   return matchesQuery(it);
 }
-function renderAll() { renderWelcome(); buildChips(); renderTrending(); renderStream(); renderNotices(); renderMeta(); renderNewButton(); if (viewMode === 'digest' || mobileView === 'overview') queueDigest(); }
+function renderAll() { renderWelcome(); buildChips(); renderTrending(); renderStream(); renderNotices(); renderMeta(); renderNewButton(); renderPanel('nlthreat'); /* its incidents come from the news */ if (viewMode === 'digest' || mobileView === 'overview') queueDigest(); }
 function renderMeta() {
   // freshness of the server data: the most recent successful fetch among the chosen sources
   const ts = enabledIds().map(id => status[id]?.fetched_at).filter(Boolean).map(t => new Date(t)).sort((a, b) => b - a)[0];
@@ -3538,7 +3612,7 @@ function clearSearch() {
 // ---------------------------------------------------------------- side panels
 const shownPanels = () => prefs.panels.order.filter(id => !prefs.panels.hidden[id]);
 // On a phone the panels are two swipe pages: Dagelijks (a) and Achtergrond (b). Visitors move panels under Instellingen.
-const PAGE_B = new Set(['economy', 'politics', 'threats', 'advisories', 'breaches', 'ransomware', 'utilities', 'outages', 'ap', 'health']);
+const PAGE_B = new Set(['economy', 'politics', 'nlthreat', 'threats', 'advisories', 'breaches', 'ransomware', 'utilities', 'outages', 'ap', 'health']);
 const pageOf = id => prefs.panels.page?.[id] || (PAGE_B.has(id) ? 'b' : 'a');
 const viewOfPanel = id => pageOf(id) === 'b' ? 'panels2' : 'panels';
 function updatePageEmpty() {
@@ -3706,6 +3780,8 @@ const summaryOf = {
   breaches: () => { const b = panelData.breaches?.data?.data; if (!b) return null; const l = [...(b.nl || []), ...(b.other || [])].sort((x, y) => new Date(y.added) - new Date(x.added))[0];
     return l ? t('laatste: {name}', { name: l.title }) : null; },
   ransomware: () => { const r = panelData.ransomware?.data; return r?.enabled && r.sources?.some(x => x.fetched_at) ? t('{n} claims in 7 dagen', { n: r.last7 }) : null; },
+  nlthreat: () => { const inc = nlIncidents().length, rd = panelData.nlthreat?.data?.radar?.data;
+    return [t(inc === 1 ? '1 incident in het nieuws' : '{n} incidenten in het nieuws', { n: inc }), rd ? t('{h} hijacks, {l} route leaks', { h: rd.hijacks_n, l: rd.leaks_n }) : null].filter(Boolean).join(' · '); },
   utilities: () => { const u = panelData.utilities?.data; if (!u?.enabled || !u.operators?.length) return null; const act = u.operators.flatMap(g => g.active || []);
     return act.length ? t('{s} stroom- en {g} gasstoringen', { s: act.filter(o => o.energy === 'elektriciteit').length, g: act.filter(o => o.energy === 'gas').length }) : t('geen storingen'); },
   outages: () => { const o = panelData.outages?.data; if (!o?.enabled) return null; const bad = (o.providers || []).filter(p => p.data && p.data.status !== 'ok');
@@ -3737,6 +3813,8 @@ const freshOf = {
   quakes: () => { const d = panelData.quakes?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 40, stale: !!d.error }; },
   today: () => { const d = panelData.today?.data?.school; return d?.fetched_at && { ts: d.fetched_at, max: 2 * 1440 + 60, stale: !!d.error }; },
   ransomware: () => { const d = panelData.ransomware?.data; return d?.enabled && { ts: oldest(d.sources), max: 130, stale: d.sources?.some(s => s.error) }; },
+  nlthreat: () => { const r = panelData.nlthreat?.data?.radar; if (r?.fetched_at) return { ts: r.fetched_at, max: 70, stale: !!r.error };
+    const ts = enabledIds().map(id => status[id]?.fetched_at).filter(Boolean).sort().at(-1); return ts && { ts, max: 30 }; }, // without Radar: the news it is built from
   energy: () => { const d = panelData.energy?.data; return d?.enabled && { ts: d.fetched_at, max: 130, stale: !!d.error }; },
   air: () => { const d = panelData.air?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 70, stale: !!d.error }; },
   trains: () => { const d = panelData.trains?.data; return d?.key && d.fetched_at && { ts: d.fetched_at, max: 12, stale: !!d.error }; },
@@ -3758,6 +3836,7 @@ const panelRenderers = {
   air: renderAir,
   today: renderToday,
   ransomware: renderRansomware,
+  nlthreat: renderNLThreat,
   pollen: renderGezond,
   economy: renderEconomy,
   nlalert: renderNLAlert,
@@ -4064,7 +4143,7 @@ function renderThreats(body, extra) {
   const out = [];
   if (d.daily) out.push(dailySection(d.daily));
   if (d.ports) out.push(portsSection(d.ports));
-  if (d.top_ips || d.feodo) out.push(originSection(d));
+  if (d.top_ips || d.feodo || d.urlhaus || d.threatfox) out.push(originSection(d));
   if (d.kev?.length) out.push(kevSection(d.kev));
   if (!out.length) out.push(h('p', { class: 'pnote', text: 'De dreigingsbronnen worden nog voor het eerst opgehaald.' }));
   out.push(sourcesFoot(d.sources));
@@ -4136,6 +4215,8 @@ function originSection(d) {
   const tabs = [];
   if (d.top_ips) tabs.push({ id: 'ips', label: "Top bron-IP's" });
   if (d.feodo) tabs.push({ id: 'feodo', label: 'Botnet-C2 (Feodo)' });
+  if (d.urlhaus) tabs.push({ id: 'urlhaus', label: t('Malware in NL') });
+  if (d.threatfox) tabs.push({ id: 'threatfox', label: t("IOC's") });
   let cur = tabs.some(t => t.id === prefs.threatTab) ? prefs.threatTab : tabs[0].id;
   const btns = {}, panels = {};
   const select = (id, focus) => {
@@ -4186,6 +4267,29 @@ function originSection(d) {
           h('td', { class: 'st-' + (c.status === 'online' ? 'online' : 'offline'), text: c.status === 'online' ? 'online' : 'offline' }),
           h('td', { class: 'opt', title: c.first_seen ? t('eerst gezien {t}', { t: c.first_seen }) : null, text: c.last_online || '–' })))));
   }
+  const tp = (id, ...kids) => h('div', { class: 'tabpanel', role: 'tabpanel', id: 'tp-' + id, 'aria-labelledby': 'tt-' + id, tabindex: '0', hidden: cur !== id }, ...kids);
+  const pending = (e, name) => e.missing_key ? h('p', { class: 'pnote' }, t('Hiervoor is een gratis abuse.ch-sleutel nodig (keys.abusech_auth_key of ABUSECH_AUTH_KEY). '), extLink('https://auth.abuse.ch/', t('Sleutel aanvragen')))
+    : h('p', { class: 'pnote', text: e.error ? t('{name} is niet bereikbaar ({err}).', { name, err: e.error }) : t('Wordt voor het eerst opgehaald.') });
+  const THREAT_NL = { malware_download: 'malwaredownload', botnet_cc: 'botnet-C2', payload_delivery: 'malwareverspreiding', payload: 'malwarebestand' };
+  if (d.urlhaus) {
+    const u = d.urlhaus.data;
+    panels.urlhaus = tp('urlhaus', !u ? pending(d.urlhaus, 'URLhaus') : [
+      h('p', { class: 'tstats', style: 'margin:0 0 8px' }, h('b', { text: fmt.num.format(u.online) }), t(' actieve malware-URL’s op servers in Nederland · {n} nieuw in 7 dagen', { n: fmt.num.format(u.week) })),
+      table(t('Netwerken met de meeste actieve malware-URL’s'), [[t('Netwerk')], [t('AS'), 'opt'], [t('URL’s'), 'num']],
+        u.asns.map(a => h('tr', null, h('td', { class: 'as', translate: 'no', text: a.name || '–' }), h('td', { class: 'mono opt', text: 'AS' + a.asn }), h('td', { class: 'num', text: fmt.num.format(a.count) })))),
+      h('p', { class: 'm fnote' }, t('Nieuwste (onklikbaar gemaakt): ')), h('ul', { class: 'iocs' }, u.newest.map(x => h('li', null, h('span', { class: 'mono', translate: 'no', text: x.url }), h('span', { class: 'm', text: ` · ${t(THREAT_NL[x.threat] || x.threat)} · ${since(new Date(x.added))}` })))),
+      h('p', { class: 'm fnote' }, t('Bron: '), extLink('https://urlhaus.abuse.ch/', 'abuse.ch URLhaus'), t(' · misbruik melden bij de hostingprovider of via '), extLink('https://urlhaus.abuse.ch/browse/', 'URLhaus'))]);
+  }
+  if (d.threatfox) {
+    const f = d.threatfox.data;
+    panels.threatfox = tp('threatfox', !f ? pending(d.threatfox, 'ThreatFox') : [
+      h('p', { class: 'tstats', style: 'margin:0 0 8px' }, h('b', { text: fmt.num.format(f.total) }), t(' nieuwe indicatoren in 24 uur')),
+      h('ul', { class: 'cbars', 'aria-label': t('Meest gemelde malwarefamilies') }, (() => { const mx = Math.max(1, ...f.families.map(x => x.count)); return f.families.slice(0, 6).map(x => h('li', { class: 'cbar' },
+        h('span', { class: 'cn', translate: 'no' }, x.malpedia ? extLink(x.malpedia, x.name) : x.name), h('span', { class: 'bt', style: `width:${x.count / mx * 100}%`, 'aria-hidden': 'true' }), h('span', { class: 'n', text: x.count }))); })()),
+      f.newest.length ? [h('p', { class: 'm fnote' }, t('Nieuwste met hoge zekerheid (onklikbaar gemaakt): ')), h('ul', { class: 'iocs' }, f.newest.map(x => h('li', null,
+        h('span', { class: 'mono', translate: 'no', title: x.ioc, text: /hash/.test(x.type) ? x.ioc.slice(0, 16) + '…' : x.ioc }), h('span', { class: 'm', text: ` · ${x.family} · ${t(THREAT_NL[x.threat] || x.threat)} · ${x.confidence}%` }))))] : null,
+      h('p', { class: 'm fnote' }, t('Bron: '), extLink('https://threatfox.abuse.ch/', 'abuse.ch ThreatFox'), t(' · families die Feodo Tracker al toont staan bij Botnet-C2'))]);
+  }
   return h('section', { class: 'tsec', 'aria-labelledby': 'th-origin' },
     h('h3', { id: 'th-origin', text: 'Herkomst van aanvallen' }), list, ...tabs.map(t => panels[t.id]));
 }
@@ -4225,14 +4329,23 @@ function renderAdvisories(body, extra) {
   const d = st.data;
   if (!d) { body.replaceChildren(h('p', { class: 'pnote', text: t('Adviezen konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
   if (!d.sources.length) { body.replaceChildren(h('p', { class: 'pnote', text: 'Er staan geen adviesbronnen aan in config.yaml (advisories).' })); return; }
-  const multi = d.sources.length > 1, srcNames = Object.fromEntries(d.sources.map(s => [s.id, s.name]));
+  const groups = d.groups || {}, hasEdge = Object.values(groups).includes('edge'), hasExpl = !!panelData.exploits?.data?.enabled;
+  const tabs = [['adv', 'Adviezen'], ...(hasEdge ? [['edge', 'Edge-apparaten']] : []), ...(hasExpl ? [['exploits', 'Exploits']] : [])];
+  const tab = tabs.some(([id]) => id === prefs.advTab) ? prefs.advTab : 'adv';
+  const tabRow = tabs.length > 1 ? h('div', { class: 'advt', role: 'group', 'aria-label': t('Soort informatie') }, tabs.map(([id, label]) =>
+    h('button', { class: 'chip', type: 'button', 'aria-pressed': String(tab === id), text: t(label),
+      onclick: () => { prefs.advTab = id; advShown = 10; savePrefs(); renderPanel('advisories'); $('#panel-advisories .advt [aria-pressed="true"]')?.focus(); } }))) : null;
+  if (tab === 'exploits') { body.replaceChildren(...[tabRow, ...exploitsNodes()].filter(Boolean)); return; }
+  const inTab = a => tab === 'edge' ? groups[a.source] === 'edge' : groups[a.source] !== 'edge';
+  const tabSources = d.sources.filter(x => tab === 'edge' ? groups[x.id] === 'edge' : groups[x.id] !== 'edge');
+  const multi = tabSources.length > 1, srcNames = Object.fromEntries(d.sources.map(s => [s.id, s.name]));
   const filters = [['all', 'Alle'], ['high', 'Hoog/kritiek'], ['new', 'Alleen nieuw (24 u)'], ...(prefs.watch.length ? [['watch', 'Mijn volglijst']] : [])];
   if (prefs.advFilter === 'watch' && !prefs.watch.length) prefs.advFilter = 'all';
   const cutoff = Date.now() - 864e5;
   const match = a => prefs.advFilter === 'high' ? a.severity === 'high' || a.severity === 'critical'
     : prefs.advFilter === 'new' ? advDate(a).getTime() >= cutoff : prefs.advFilter === 'watch' ? advWatch(a) : true;
-  const list = d.items.filter(match).sort((x, y) => advWatch(y) - advWatch(x)); // watchlist hits first (stable)
-  const out = [h('div', { class: 'advf', role: 'group', 'aria-label': 'Adviezen filteren' }, filters.map(([id, label]) =>
+  const list = d.items.filter(a => inTab(a) && match(a)).sort((x, y) => advWatch(y) - advWatch(x) || (tab === 'edge' ? SEV_RANK[y.severity] - SEV_RANK[x.severity] : 0)); // watchlist hits first; in the edge tab critical first
+  const out = [tabRow, h('div', { class: 'advf', role: 'group', 'aria-label': 'Adviezen filteren' }, filters.map(([id, label]) =>
     h('button', { class: 'chip', type: 'button', 'aria-pressed': String(prefs.advFilter === id), text: label,
       onclick: () => { prefs.advFilter = id; advShown = 10; savePrefs(); renderPanel('advisories'); $(`#panel-advisories .advf [aria-pressed="true"]`)?.focus(); } })))];
   if (!list.length) {
@@ -4259,8 +4372,35 @@ function renderAdvisories(body, extra) {
         onclick: () => { advShown += 10; renderPanel('advisories'); } }));
     }
   }
-  out.push(sourcesFoot(d.sources));
-  body.replaceChildren(...out);
+  out.push(sourcesFoot(tabSources));
+  body.replaceChildren(...out.filter(Boolean));
+}
+const SEV_RANK = { critical: 4, high: 3, medium: 2, low: 1, unknown: 0 };
+// Exploits: the newest public exploits (Exploit-DB) and the CVEs whose EPSS score rose most in a week.
+async function loadExploits() {
+  try { panelData.exploits = { data: await api('api/exploits') }; }
+  catch (e) { panelData.exploits = { ...(panelData.exploits || {}), error: e }; }
+  renderPanel('advisories');
+}
+function exploitsNodes() {
+  const d = panelData.exploits?.data;
+  if (!d) return [h('p', { class: 'pnote', text: t('Wordt voor het eerst opgehaald.') })];
+  const out = [], ed = d.exploitdb, ep = d.epss, pc = v => (v * 100).toLocaleString(locale(), { maximumFractionDigits: 1 }) + '%';
+  const kev = new Set(ep?.kev || []);
+  out.push(h('h3', { class: 'exh', text: t('EPSS-stijgers (7 dagen)') }));
+  if (ep?.risers?.length) out.push(h('ul', { class: 'plist', translate: 'no' }, ep.risers.slice(0, 5).map(r => h('li', null,
+    extLink('https://nvd.nist.gov/vuln/detail/' + r.cve, r.cve, 'cve'), ' ',
+    h('b', { text: `${pc(r.prev)} → ${pc(r.epss)}` }), kev.has(r.cve) ? [' ', h('span', { class: 'tag sev-critical', text: t('actief misbruikt') })] : null,
+    h('div', { class: 'm', text: t('kans op misbruik binnen 30 dagen · hoger dan {p} van alle CVE’s', { p: pc(r.percentile) }) })))));
+  else out.push(h('p', { class: 'pnote', text: ep?.error ? t('EPSS is niet bereikbaar ({err}).', { err: ep.error }) : ep?.date ? t('Geen grote stijgers deze week.') : t('Wordt voor het eerst opgehaald.') }));
+  out.push(h('h3', { class: 'exh', text: t('Nieuwe publieke exploits') }));
+  if (ed?.items?.length) out.push(h('ul', { class: 'plist' }, ed.items.slice(0, 6).map(x => h('li', null,
+    x.kind ? h('span', { class: 'tag plain', text: x.kind }) : null, ' ', h('span', { translate: 'no' }, extLink(x.url, x.title)),
+    h('div', { class: 'm' }, timeEl(new Date(x.published), false))))));
+  else out.push(h('p', { class: 'pnote', text: ed?.error ? t('Exploit-DB is niet bereikbaar ({err}).', { err: ed.error }) : t('Wordt voor het eerst opgehaald.') }));
+  out.push(h('p', { class: 'pfoot' }, t('Bronnen: '), extLink('https://www.first.org/epss/', 'FIRST EPSS'), ep?.date ? t(' ({since} → {date})', { since: ep.since, date: ep.date }) : '', ' · ',
+    extLink('https://www.exploit-db.com/', 'Exploit-DB'), kev.size || ep?.kev ? [' · ', t('misbruik: CISA KEV')] : ''));
+  return out;
 }
 
 // ---------------------------------------------------------------- top bar (NCTV, KNMI)
@@ -6069,6 +6209,53 @@ function renderHazards(body) {
   body.replaceChildren(...out.filter(Boolean));
 }
 
+// ---------------------------------------------------------------- dreigingsbeeld NL
+// Incidents at Dutch organisations from the visitor's Dutch-language news (last 7 days), and DDoS attacks and BGP
+// events from Cloudflare Radar (server side, needs a token).
+async function loadNLThreat() {
+  try { panelData.nlthreat = { data: await api('api/nlthreat') }; }
+  catch (e) { panelData.nlthreat = { ...(panelData.nlthreat || {}), error: e }; }
+  renderPanel('nlthreat');
+}
+const INCIDENT_RE = /\b(gehackt|hack(er|ers|t)?|hackaanval\w*|cyberaanval\w*|cyberincident\w*|ddos\w*|ransomware\w*|gijzelsoftware|datalek\w*|phishing\w*|malware|cybercrimin\w*|gegevens (zijn )?gestolen|digitale inbraak)\b/;
+function nlIncidents() {
+  const cut = Date.now() - 7 * 864e5, seen = new Set();
+  return items.filter(it => +it.date >= cut && srcById.get(it.source)?.lang === 'nl' && INCIDENT_RE.test(fold(it.title)) && !isMuted(it))
+    .filter(it => { const k = fold(it.title).slice(0, 60); if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 6);
+}
+function renderNLThreat(body) {
+  const st = panelData.nlthreat;
+  if (!st) { body.replaceChildren(h('div', { class: 'tsk', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:300px' }))); return; }
+  const d = st.data;
+  if (!d) { body.replaceChildren(h('p', { class: 'pnote', text: t('Het dreigingsbeeld kon niet worden opgehaald ({err}).', { err: tr(st.error?.message) }) })); return; }
+  if (!d.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (nlthreat.enabled).' })); return; }
+  const sec = (ico, title, ...kids) => h('div', { class: 'wsec' }, h('h3', null, h('span', { 'aria-hidden': 'true', text: ico + ' ' }), t(title)), ...kids);
+  const out = [], inc = nlIncidents();
+  out.push(sec('📰', 'Incidenten in het nieuws (7 dagen)', inc.length ? h('ul', { class: 'plist' }, inc.map(it => h('li', null, h('span', { translate: 'no' }, extLink(it.url, it.title)),
+    h('div', { class: 'm' }, h('span', { translate: 'no', text: srcName(it.source) }), ' · ', timeEl(it.date, false))))) : h('p', { class: 'pnote', text: t('Geen berichten over hacks, datalekken of cyberaanvallen in je Nederlandstalige bronnen.') })));
+  const r = d.radar || {}, rd = r.data, cname = c => fmt.region?.of(c) || c, pct = v => Math.round(v) + '%';
+  const asn = n => `AS${n}` + (rd?.as_names?.[n] ? ` ${rd.as_names[n]}` : '');
+  if (r.missing_key) out.push(sec('📡', 'Aanvallen en routing', h('p', { class: 'pnote' }, t('Voor DDoS-aanvallen en BGP-meldingen is een gratis Cloudflare-token nodig (Radar: Read) in CLOUDFLARE_RADAR_TOKEN. '),
+    extLink('https://dash.cloudflare.com/profile/api-tokens', t('Token maken')))));
+  else if (!rd) out.push(sec('📡', 'Aanvallen en routing', h('p', { class: 'pnote', text: r.error ? t('Cloudflare Radar is niet bereikbaar ({err}).', { err: r.error }) : t('Wordt voor het eerst opgehaald.') })));
+  else {
+    const days = rd.days || [];
+    out.push(sec('💥', 'DDoS-aanvallen op Nederland (7 dagen)',
+      h('div', { class: 'ddtrend', role: 'img', 'aria-label': t('Aanvallen per dag, relatief: {list}', { list: rd.trend.map((v, i) => `${days[i] ? fmt.wdmUTC.format(dateOnly(days[i])) : ''} ${Math.round(v * 100)}`).join(', ') }) },
+        rd.trend.map((v, i) => h('span', { title: `${days[i] || ''}: ${Math.round(v * 100)}%`, style: `height:${Math.max(4, v * 100)}%` }))),
+      h('p', { class: 'eline' }, h('b', { text: t('Soort: ') }), rd.vectors.slice(0, 3).map(v => `${v.name} ${pct(v.share)}`).join(' · ')),
+      rd.origins?.length ? h('p', { class: 'eline' }, h('b', { text: t('Herkomst (webaanvallen): ') }), rd.origins.slice(0, 4).map(o => `${cname(o.code)} ${pct(o.share)}`).join(' · ')) : null));
+    const ev = (e, kind) => h('li', null, h('b', { translate: 'no', text: asn(e.asn) }), ' ',
+      kind === 'h' ? t('kondigde {p} aan', { p: (e.prefixes || []).slice(0, 2).join(', ') }) + (e.victims?.length ? t(' van {v}', { v: e.victims.slice(0, 2).map(asn).join(', ') }) : '') : t('lekte routes') + (e.countries?.length ? ` (${e.countries.join(', ')})` : ''),
+      h('div', { class: 'm' }, timeEl(new Date(e.at), false), e.ongoing ? [' · ', h('span', { class: 'tag live', text: t('nog bezig') })] : null));
+    out.push(sec('🧭', 'Routing (BGP, 7 dagen)',
+      h('p', { class: 'eline', text: t('{h} hijacks en {l} route leaks waarbij Nederlandse netwerken betrokken zijn', { h: rd.hijacks_n, l: rd.leaks_n }) }),
+      rd.hijacks.length || rd.leaks.length ? h('ul', { class: 'plist bgp' }, [...rd.hijacks.slice(0, 3).map(e => ev(e, 'h')), ...rd.leaks.slice(0, 2).map(e => ev(e, 'l'))]) : null));
+  }
+  out.push(h('p', { class: 'pfoot' }, t('Bronnen: je nieuwsbronnen'), rd || r.error ? [' · ', extLink('https://radar.cloudflare.com/nl', 'Cloudflare Radar'), ' (CC BY-NC 4.0)'] : null));
+  body.replaceChildren(...out);
+}
+
 // ---------------------------------------------------------------- sportagenda
 const SPORT_NL = { f1: 'Formule 1', road: 'Wielrennen', mtb: 'Mountainbike', athletics: 'Atletiek', football: 'Voetbal' };
 const SPORT_ICON = { f1: '🏎️', road: '🚴', mtb: '🚵', athletics: '🏃', football: '⚽' };
@@ -6322,7 +6509,7 @@ function wireMobileViews() {
 // refreshView: fetch the data of the current phone view again (pull to refresh)
 function refreshView(v) {
   const panels = () => [loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(), loadBreaches(), loadOutages(), loadHealthPanel(),
-    loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(),
+    loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadNLThreat(), loadExploits(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(),
     loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar(), loadWorld()];
   const jobs = v === 'news' ? [loadNews({ replace: true }), loadTrending()] : v === 'panels' || v === 'panels2' ? panels() : [loadNews({ replace: true }), ...panels()];
   return Promise.allSettled(jobs);
@@ -7063,7 +7250,7 @@ async function init() {
   buildChips();
   if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
   await Promise.allSettled([loadNews({ replace: true }), loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(),
-    loadBreaches(), loadOutages(), loadHealthPanel(), loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(), loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadTrending(), initPush(),
+    loadBreaches(), loadOutages(), loadHealthPanel(), loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadNLThreat(), loadExploits(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(), loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadTrending(), initPush(),
     loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar(), loadWorld()]);
   kioskFit(); // the header and top bar have their final height now
   panelFromHash(); // e.g. a push notification that opens #panel-waste
@@ -7073,6 +7260,8 @@ async function init() {
   every(R('weather', 15), loadWeather);
   every(R('threats', 15), loadThreats);
   every(R('advisories', 30), loadAdvisories);
+  every(R('advisories', 30), loadExploits);
+  every(R('threats', 15), loadNLThreat);
   every(R('ap', 30), loadAP);
   every(R('alerts', 3), loadAlerts);
   every(R('traffic', 5), loadTraffic);
