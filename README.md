@@ -15,7 +15,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
   - the ISC Infocon level
   - Autoriteit Persoonsgegevens enforcement news (panel "Autoriteit Persoonsgegevens") (last 14 days)
 - **Security advisories**: NCSC-NL, with the `[kans/schade]` rating parsed into badges, plus optional CERT-EU, CISA, BSI and MSRC. Tabs **Edge-apparaten** (Fortinet, Palo Alto, Cisco and OPNsense, severity from the source, critical first, at most 8 per vendor; Fortinet titles get the product name) and **Exploits** (new public exploits from Exploit-DB and the CVEs whose EPSS score rose most in a week, marked when in CISA KEV).
-- **Dreigingsbeeld NL:** incidents at Dutch organisations from your Dutch-language news (last 7 days), DDoS attacks on the Netherlands (trend, attack types, origin countries) and BGP hijacks and route leaks involving Dutch networks (Cloudflare Radar; needs a free API token).
+- **Dreigingsbeeld NL:** incidents at Dutch organisations from your news (last 7 days; the headline must point to a Dutch organisation), DDoS attacks on the Netherlands (trend, attack types, origin countries) and BGP hijacks and route leaks involving Dutch networks (Cloudflare Radar; needs a free API token).
 - **Top bar:** the current KNMI weather code (only while there is a warning), the number of P2000 alerts in the last hour per service for a configured area (default Den Haag), an active NL-Alert with its place (only while one is active), and the NCTV terrorism threat level.
 - **Vandaag:** date and week number, sunrise and sunset, moon phase, the next public holiday, the next clock change, and school holidays for regio Noord, Midden and Zuid (the visitor's region highlighted). **Op deze dag**: four events on today's date from the Dutch Wikipedia day page (Dutch ones first).
 - **Luchtkwaliteit:** the air quality index (1–11) and NO₂, PM2.5, PM10 and O₃ from the nearest Luchtmeetnet station. The place is chosen per visitor (default: their weather location). Below it the **radiation** (gamma dose rate) at the nearest RIVM station, with the national range; when several stations measure raised levels, a notice appears in the top bar and a push message can go out. Then **Hitte en smog**: whether the Nationaal Hitteplan is active (KNMI heat warning), RIVM's smog warnings, and the ozone forecast for 3 days.
@@ -810,6 +810,9 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.31.3
+- **Dreigingsbeeld NL:** the incident list only shows incidents at Dutch organisations: the headline or summary must name the Netherlands, a Dutch place or province, a type of Dutch organisation (gemeente, waterschap, ziekenhuis, …) or a well-known Dutch company or authority; headlines from domestic sources (regional broadcasters, NOS Binnenland) also count unless they name another country.
 
 ### 1.31.2
 - **Security-adviezen:** the tab row (Adviezen · Edge-apparaten · Exploits) had the CSS class `advt`, which EasyList hides on every site with the generic rule `##.advt`; with uBlock Origin, AdBlock Plus or AdGuard the tabs were invisible (seen in Firefox on Windows and Android). Renamed to `sectabs`. The e2e suite now checks every class and id on the rendered page against the current EasyList and EasyList Dutch.

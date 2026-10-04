@@ -23,6 +23,14 @@ const URLHAUS = { fetched_at: iso(0), data: { online: 374, week: 390, threats: {
 const TFOX = { fetched_at: iso(0), data: { total: 1599, types: { payload: 900 }, families: [{ name: 'Mirai', count: 950, malpedia: 'https://malpedia.caad.fkie.fraunhofer.de/details/elf.mirai' }, { name: 'AMOS', count: 55 }],
   newest: [{ ioc: 'petroazaran[.]com', type: 'domain', threat: 'payload_delivery', family: 'ClearFake', confidence: 90, first_seen: iso(-36e5) },
     { ioc: 'f2911fe9394e3d09f36be8d6c17b62fde5fab04d1e985173f23a543111c97fac', type: 'sha256_hash', threat: 'payload', family: 'Mirai', confidence: 100, first_seen: iso(-36e5) }] } };
+const NEWS = [ // [kept?] cyber headlines: only those at Dutch organisations stay
+  { source: 'security-nl', title: 'Gemeente Utrecht getroffen door ransomware-aanval', keep: true },
+  { source: 'tweakers', title: 'Odido meldt datalek met klantgegevens', keep: true },
+  { source: 'omroep-brabant', title: 'DDoS-aanval legt website van omroep plat', keep: true },
+  { source: 'security-nl', title: 'Finse organisaties gehackt via Citrix-lekken meldt Finse overheid', keep: false },
+  { source: 'tweakers', title: 'Hackers dringen officieel X-account van Microsoft binnen', keep: false },
+  { source: 'omroep-brabant', title: 'Datalek bij Duitse webshop raakt ook Brabanders', keep: false },
+  { source: 'tweakers', title: 'Nieuwe telefoon van Fairphone heeft betere camera', keep: false }];
 const RADAR = { enabled: true, country: 'NL', radar: { fetched_at: iso(0), data: {
   trend: [0.22, 0.25, 1, 0.58, 0.37, 0.89, 0.08], days: [-7, -6, -5, -4, -3, -2, -1].map(day),
   vectors: [{ name: 'SYN Flood', share: 62.2 }, { name: 'UDP Flood', share: 24 }, { name: 'Mirai (UDP) Flood', share: 8 }],
@@ -44,6 +52,9 @@ async function open(w, { scheme = 'light', lang = 'nl', mobile = false, nl = RAD
     await p.route('**/api/exploits', r => r.fulfill({ json: EXPL }));
     await p.route('**/api/threats', async r => { const res = await r.fetch(); const j = await res.json(); j.urlhaus = URLHAUS; j.threatfox = TFOX; return r.fulfill({ response: res, json: j }); });
     await p.route('**/api/nlthreat', r => r.fulfill({ json: nl }));
+    await p.route('**/api/news?*', async r => { const res = await r.fetch(); const j = await res.json(); // headlines for the incident filter
+      j.items = [...NEWS.map((x, i) => ({ id: 'inc-' + i, url: 'https://example.org/inc-' + i, published: iso(-(i + 1) * 36e5), summary: '', ...x })), ...(j.items || [])];
+      return r.fulfill({ response: res, json: j }); });
   }
   await p.goto(BASEURL); await p.waitForSelector('#stream .item'); await p.waitForTimeout(2500);
   return [ctx, p, errs];
@@ -87,7 +98,9 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   await p.locator('#panel-nlthreat').scrollIntoViewIfNeeded();
   const nl = await p.evaluate(() => ({ h2: document.querySelector('#panel-nlthreat h2').textContent, secs: [...document.querySelectorAll('#panel-nlthreat .wsec h3')].map(x => x.textContent.trim()),
     bars: document.querySelectorAll('#panel-nlthreat .ddtrend span').length, text: document.querySelector('#panel-nlthreat').innerText.replace(/\s+/g, ' ') }));
-  ok(nl.h2 === 'Dreigingsbeeld NL' && nl.secs.join('|') === '📰 Incidenten in het nieuws (7 dagen)|💥 DDoS-aanvallen op Nederland (7 dagen)|🧭 Routing (BGP, 7 dagen)', `${tag}: panel and sections: ${nl.secs.join(' | ')}`);
+  ok(nl.h2 === 'Dreigingsbeeld NL' && nl.secs.join('|') === '📰 Incidenten bij Nederlandse organisaties (7 dagen)|💥 DDoS-aanvallen op Nederland (7 dagen)|🧭 Routing (BGP, 7 dagen)', `${tag}: panel and sections: ${nl.secs.join(' | ')}`);
+  const inc = await p.$$eval('#panel-nlthreat .wsec:first-child li', l => l.map(x => x.querySelector('a')?.textContent));
+  ok(NEWS.filter(x => x.keep).every(x => inc.includes(x.title)) && NEWS.filter(x => !x.keep).every(x => !inc.includes(x.title)), `${tag}: only incidents at Dutch organisations (${inc.filter(t => NEWS.some(x => x.title === t)).length} of ${NEWS.length} test headlines kept)`);
   ok(nl.bars === 7 && /Soort: SYN Flood 62% · UDP Flood 24%/.test(nl.text) && /Herkomst \(webaanvallen\): Verenigde Staten 21% · China 6%/.test(nl.text), `${tag}: DDoS trend, types and origins`);
   ok(/2 hijacks en 5 route leaks/.test(nl.text) && /AS60781 LeaseWeb Netherlands B\.V\. kondigde 2a13:8c85::\/32 aan van AS207449 Example UK Ltd/.test(nl.text) && /nog bezig/.test(nl.text) && /AS269524 EDGEUNO S\.A\.S lekte routes \(CO, NL, BR\)/.test(nl.text),
     `${tag}: BGP events: ${nl.text.slice(nl.text.indexOf('Routing'), nl.text.indexOf('Routing') + 200)}`);

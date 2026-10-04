@@ -1164,6 +1164,10 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.31.3</h3>
+    <ul>
+      <li>Dreigingsbeeld NL: de lijst met incidenten toont alleen nog hacks, datalekken en cyberaanvallen bij Nederlandse organisaties.</li>
+    </ul>
     <h3>Versie 1.31.2</h3>
     <ul>
       <li>De tabbladen van Security-adviezen (Adviezen, Edge-apparaten, Exploits) werden door adblockers zoals uBlock Origin verborgen; dat is opgelost.</li>
@@ -1412,6 +1416,10 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.31.3</h3>
+    <ul>
+      <li>Threat picture NL: the incident list now only shows hacks, data breaches and cyber attacks at Dutch organisations.</li>
+    </ul>
     <h3>Version 1.31.2</h3>
     <ul>
       <li>The Security advisories tabs (Advisories, Edge devices, Exploits) were hidden by ad blockers such as uBlock Origin; fixed.</li>
@@ -2931,8 +2939,8 @@ const EN = {
   "{n} incidenten in het nieuws": "{n} incidents in the news",
   "{h} hijacks, {l} route leaks": "{h} hijacks, {l} route leaks",
   "Het dreigingsbeeld kon niet worden opgehaald ({err}).": "The threat picture could not be loaded ({err}).",
-  "Incidenten in het nieuws (7 dagen)": "Incidents in the news (7 days)",
-  "Geen berichten over hacks, datalekken of cyberaanvallen in je Nederlandstalige bronnen.": "No reports of hacks, data breaches or cyber attacks in your Dutch-language sources.",
+  "Incidenten bij Nederlandse organisaties (7 dagen)": "Incidents at Dutch organisations (7 days)",
+  "Geen berichten over hacks, datalekken of cyberaanvallen bij Nederlandse organisaties in je bronnen.": "No reports of hacks, data breaches or cyber attacks at Dutch organisations in your sources.",
   "Aanvallen en routing": "Attacks and routing",
   "Voor DDoS-aanvallen en BGP-meldingen is een gratis Cloudflare-token nodig (Radar: Read) in CLOUDFLARE_RADAR_TOKEN. ": "DDoS attacks and BGP events need a free Cloudflare token (Radar: Read) in CLOUDFLARE_RADAR_TOKEN. ",
   "Token maken": "Create a token",
@@ -6264,9 +6272,27 @@ async function loadNLThreat() {
   renderPanel('nlthreat');
 }
 const INCIDENT_RE = /\b(gehackt|hack(er|ers|t)?|hackaanval\w*|cyberaanval\w*|cyberincident\w*|ddos\w*|ransomware\w*|gijzelsoftware|datalek\w*|phishing\w*|malware|cybercrimin\w*|gegevens (zijn )?gestolen|digitale inbraak)\b/;
+// Only incidents at Dutch organisations: the headline or summary must point to the Netherlands (a place, province, type of
+// organisation or well-known Dutch company or authority), or come from a domestic source (regional broadcaster, NOS
+// Binnenland) without naming another country.
+const NL_RE = new RegExp('\\b(' + ['nederland\\w*', 'holland\\w*', 'dutch', 'den haag', "'s-gravenhage", 'randstad',
+  'groning\\w*', 'fries\\w*', 'drent\\w*', 'overijssel\\w*', 'flevoland\\w*', 'gelder\\w*', 'utrecht\\w*', 'noord-holland\\w*', 'zuid-holland\\w*', 'zeeuw\\w*', 'zeeland', 'brabant\\w*', 'limburg\\w*',
+  'amsterdam\\w*', 'rotterdam\\w*', 'eindhoven\\w*', 'tilburg\\w*', 'almere', 'breda\\w*', 'nijmeg\\w*', 'arnhem\\w*', 'haarlem\\w*', 'enschede', 'apeldoorn', 'leiden\\w*', 'delft\\w*', 'maastricht\\w*',
+  'zwolle', 'leeuwarden', 'assen', 'lelystad', 'alkmaar', 'amersfoort', 'zaandam', 'dordrecht', 'den bosch', "'s-hertogenbosch", 'deventer', 'hilversum', 'venlo',
+  'gemeente\\w*', 'provincie\\w*', 'waterschap\\w*', 'ministerie\\w*', 'rijksoverheid', 'rijkswaterstaat', 'belastingdienst', 'uwv', 'duo', 'svb', 'rivm', 'ggd\\w*', 'politie', 'defensie',
+  'tweede kamer', 'eerste kamer', 'ncsc', 'autoriteit persoonsgegevens', 'ziekenhu\\w*', 'umc\\w*', 'hogeschool\\w*', 'mbo\\w*', 'woningcorporatie\\w*', 'zorgverzekeraar\\w*',
+  'kpn', 'odido', 'vodafoneziggo', 'ziggo', 'ing', 'rabobank', 'abn amro', 'asml', 'philips', 'ahold', 'albert heijn', 'jumbo', 'bol', 'postnl', 'schiphol', 'klm', 'ns', 'prorail',
+  'tennet', 'alliander', 'liander', 'stedin', 'enexis', 'eneco', 'essent', 'nn', 'aegon', 'achmea', 'surf', 'sidn', '\\w+\\.nl'].join('|') + ')\\b');
+const FOREIGN_RE = /\b(fins\w*|finland|duits\w*|belg\w*|brits\w*|engels\w*|amerika\w*|frans\w*|spaans\w*|itali\w*|zweed\w*|zweeds\w*|noors\w*|noorwegen|deens\w*|denemarken|pools\w*|polen|russ\w*|rusland|chin\w*|japan\w*|australi\w*|canad\w*|oekrain\w*|israel\w*|iran\w*|india\w*|vs|verenigde staten|microsoft|google|apple|meta|amazon|x-account)\b/;
+const domestic = src => src?.category === 'regio' || /binnenland/.test(src?.id || '');
+function isNLIncident(it) {
+  const src = srcById.get(it.source), title = fold(it.title), text = title + ' ' + fold(it.summary || '');
+  if (src?.lang !== 'nl' || !INCIDENT_RE.test(title)) return false;
+  return NL_RE.test(text) || (domestic(src) && !FOREIGN_RE.test(text));
+}
 function nlIncidents() {
   const cut = Date.now() - 7 * 864e5, seen = new Set();
-  return items.filter(it => +it.date >= cut && srcById.get(it.source)?.lang === 'nl' && INCIDENT_RE.test(fold(it.title)) && !isMuted(it))
+  return items.filter(it => +it.date >= cut && isNLIncident(it) && !isMuted(it))
     .filter(it => { const k = fold(it.title).slice(0, 60); if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 6);
 }
 function renderNLThreat(body) {
@@ -6277,8 +6303,8 @@ function renderNLThreat(body) {
   if (!d.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (nlthreat.enabled).' })); return; }
   const sec = (ico, title, ...kids) => h('div', { class: 'wsec' }, h('h3', null, h('span', { 'aria-hidden': 'true', text: ico + ' ' }), t(title)), ...kids);
   const out = [], inc = nlIncidents();
-  out.push(sec('📰', 'Incidenten in het nieuws (7 dagen)', inc.length ? h('ul', { class: 'plist' }, inc.map(it => h('li', null, h('span', { translate: 'no' }, extLink(it.url, it.title)),
-    h('div', { class: 'm' }, h('span', { translate: 'no', text: srcName(it.source) }), ' · ', timeEl(it.date, false))))) : h('p', { class: 'pnote', text: t('Geen berichten over hacks, datalekken of cyberaanvallen in je Nederlandstalige bronnen.') })));
+  out.push(sec('📰', 'Incidenten bij Nederlandse organisaties (7 dagen)', inc.length ? h('ul', { class: 'plist' }, inc.map(it => h('li', null, h('span', { translate: 'no' }, extLink(it.url, it.title)),
+    h('div', { class: 'm' }, h('span', { translate: 'no', text: srcName(it.source) }), ' · ', timeEl(it.date, false))))) : h('p', { class: 'pnote', text: t('Geen berichten over hacks, datalekken of cyberaanvallen bij Nederlandse organisaties in je bronnen.') })));
   const r = d.radar || {}, rd = r.data, cname = c => fmt.region?.of(c) || c, pct = v => Math.round(v) + '%';
   const asn = n => `AS${n}` + (rd?.as_names?.[n] ? ` ${rd.as_names[n]}` : '');
   if (r.missing_key) out.push(sec('📡', 'Aanvallen en routing', h('p', { class: 'pnote' }, t('Voor DDoS-aanvallen en BGP-meldingen is een gratis Cloudflare-token nodig (Radar: Read) in CLOUDFLARE_RADAR_TOKEN. '),
