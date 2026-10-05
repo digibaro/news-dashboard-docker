@@ -1590,6 +1590,7 @@ func (a *App) routes(basePath string) http.Handler {
 	handle("GET /api/sky", a.handleSky)
 	handle("GET /api/sea", a.handleSea)
 	handle("GET /api/exploits", a.handleExploits)
+	handle("GET /api/alarmwatch", a.handleAlarmWatch)
 	handle("GET /api/nlthreat", a.handleNLThreat)
 	handle("GET /api/sports", a.handleSports)
 	handle("GET /api/push", a.handlePushInfo)
@@ -2634,6 +2635,7 @@ self.addEventListener('push', (e) => {
   try { d = e.data ? e.data.json() : {}; } catch { d = { body: e.data ? e.data.text() : '' }; }
   e.waitUntil(self.registration.showNotification(d.title || 'Nieuws Hub', {
     body: d.body || '', tag: d.tag || undefined, icon: 'icon-192.png', badge: 'icon-192.png', data: { url: d.url || '' },
+    requireInteraction: d.sticky === '1', vibrate: d.sticky === '1' ? [300, 150, 300, 150, 300] : undefined,
   }));
 });
 

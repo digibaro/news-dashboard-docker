@@ -38,6 +38,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Politiek vandaag:** today's debates and committee meetings of the Tweede Kamer (or the next sitting day) and the latest votes.
 - **Verkeer:** jams, accidents and road closures from NDW open data (Rijkswaterstaat), with readable road names.
 - **Alarmeringen:** the latest P2000 alerts for your city from Zwaailicht.nl, grouped as Brandweer, Ambulance, Politie and Lifeliner (at most 2 each). The city is chosen per visitor under Instellingen.
+- **Alarmeringen-wachter:** watch up to 10 specific streets (street + place, optionally only urgent alerts). A new alert in such a street gives a banner, a two-tone sound and a desktop notification while the dashboard is open (also in a background tab), and a push notification that stays on screen when it is closed (topic *Alarmeringen-wachter*). Set under *Instellingen → Alarmeringen-wachter*, with a test button.
 - **Datalekken:** the latest 3 Dutch and 3 other data breaches at organisations, from Have I Been Pwned: number of accounts, leak date, and what data leaked. Below them **Oplichting en phishing**: the latest scam warnings of the Fraudehelpdesk.
 - **Ransomware:** organisations claimed by ransomware groups on their leak sites (ransomware.live), with counts, the most active groups and the latest claims. No links to leak sites and no descriptions.
 - **Internetstoringen:** **internet in the Netherlands** on top, then the status of Akamai, AWS, Cloudflare, Microsoft Azure, Microsoft 365, Google Cloud and STACKIT (in the order of `config.yaml`); internet: outages detected by IODA for the country and KPN, VodafoneZiggo, Odido and DELTA Fiber. Any service with an Atlassian Statuspage or RSS status feed can be added in `config.yaml`.
@@ -55,7 +56,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Data saver:** under Instellingen → Weergave: Automatisch / Aan / Uit. When on, the page refreshes 3× less often and loads no images (thumbnails, source icons, the satellite image only on request). Automatic turns it on when the browser asks to save data, on a 2G connection, or with a battery below 20 % that is not charging.
 - **Read state:** read/unread plus a "Bewaard" list with **notes, labels** and export to Markdown or JSON.
 - **OPML:** export the chosen sources, or import a list from another reader (only feeds that exist on this server are turned on).
-- **Push notifications** (opt-in, per device): NL-Alert in your area, KNMI code orange/red, raised radiation, high water (code orange/red) or a closed storm-surge barrier, NCTV threat level, earthquakes, big news and the evening before waste collection. See [Push notifications](#push-notifications).
+- **Push notifications** (opt-in, per device): NL-Alert in your area, KNMI code orange/red, raised radiation, high water (code orange/red) or a closed storm-surge barrier, NCTV threat level, earthquakes, big news, the evening before waste collection and alerts in the streets you watch (Alarmeringen-wachter). See [Push notifications](#push-notifications).
 - **Watchlist and mute words:** security advisories that mention your products are pinned to the top.
 - **Freshness:** every panel shows how old its data is.
 - **Thumbnails:** optional, via the built-in image proxy.
@@ -540,6 +541,7 @@ Visitors can get notifications on their phone or computer, also when the dashboa
 - earthquakes from `push.quake_min_mag`
 - big news: a story that `push.breaking_sources` sources reported within an hour
 - waste: the evening before collection, at `push.waste_hour`, for the address set on that device (or the default address)
+- Alarmeringen-wachter: a P2000 alert (from the last 30 minutes) in one of the streets watched on that device; the notification stays on screen until clicked and vibrates on Android
 
 **Setup** (once):
 1. The dashboard must be served over **HTTPS** (browsers only allow push on secure sites; `localhost` also works for testing).
@@ -652,7 +654,7 @@ A URL sets the mode for that visit only, without changing the saved choice: `htt
 - **Source icons** are fetched by the server from the news sites' own pages (never by the browser), kept in memory and refreshed weekly; SVG icons are skipped because they can contain scripts, and the fetches refuse private network addresses like the image proxy. For sites that block the server, it asks DuckDuckGo's and then Google's favicon service, sending only the site's name (e.g. `www.nu.nl`); turn that off with `features.icon_services: false`.
 - **"Gebruik mijn locatie"** rounds coordinates to 2 decimals (~1 km) in the browser, and sends them only to this server.
 - **Afvalkalender address:** kept in the browser. The server uses it only to ask the municipal calendars, keeps the result in memory for `waste.interval` (default 24 hours), and never logs it.
-- **Push notifications** are opt-in per device. The server keeps each subscription (the push-service URL and two keys, the chosen topics, the language, the weather location rounded to ~1 km and, for the waste reminder, the address) in memory; with `cache.snapshot_path` set also in `<snapshot>.push.json` (mode 0600). Turning notifications off removes it.
+- **Push notifications** are opt-in per device. The server keeps each subscription (the push-service URL and two keys, the chosen topics, the language, the weather location rounded to ~1 km, for the waste reminder the address and for the Alarmeringen-wachter the watched streets) in memory; with `cache.snapshot_path` set also in `<snapshot>.push.json` (mode 0600). Turning notifications off removes it.
 - **Read state, "Bewaard" (including notes and labels), watchlist and mute words** live in `localStorage`. The service worker keeps the last good responses in the browser's cache for offline use; the server stores nothing per user.
 - **Thumbnails** are off per visitor by default (*Instellingen → Weergave*). When on, they come from `/api/img`, so publishers never see the visitor. The proxy:
   - only fetches URLs this server signed itself (HMAC with a random key per process), so it is not an open proxy
@@ -723,6 +725,7 @@ All JSON responses:
 | `GET /api/nlthreat` | Dreigingsbeeld NL: `radar` (`data`: `trend`, `days`, `vectors`, `origins`, `hijacks`, `leaks`, `hijacks_n`, `leaks_n`, `as_names`; or `missing_key`) |
 | `GET /api/alerts` | top bar: NCTV level (`level`, `name`, `since`) KNMI summary (`level`, `active`, `onset`, `types`, `areas`, `heat`) and `water` (`level`, `sectors`, `peak`, `peak_at`, `barriers`, `outlook`) |
 | `GET /api/traffic` | jams (road, direction, from/to, delay), accidents, closure count, VILD version |
+| `GET /api/alarmwatch?r=` | Alarmeringen-wachter: alerts of the last 6 hours in watched streets; `r=<city slug>\|<street>\|<1 = urgent only>`, up to 10 rules; unknown places are reported per city |
 | `GET /api/alarms?city=` | P2000 alerts for a city slug (default from config): per service at most 2, with urgency, units and detail; Lifeliner falls back to national when the city has none |
 | `GET /api/energy` | Energieprijzen: hourly `electricity` (today, tomorrow from ~13:00) and `gas` prices in € incl. VAT (+ configured extras) |
 | `GET /api/air?lat=&lon=` | Luchtkwaliteit: nearest station (`name`, `distance_km`, `url`), `lki` (`value` 1–11, `at`) and `components` (NO2, PM25, PM10, O3 in µg/m³) |
@@ -813,6 +816,9 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.32.0
+- **Alarmeringen-wachter:** watch specific streets (up to 10; street + place, optionally only urgent). A new P2000 alert in such a street gives a banner, a two-tone sound and a desktop notification while the dashboard is open (also in a background tab), and a push notification when it is closed (new topic; it stays on screen and vibrates). Matching runs on the server against the whole city feed (whole words, case and accents ignored, a house number is dropped). Alerts from before a street was added never sound; a test button checks sound and notifications. New endpoint `GET /api/alarmwatch`.
 
 ### 1.31.4
 - **Sources:** Hacker News was listed twice (`hacker-news` and, since 1.31.0, `hackernews`); only `hacker-news` remains, also in the Tech & security preset, and visitors who had chosen `hackernews` are moved to it. **The Hacker News** (`thehackernews`) moved from the category Datalekken to Tech, privacy & security.

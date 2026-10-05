@@ -244,6 +244,18 @@ svg.i { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor;
 .preset strong, .pgrp strong { display: block; font-size: 14px; }
 .preset small, .pgrp small { display: block; font-size: 12px; line-height: 1.35; color: var(--text-2); }
 .welcome .wpanels-h { margin-top: 6px; font-size: 15px; }
+.awbanner { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; flex-direction: column; gap: 8px; width: min(640px, calc(100vw - 32px)); }
+.awmsg { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--bg); color: var(--text); border: 1px solid var(--sev-crit); border-left: 6px solid var(--sev-crit); border-radius: 8px; box-shadow: 0 6px 24px rgb(0 0 0 / .25); }
+.awmsg .awico { font-size: 22px; line-height: 1; }
+.awmsg .awtxt { flex: 1; min-width: 0; font-size: 13px; }
+.awmsg .awtxt strong { display: block; font-size: 15px; color: var(--sev-crit); }
+.awmsg .btn { flex: none; }
+@media (max-width: 480px) { .awmsg { flex-wrap: wrap; } .awmsg .awtxt { flex-basis: calc(100% - 40px); } }
+.awlist { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.awlist li { display: flex; align-items: flex-start; gap: 8px; justify-content: space-between; padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px; }
+.awlist li > div { min-width: 0; }
+.awlist small { color: var(--text-2); }
+.awlist .awlast { display: block; font-size: 12px; overflow-wrap: anywhere; }
 .qpresets { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
 .qpresets .chip { height: 26px; font-size: 12px; }
 .pfresh { min-height: 1.4em; margin: -2px 0 4px; font-size: 12px; color: var(--text-3); }
@@ -1165,6 +1177,12 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.32.0</h3>
+    <ul>
+      <li>Nieuw: de Alarmeringen-wachter. Volg tot 10 straten (straat en plaats, eventueel alleen bij spoed) onder Instellingen → Alarmeringen-wachter. Bij een nieuwe alarmering in zo'n straat krijg je een melding in beeld, een alarmgeluid en een bureaubladmelding, ook als het dashboard in een tabblad op de achtergrond staat.</li>
+      <li>Met Meldingen aan (onderwerp Alarmeringen-wachter) krijg je de melding ook als het dashboard dicht is; die blijft staan tot je erop klikt en trilt op Android.</li>
+      <li>Met de knop Test geluid en melding controleer je of alles werkt.</li>
+    </ul>
     <h3>Versie 1.31.4</h3>
     <ul>
       <li>Hacker News stond twee keer in de bronnenlijst; nu nog één keer. Wie de tweede had gekozen, krijgt automatisch de overgebleven bron.</li>
@@ -1425,6 +1443,12 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.32.0</h3>
+    <ul>
+      <li>New: the emergency alert watch. Watch up to 10 streets (street and place, optionally urgent only) under Settings → Emergency alert watch. A new emergency alert in such a street gives an on-screen alert, an alarm sound and a desktop notification, also when the dashboard is in a background tab.</li>
+      <li>With Notifications on (topic emergency alert watch) you also get it when the dashboard is closed; it stays until you click it and vibrates on Android.</li>
+      <li>The button Test sound and notification checks that everything works.</li>
+    </ul>
     <h3>Version 1.31.4</h3>
     <ul>
       <li>Hacker News was listed twice among the sources; now once. Whoever had chosen the second one gets the remaining source automatically.</li>
@@ -1756,6 +1780,20 @@ textarea.json {
       </div>
       <p class="msg" id="alarm-msg" role="status"></p>
     </section>
+    <section aria-labelledby="set-aw-h" id="set-aw">
+      <h3 id="set-aw-h">Alarmeringen-wachter</h3>
+      <p class="hint">Een melding met geluid bij een alarmering (P2000) in een straat die je volgt. Werkt terwijl het dashboard open is, ook in een tabblad op de achtergrond; met Meldingen aan (hieronder) ook als het dicht is. Bron: Zwaailicht.nl, meestal binnen enkele minuten. Geen vervanging van officiële alarmering.</p>
+      <ul class="awlist" id="aw-list"></ul>
+      <div class="row" style="margin-top:0">
+        <input class="field" style="flex:3;min-width:10rem" id="aw-street" placeholder="Straat, bijv. Koningskade" autocomplete="off" aria-label="Straat">
+        <input class="field" style="flex:2;min-width:9rem" id="aw-city" autocomplete="off" aria-label="Plaats">
+        <button class="btn" type="button" id="aw-add">Toevoegen</button>
+      </div>
+      <label class="opt"><span>Alleen bij spoed</span><input type="checkbox" class="switch" role="switch" id="aw-spoed"></label>
+      <label class="opt"><span>Geluid</span><input type="checkbox" class="switch" role="switch" id="aw-sound"></label>
+      <div class="row"><button class="btn" type="button" id="aw-test">Test geluid en melding</button></div>
+      <p class="msg" id="aw-msg" role="status"></p>
+    </section>
     <section aria-labelledby="set-air-h" id="set-air">
       <h3 id="set-air-h">Plaats voor luchtkwaliteit en hooikoorts</h3>
       <p class="hint" id="air-now"></p>
@@ -1855,7 +1893,7 @@ textarea.json {
     </section>
     <section aria-labelledby="set-push-h" id="set-push" hidden>
       <h3 id="set-push-h">Meldingen</h3>
-      <p class="hint">Krijg een melding op dit apparaat, ook als het dashboard dicht is. Voor NL-Alerts wordt je weerlocatie (afgerond op ongeveer 1 km) naar deze server gestuurd, en voor de afvalmelding je adres.</p>
+      <p class="hint">Krijg een melding op dit apparaat, ook als het dashboard dicht is. Voor NL-Alerts wordt je weerlocatie (afgerond op ongeveer 1 km) naar deze server gestuurd, voor de afvalmelding je adres en voor de Alarmeringen-wachter je straten.</p>
       <div id="push-topics" role="group" aria-labelledby="set-push-h"></div>
       <div class="row">
         <button class="btn primary" type="button" id="push-on">Meldingen aanzetten</button>
@@ -1925,7 +1963,7 @@ const MIN = 60e3;
 const DEFAULTS = {
   v: 2, theme: 'auto', sources: null, known: [], pageSize: 60, summaries: true,
   density: 'compact', category: 'all', weather: null, threatTab: 'ips', advTab: 'adv', advFilter: 'all',
-  lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, trending: true, pushTopics: null, waste: null, sports: null, sportsSeen: null, solar: null, saver: 'auto', hazardTab: 'nl', watch: [], mute: [],
+  lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, trending: true, pushTopics: null, waste: null, sports: null, sportsSeen: null, solar: null, saver: 'auto', hazardTab: 'nl', watch: [], mute: [], alarmWatch: [], alarmSound: true,
   panels: { order: PANEL_IDS.slice(), collapsed: {}, hidden: {}, page: {} },
 };
 
@@ -2978,6 +3016,15 @@ const EN = {
   "Welke panelen wil je zien?": "Which panels do you want to see?", "Zet aan wat je wilt zien. Later aan te passen onder Instellingen → Panelen.": "Switch on what you want to see. You can change this later under Settings → Panels.",
   "Weer & natuur": "Weather & nature", "Thuis & vandaag": "Home & today", "Verkeer & reizen": "Traffic & travel", "Economie & politiek": "Economy & politics", "Security & privacy": "Security & privacy",
   "Luchtkwaliteit en hooikoorts gebruiken nu de standaardplaats van deze server ({name}).": "Air quality and hay fever now use this server's default place ({name}).",
+  "Alarmeringen-wachter": "Emergency alert watch", "Straat, bijv. Koningskade": "Street, e.g. Koningskade", "Straat": "Street", "Plaats": "Place", "Toevoegen": "Add",
+  "Een melding met geluid bij een alarmering (P2000) in een straat die je volgt. Werkt terwijl het dashboard open is, ook in een tabblad op de achtergrond; met Meldingen aan (hieronder) ook als het dicht is. Bron: Zwaailicht.nl, meestal binnen enkele minuten. Geen vervanging van officiële alarmering.": "A notification with sound for an emergency alert (P2000) in a street you watch. Works while the dashboard is open, also in a background tab; with Notifications on (below) also when it is closed. Source: Zwaailicht.nl, usually within a few minutes. Not a replacement for official alerting.",
+  "Alleen bij spoed": "Urgent only", "Geluid": "Sound", "Test geluid en melding": "Test sound and notification", "Alarmering: {street}": "Emergency alert: {street}", "Details": "Details", "OK": "OK",
+  "Plaats, bijv. {name}": "Place, e.g. {name}", "in {name}": "in {name}", "alleen spoed": "urgent only", "Laatste: {title} ({time})": "Latest: {title} ({time})", "Geen alarmering in de laatste 6 uur.": "No emergency alert in the last 6 hours.",
+  "{street} niet meer volgen": "Stop watching {street}", "{street} wordt niet meer gevolgd.": "{street} is no longer watched.", "Vul een straatnaam in.": "Enter a street name.", "Je volgt al 10 straten; verwijder er eerst een.": "You already watch 10 streets; remove one first.",
+  "Deze straat volg je al.": "You already watch this street.", "{street} in {name} wordt nu gevolgd.": "{street} in {name} is now watched.", "Voorbeeldstraat": "Example Street", "Test: zo ziet een alarmering in {street} eruit": "Test: this is what an emergency alert in {street} looks like",
+  "Geluid staat uit.": "Sound is off.", "Geen bureaubladmelding: deze browser staat meldingen voor deze site niet toe.": "No desktop notification: this browser does not allow notifications for this site.",
+  "Alarmeringen-wachter: een alarmering in een straat die je volgt": "Emergency alert watch: an alert in a street you watch",
+  "Krijg een melding op dit apparaat, ook als het dashboard dicht is. Voor NL-Alerts wordt je weerlocatie (afgerond op ongeveer 1 km) naar deze server gestuurd, voor de afvalmelding je adres en voor de Alarmeringen-wachter je straten.": "Get a notification on this device, even when the dashboard is closed. For NL-Alerts your weather location (rounded to about 1 km) is sent to this server, for the waste reminder your address, and for the emergency alert watch your streets.",
   "Hoogwater en stormvloed": "High water and storm surge", "Rijkswaterstaat is niet bereikbaar ({err}).": "Rijkswaterstaat cannot be reached ({err}).",
   "Overal code groen: geen hoogwater.": "Code green everywhere: no high water.", "Verwacht: {code} vanaf {t}.": "Expected: {code} from {t}.",
   "Stormvloedkering dicht": "Storm-surge barrier closed", "Stormvloedkeringen: alle {n} open.": "Storm-surge barriers: all {n} open.",
@@ -3178,7 +3225,9 @@ function sanitize(p) {
     d.alarmCityName = typeof p.alarmCityName === 'string' ? p.alarmCityName.slice(0, 60) : null;
   }
   if (['all', 'high', 'new', 'watch'].includes(p.advFilter)) d.advFilter = p.advFilter;
-  for (const k of ['onboarded', 'group', 'hideRead', 'images', 'trending']) if (typeof p[k] === 'boolean') d[k] = p[k];
+  for (const k of ['onboarded', 'group', 'hideRead', 'images', 'trending', 'alarmSound']) if (typeof p[k] === 'boolean') d[k] = p[k];
+  if (Array.isArray(p.alarmWatch)) d.alarmWatch = p.alarmWatch.filter(r => r && typeof r === 'object' && /^[a-z0-9][a-z0-9-]{1,48}$/.test(r.city) && typeof r.street === 'string' && r.street.trim().length >= 3)
+    .slice(0, 10).map(r => ({ city: r.city, cityName: typeof r.cityName === 'string' ? r.cityName.slice(0, 60) : null, street: r.street.trim().slice(0, 60), spoed: r.spoed === true }));
   if (p.waste && typeof p.waste === 'object') {
     const pc = String(p.waste.postcode || '').toUpperCase().replace(/\s+/g, ''), nr = Number(p.waste.number), sfx = String(p.waste.suffix || '').trim().slice(0, 6);
     const prov = typeof p.waste.provider === 'string' && /^[a-z0-9][a-z0-9:.-]{1,60}$/.test(p.waste.provider) ? p.waste.provider : '';
@@ -5899,6 +5948,143 @@ async function importOPML(file) {
     + (unknown.length ? t('{k} feeds staan niet in de configuratie van deze server en zijn overgeslagen.', { k: unknown.length }) : '');
 }
 
+// ---------------------------------------------------------------- Alarmeringen-wachter
+// Streets to watch (prefs.alarmWatch). The server matches them against the whole city feed;
+// the page checks every minute, also in a background tab (its own timer, not tick()). A new
+// alert (under 30 minutes old) gives a banner, a two-tone sound and a desktop notification
+// with the same tag as the push message, so a device never shows the same alert twice.
+const AW_SEEN = 'ndb:aw-seen';
+let awTimer = 0, awCtx = null, awRecent = [];
+const awCityName = r => r.cityName || cityLabel(r.city);
+const awStreet = s => s.replace(/\s+\d+\s*[a-z]?(\s*-\s*\d+)?\s*$/i, '').replace(/\s+/g, ' ').trim().slice(0, 60); // "Koningskade 12a" → "Koningskade"
+const awTime = d => new Date(d).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
+function awStart() {
+  clearInterval(awTimer); awTimer = 0;
+  if (!catalog?.alarms?.enabled || !prefs.alarmWatch.length) { awRecent = []; return; }
+  awCheck();
+  awTimer = setInterval(awCheck, 60000);
+}
+async function awCheck() {
+  if (!prefs.alarmWatch.length) return;
+  const q = prefs.alarmWatch.map(r => 'r=' + encodeURIComponent(`${r.city}|${r.street}|${r.spoed ? 1 : 0}`)).join('&');
+  let d;
+  try { d = await api('api/alarmwatch?' + q); } catch { return; }
+  if (!d?.enabled) return;
+  awRecent = d.hits || [];
+  const seen = store.get(AW_SEEN) || {}, now = Date.now(), fresh = [];
+  for (const hit of awRecent) {
+    if (!hit.id || seen[hit.id]) continue;
+    seen[hit.id] = now;
+    if (now - Date.parse(hit.time) < 30 * 60000) fresh.push(hit); // older ones only show in Instellingen
+  }
+  for (const [k, v] of Object.entries(seen)) if (now - v > 2 * 86400000) delete seen[k];
+  store.set(AW_SEEN, seen);
+  if ($('#settings')?.open) renderAwList();
+  if (fresh.length) awAlert(fresh);
+}
+function awUnlock() { // browsers only allow sound after a click or key press on the page
+  try {
+    awCtx ||= new (window.AudioContext || window.webkitAudioContext)();
+    if (awCtx.state === 'suspended') awCtx.resume().catch(() => {});
+  } catch { awCtx = null; }
+}
+function awSound() {
+  if (!prefs.alarmSound) return;
+  awUnlock();
+  if (!awCtx || awCtx.state !== 'running') return;
+  const t0 = awCtx.currentTime + 0.05;
+  for (let i = 0; i < 6; i++) { // 880/660 Hz, 0.4 s each
+    const o = awCtx.createOscillator(), g = awCtx.createGain(), s = t0 + i * 0.42;
+    o.type = 'triangle'; o.frequency.value = i % 2 ? 660 : 880;
+    g.gain.setValueAtTime(0.0001, s); g.gain.exponentialRampToValueAtTime(0.3, s + 0.02);
+    g.gain.setValueAtTime(0.3, s + 0.36); g.gain.exponentialRampToValueAtTime(0.0001, s + 0.4);
+    o.connect(g).connect(awCtx.destination); o.start(s); o.stop(s + 0.42);
+  }
+}
+function awNotify(hit) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const title = t('Alarmering: {street}', { street: hit.street }), opts = { body: `${hit.title} (${awTime(hit.time)})`, tag: 'aw-' + hit.id,
+    icon: 'icon-192.png', badge: 'icon-192.png', requireInteraction: true, data: { url: hit.url || '' } };
+  (navigator.serviceWorker ? navigator.serviceWorker.getRegistration() : Promise.resolve(null))
+    .then(reg => reg ? reg.showNotification(title, opts) : new Notification(title, opts)).catch(() => {});
+}
+function awAlert(hits) {
+  let box = $('#aw-banner');
+  if (!box) { box = h('div', { id: 'aw-banner', class: 'awbanner' }); document.body.append(box); }
+  for (const hit of hits.slice(0, 3)) {
+    const el = h('div', { class: 'awmsg', role: 'alert' },
+      h('span', { class: 'awico', 'aria-hidden': 'true', text: '🚨' }),
+      h('div', { class: 'awtxt' }, h('strong', { text: t('Alarmering: {street}', { street: hit.street }) }), h('span', { text: `${hit.title} · ${awTime(hit.time)}` })),
+      /^https:\/\//.test(hit.url || '') ? h('a', { class: 'btn', href: hit.url, target: '_blank', rel: 'noopener noreferrer', text: t('Details') }) : null,
+      h('button', { class: 'btn primary', type: 'button', text: t('OK'), onclick: e => { e.currentTarget.closest('.awmsg').remove(); if (!box.children.length) box.remove(); } }));
+    box.prepend(el);
+    awNotify(hit);
+  }
+  while (box.children.length > 3) box.lastChild.remove();
+  awSound();
+}
+function renderAwList() {
+  const ul = $('#aw-list');
+  if (!ul) return;
+  $('#set-aw').hidden = !catalog?.alarms?.enabled;
+  $('#aw-city').placeholder = t('Plaats, bijv. {name}', { name: alarmCityName() });
+  $('#aw-sound').checked = prefs.alarmSound;
+  ul.replaceChildren(...prefs.alarmWatch.map((r, i) => {
+    const last = awRecent.find(x => x.city === r.city && x.street === r.street);
+    return h('li', null,
+      h('div', null, h('strong', { text: r.street }), ' ', t('in {name}', { name: awCityName(r) }), r.spoed ? h('small', { text: ' · ' + t('alleen spoed') }) : null,
+        h('small', { class: 'awlast', text: last ? t('Laatste: {title} ({time})', { title: last.title, time: awTime(last.time) }) : t('Geen alarmering in de laatste 6 uur.') })),
+      h('button', { class: 'btn', type: 'button', 'aria-label': t('{street} niet meer volgen', { street: r.street }), text: '×', onclick: () => {
+        prefs.alarmWatch.splice(i, 1); savePrefs(); renderAwList(); awStart(); awPushSync();
+        $('#aw-msg').classList.remove('err'); $('#aw-msg').textContent = t('{street} wordt niet meer gevolgd.', { street: r.street });
+      } }));
+  }));
+  ul.hidden = !prefs.alarmWatch.length;
+}
+const awPushSync = () => { pushSub().then(sub => sub && Notification.permission === 'granted' && pushRegister(sub)).catch(() => {}); };
+async function awAdd() {
+  const msg = $('#aw-msg'), street = awStreet($('#aw-street').value), cityIn = $('#aw-city').value.trim();
+  msg.classList.remove('err');
+  awUnlock(); // this click allows the sound later
+  if (street.length < 3) { msg.textContent = t('Vul een straatnaam in.'); msg.classList.add('err'); return; }
+  if (prefs.alarmWatch.length >= 10) { msg.textContent = t('Je volgt al 10 straten; verwijder er eerst een.'); msg.classList.add('err'); return; }
+  const city = cityIn ? citySlug(cityIn) : (prefs.alarmCity || catalog?.alarms?.city || '');
+  if (city.length < 2) { msg.textContent = t('Vul een plaatsnaam in.'); msg.classList.add('err'); return; }
+  const fold = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  if (prefs.alarmWatch.some(r => r.city === city && fold(r.street) === fold(street))) { msg.textContent = t('Deze straat volg je al.'); msg.classList.add('err'); return; }
+  msg.textContent = t('Controleren…');
+  try { await api('api/alarms?city=' + encodeURIComponent(city)); } catch (e) {
+    msg.textContent = /niet gevonden/.test(e.message)
+      ? t('Zwaailicht.nl kent geen plaats “{q}”. Gebruik de officiële plaatsnaam, bijvoorbeeld “Den Haag” of “Alphen aan den Rijn”.', { q: cityIn })
+      : t('Controleren lukt nu niet: {err}.', { err: tr(e.message) });
+    msg.classList.add('err'); return;
+  }
+  const rule = { city, cityName: cityIn ? cityIn.slice(0, 60) : (city === prefs.alarmCity ? prefs.alarmCityName : null), street, spoed: $('#aw-spoed').checked };
+  prefs.alarmWatch.push(rule); savePrefs();
+  $('#aw-street').value = ''; $('#aw-spoed').checked = false;
+  // the seen list starts now: alerts from before adding the street do not sound
+  try { const d = await api('api/alarmwatch?r=' + encodeURIComponent(`${city}|${street}|${rule.spoed ? 1 : 0}`)); const seen = store.get(AW_SEEN) || {}; for (const x of d.hits || []) seen[x.id] ||= Date.now(); store.set(AW_SEEN, seen); } catch { /* checked again within a minute */ }
+  awStart(); renderAwList(); awPushSync();
+  msg.textContent = t('{street} in {name} wordt nu gevolgd.', { street, name: awCityName(rule) });
+  if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {});
+}
+function wireAwSettings() {
+  $('#aw-add').addEventListener('click', awAdd);
+  for (const id of ['#aw-street', '#aw-city']) $(id).addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); awAdd(); } });
+  $('#aw-sound').addEventListener('change', e => { prefs.alarmSound = e.target.checked; savePrefs(); });
+  $('#aw-test').addEventListener('click', async () => {
+    awUnlock();
+    if ('Notification' in window && Notification.permission === 'default') { try { await Notification.requestPermission(); } catch { /* ignore */ } }
+    const street = prefs.alarmWatch[0]?.street || t('Voorbeeldstraat');
+    awAlert([{ id: 'test-' + Date.now(), street, title: t('Test: zo ziet een alarmering in {street} eruit', { street }), time: new Date().toISOString(), url: '' }]);
+    $('#aw-msg').classList.remove('err');
+    $('#aw-msg').textContent = !prefs.alarmSound ? t('Geluid staat uit.') : !('Notification' in window) || Notification.permission !== 'granted'
+      ? t('Geen bureaubladmelding: deze browser staat meldingen voor deze site niet toe.') : '';
+  });
+  const unlock = () => { if (prefs.alarmWatch.length) awUnlock(); if (awCtx?.state === 'running') { document.removeEventListener('pointerdown', unlock); document.removeEventListener('keydown', unlock); } };
+  document.addEventListener('pointerdown', unlock); document.addEventListener('keydown', unlock);
+}
+
 // ---------------------------------------------------------------- push notifications
 let pushInfo = null;
 const PUSH_LABELS = {
@@ -5911,6 +6097,7 @@ const PUSH_LABELS = {
   quakes: () => t('Aardbeving vanaf M{m}', { m: (pushInfo?.quake_min_mag ?? 2.5).toLocaleString(locale()) }),
   breaking: () => t('Groot nieuws: {n} of meer bronnen binnen een uur', { n: pushInfo?.breaking_sources ?? 6 }),
   waste: () => t('Afval: de avond vóór de ophaaldag ({h}:00), voor je adres', { h: pushInfo?.waste_hour ?? 19 }),
+  alarmwatch: () => t('Alarmeringen-wachter: een alarmering in een straat die je volgt'),
 };
 const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && window.isSecureContext;
 const b64ToBytes = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0));
@@ -5932,6 +6119,7 @@ function pushTopicsChosen() {
 async function pushRegister(sub) {
   const j = sub.toJSON(), l = prefs.weather || catalog?.weather_location;
   return postJSON('api/push/subscribe', { endpoint: j.endpoint, keys: j.keys, topics: pushTopicsChosen(), lang, waste: prefs.waste || undefined,
+    watch: prefs.alarmWatch.length ? prefs.alarmWatch.map(({ city, street, spoed }) => ({ city, street, spoed })) : undefined,
     lat: l && Number.isFinite(l.lat) ? l.lat : undefined, lon: l && Number.isFinite(l.lon) ? l.lon : undefined });
 }
 async function initPush() {
@@ -6927,6 +7115,7 @@ function openSettings(target) {
   for (const r of document.querySelectorAll('input[name="mode"]')) r.checked = r.value === viewMode;
   $('#alarm-city').value = prefs.alarmCity ? alarmCityName() : '';
   $('#alarm-msg').textContent = '';
+  renderAwList(); $('#aw-msg').textContent = '';
   $('#prefs-json').value = JSON.stringify(prefs, null, 2);
   $('#prefs-msg').textContent = '';
   if (!dlg.open) dlg.showModal();
@@ -7296,6 +7485,7 @@ function wire() {
   });
   $('#wx-geo').addEventListener('click', useMyLocation);
   wireAirSettings();
+  wireAwSettings();
   wireWasteSettings();
   wireSolarSettings();
   for (const r of document.querySelectorAll('input[name="mode"]')) r.addEventListener('change', () => setMode(r.value));
@@ -7372,6 +7562,7 @@ async function init() {
     loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar(), loadWorld()]);
   kioskFit(); // the header and top bar have their final height now
   panelFromHash(); // e.g. a push notification that opens #panel-waste
+  awStart();
   // intervals from config.yaml (refresh:), in seconds; defaults if the server is older
   const R = (k, def) => Math.max(60, catalog?.refresh?.[k] || def * 60) * 1000;
   every(R('news', 5), () => loadNews());

@@ -37,7 +37,7 @@ import (
 // visit, so after a restart without snapshot notifications resume once a device
 // opens the dashboard again.
 
-var pushTopics = []string{"amber", "nctv", "knmi", "nlalert", "radiation", "quakes", "water", "breaking", "waste"}
+var pushTopics = []string{"amber", "nctv", "knmi", "nlalert", "alarmwatch", "radiation", "quakes", "water", "breaking", "waste"}
 
 // pushHosts are the push services of the major browsers; subscriptions to any
 // other host are refused, so the server never posts to arbitrary URLs.
@@ -45,15 +45,16 @@ var pushHosts = []string{"fcm.googleapis.com", "updates.push.services.mozilla.co
 	".push.apple.com", ".notify.windows.com"}
 
 type pushSub struct {
-	Endpoint string     `json:"endpoint"`
-	P256dh   []byte     `json:"p256dh"`
-	Auth     []byte     `json:"auth"`
-	Topics   []string   `json:"topics"`
-	Lang     string     `json:"lang"`
-	Lat      *float64   `json:"lat,omitempty"`
-	Lon      *float64   `json:"lon,omitempty"`
-	Waste    *wasteAddr `json:"waste,omitempty"` // the visitor's address for the waste reminder
-	Seen     time.Time  `json:"seen"`
+	Endpoint string      `json:"endpoint"`
+	P256dh   []byte      `json:"p256dh"`
+	Auth     []byte      `json:"auth"`
+	Topics   []string    `json:"topics"`
+	Lang     string      `json:"lang"`
+	Lat      *float64    `json:"lat,omitempty"`
+	Lon      *float64    `json:"lon,omitempty"`
+	Waste    *wasteAddr  `json:"waste,omitempty"` // the visitor's address for the waste reminder
+	Watch    []AlarmRule `json:"watch,omitempty"` // Alarmeringen-wachter: streets to watch
+	Seen     time.Time   `json:"seen"`
 }
 
 type pushState struct {
@@ -221,6 +222,7 @@ type pushMsg struct {
 	Tag    string
 	TTL    int
 	Urgent bool
+	Sticky bool                // stays on screen until clicked, and vibrates (Alarmeringen-wachter)
 	For    func(*pushSub) bool // optional extra filter
 }
 
@@ -236,7 +238,11 @@ func (m pushMsg) payload(lang string) []byte {
 	if body == "" {
 		body = m.Body[0]
 	}
-	b, _ := json.Marshal(map[string]string{"title": truncate(title, 120), "body": truncate(body, 300), "url": m.URL, "tag": m.Tag})
+	d := map[string]string{"title": truncate(title, 120), "body": truncate(body, 300), "url": m.URL, "tag": m.Tag}
+	if m.Sticky {
+		d["sticky"] = "1"
+	}
+	b, _ := json.Marshal(d)
 	return b
 }
 
@@ -443,6 +449,7 @@ func (a *App) runPushWatch(ctx context.Context) error {
 	}
 	p.mu.Unlock()
 
+	msgs = append(msgs, a.alarmWatchPush(ctx, cfg, now, first)...)
 	knmiMsg, knmiLevel, knmiOK := a.knmiPush(ctx, cfg, now)
 	breaking := a.breakingPush(cfg, now, first)
 
@@ -687,7 +694,7 @@ func (a *App) pushTopicsAvailable(cfg *Config) []string {
 	var out []string
 	for _, t := range pushTopics {
 		ok := map[string]bool{"amber": cfg.Amber.Enabled, "nctv": cfg.Alerts.NCTV.Enabled, "knmi": cfg.Alerts.KNMI, "nlalert": cfg.NLAlert.Enabled,
-			"quakes": cfg.Quakes.Enabled, "water": cfg.World.Enabled && cfg.World.Water, "breaking": cfg.Push.BreakingSources >= 2, "waste": cfg.Waste.Enabled, "radiation": cfg.Radiation.Enabled}[t]
+			"quakes": cfg.Quakes.Enabled, "water": cfg.World.Enabled && cfg.World.Water, "alarmwatch": cfg.Alarms.Enabled, "breaking": cfg.Push.BreakingSources >= 2, "waste": cfg.Waste.Enabled, "radiation": cfg.Radiation.Enabled}[t]
 		if ok {
 			out = append(out, t)
 		}
@@ -749,11 +756,12 @@ type pushSubReq struct {
 		P256dh string `json:"p256dh"`
 		Auth   string `json:"auth"`
 	} `json:"keys"`
-	Topics []string   `json:"topics"`
-	Lang   string     `json:"lang"`
-	Lat    *float64   `json:"lat"`
-	Lon    *float64   `json:"lon"`
-	Waste  *wasteAddr `json:"waste"`
+	Topics []string    `json:"topics"`
+	Lang   string      `json:"lang"`
+	Lat    *float64    `json:"lat"`
+	Lon    *float64    `json:"lon"`
+	Waste  *wasteAddr  `json:"waste"`
+	Watch  []AlarmRule `json:"watch"`
 }
 
 func decodeB64(s string) ([]byte, error) {
@@ -800,6 +808,7 @@ func (a *App) handlePushSubscribe(w http.ResponseWriter, r *http.Request) {
 			sub.Waste = &w
 		}
 	}
+	sub.Watch = cleanRules(req.Watch)
 	p := a.push
 	p.mu.Lock()
 	if _, exists := p.subs[sub.Endpoint]; !exists && len(p.subs) >= cfg.Push.MaxSubscriptions {
