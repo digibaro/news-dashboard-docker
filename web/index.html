@@ -232,17 +232,18 @@ svg.i { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor;
 .welcome { margin: 4px 0 14px; padding: 14px 16px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); }
 .welcome[hidden] { display: none; }
 /* placeholder until the catalog arrives, so the news does not jump (measured card heights) */
-.welcome.wsk { height: 360px; }
-@media (max-width: 699px) { .welcome.wsk { height: 649px; } }
+.welcome.wsk { height: 674px; }
+@media (max-width: 699px) { .welcome.wsk { height: 1459px; } }
 .welcome h3 { margin: 0 0 4px; font-size: 16px; }
 .presets { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; margin-bottom: 12px; }
-.preset { display: flex; align-items: flex-start; gap: 10px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); cursor: pointer; }
-.preset:has(input:checked) { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.preset, .pgrp { display: flex; align-items: flex-start; gap: 10px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); cursor: pointer; }
+.preset:has(input:checked), .pgrp:has(input:checked) { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 .preset:has(input:disabled) { cursor: default; }
 .preset:has(input:disabled) strong { color: var(--text-3); }
-.preset input { margin: 3px 0 0; accent-color: var(--accent); }
-.preset strong { display: block; font-size: 14px; }
-.preset small { display: block; font-size: 12px; line-height: 1.35; color: var(--text-2); }
+.preset input, .pgrp input { margin: 3px 0 0; accent-color: var(--accent); }
+.preset strong, .pgrp strong { display: block; font-size: 14px; }
+.preset small, .pgrp small { display: block; font-size: 12px; line-height: 1.35; color: var(--text-2); }
+.welcome .wpanels-h { margin-top: 6px; font-size: 15px; }
 .qpresets { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
 .qpresets .chip { height: 26px; font-size: 12px; }
 .pfresh { min-height: 1.4em; margin: -2px 0 4px; font-size: 12px; color: var(--text-3); }
@@ -1164,6 +1165,14 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.31.4</h3>
+    <ul>
+      <li>Hacker News stond twee keer in de bronnenlijst; nu nog één keer. Wie de tweede had gekozen, krijgt automatisch de overgebleven bron.</li>
+      <li>The Hacker News staat nu bij Tech, privacy &amp; security in plaats van bij Datalekken.</li>
+      <li>Nieuwe bronnen: Computable en AG Connect (Tech), Politico Europe en South China Morning Post (Internationaal). Techzine is verwijderd (de site blokkeert feedlezers).</li>
+      <li>Eerste bezoek: naast de onderwerpen kies je ook welke panelen je wilt zien, in groepen zoals Weer &amp; natuur, Alarmeringen en Security &amp; privacy.</li>
+      <li>Instellingen → Plaats voor luchtkwaliteit en hooikoorts: nieuwe knop Standaardplaats.</li>
+    </ul>
     <h3>Versie 1.31.3</h3>
     <ul>
       <li>Dreigingsbeeld NL: de lijst met incidenten toont alleen nog hacks, datalekken en cyberaanvallen bij Nederlandse organisaties.</li>
@@ -1416,6 +1425,14 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.31.4</h3>
+    <ul>
+      <li>Hacker News was listed twice among the sources; now once. Whoever had chosen the second one gets the remaining source automatically.</li>
+      <li>The Hacker News is now under Tech, privacy &amp; security instead of Data breaches.</li>
+      <li>New sources: Computable and AG Connect (Tech), Politico Europe and South China Morning Post (International). Techzine was removed (the site blocks feed readers).</li>
+      <li>First visit: besides the topics, you also choose which panels you want to see, in groups such as Weather &amp; nature, Emergency alerts and Security &amp; privacy.</li>
+      <li>Settings → Place for air quality and hay fever: new button Default place.</li>
+    </ul>
     <h3>Version 1.31.3</h3>
     <ul>
       <li>Threat picture NL: the incident list now only shows hacks, data breaches and cyber attacks at Dutch organisations.</li>
@@ -1747,7 +1764,7 @@ textarea.json {
         <button class="btn" type="button" id="air-save">Opslaan</button>
       </div>
       <ul class="georesults" id="air-results" aria-label="Gevonden plaatsen"></ul>
-      <div class="row"><button class="btn" type="button" id="air-wx">Zelfde als weerlocatie</button></div>
+      <div class="row"><button class="btn" type="button" id="air-wx">Zelfde als weerlocatie</button><button class="btn" type="button" id="air-default">Standaardplaats</button></div>
       <p class="msg" id="air-msg" role="status"></p>
     </section>
     <section aria-labelledby="set-waste-h" id="set-waste">
@@ -2048,7 +2065,7 @@ const EN = {
   'Zoekopdracht wissen': 'Clear search', 'Geen berichten in deze categorie van je gekozen bronnen.': 'No articles in this category from your chosen sources.', 'Alles tonen': 'Show all',
   'Filters aanpassen': 'Adjust filters', 'Nog niets bewaard. Bewaar een bericht met het bladwijzer-icoon, of met de toets s.': 'Nothing saved yet. Save an article with the bookmark icon or the s key.',
   'Bronnen bekijken': 'View sources',
-  'Welkom! Wat wil je volgen?': 'Welcome! What would you like to follow?', 'Klaar': 'Done', 'Overslaan': 'Skip',
+  'Welkom! Welke bronnen wil je volgen?': 'Welcome! Which sources would you like to follow?', 'Klaar': 'Done', 'Overslaan': 'Skip',
   'Kies een of meer onderwerpen. Je kunt dit later altijd aanpassen onder Instellingen → Bronnen.': 'Pick one or more topics. You can change this any time under Settings → Sources.',
   'Kies eerst een weerlocatie in de instellingen.': 'Choose a weather location in the settings first.',
   // panel names
@@ -2958,6 +2975,9 @@ const EN = {
   "Bronnen: je nieuwsbronnen": "Sources: your news sources",
   "Dreigingsbeeld NL": "Threat picture NL",
   "Er is een nieuwe versie van Nieuws Hub.": "A new version of Nieuws Hub is available.", "Vernieuwen": "Reload",
+  "Welke panelen wil je zien?": "Which panels do you want to see?", "Zet aan wat je wilt zien. Later aan te passen onder Instellingen → Panelen.": "Switch on what you want to see. You can change this later under Settings → Panels.",
+  "Weer & natuur": "Weather & nature", "Thuis & vandaag": "Home & today", "Verkeer & reizen": "Traffic & travel", "Economie & politiek": "Economy & politics", "Security & privacy": "Security & privacy",
+  "Luchtkwaliteit en hooikoorts gebruiken nu de standaardplaats van deze server ({name}).": "Air quality and hay fever now use this server's default place ({name}).",
   "Hoogwater en stormvloed": "High water and storm surge", "Rijkswaterstaat is niet bereikbaar ({err}).": "Rijkswaterstaat cannot be reached ({err}).",
   "Overal code groen: geen hoogwater.": "Code green everywhere: no high water.", "Verwacht: {code} vanaf {t}.": "Expected: {code} from {t}.",
   "Stormvloedkering dicht": "Storm-surge barrier closed", "Stormvloedkeringen: alle {n} open.": "Storm-surge barriers: all {n} open.",
@@ -3145,7 +3165,7 @@ function sanitize(p) {
   const ids = a => Array.isArray(a) ? [...new Set(a.filter(s => typeof s === 'string' && /^[a-z0-9][a-z0-9-]{0,47}$/.test(s)))].slice(0, 500) : null;
   if (['auto', 'light', 'dark'].includes(p.theme)) d.theme = p.theme;
   if (['nl', 'en', 'auto'].includes(p.lang)) d.lang = p.lang;
-  if (Array.isArray(p.sources)) d.sources = ids(p.sources);
+  if (Array.isArray(p.sources)) d.sources = ids(p.sources.map(id => id === 'hackernews' ? 'hacker-news' : id)); // 1.31.x had Hacker News twice; the duplicate was removed
   d.known = ids(p.known) || [];
   if ([30, 60, 100].includes(p.pageSize)) d.pageSize = p.pageSize;
   if (typeof p.summaries === 'boolean') d.summaries = p.summaries;
@@ -3350,6 +3370,19 @@ function regionSources() {
 const presetSources = p => p.region ? regionSources() : (p.sources || []).filter(id => srcById.has(id));
 
 // First visit: pick topics instead of scrolling through every source.
+// First visit: panel groups next to the news topics. Only the everyday groups start switched on; Overslaan keeps every panel.
+const PANEL_GROUPS_ON = new Set(['Weer & natuur', 'Thuis & vandaag', 'Verkeer & reizen']);
+const PANEL_GROUPS = [
+  ['Weer & natuur', ['weather', 'satellite', 'sky', 'quakes']],
+  ['Gezondheid', ['air', 'pollen', 'health']],
+  ['Thuis & vandaag', ['today', 'waste', 'energy', 'fuel']],
+  ['Verkeer & reizen', ['traffic', 'trains']],
+  ['Alarmeringen', ['alarms', 'nlalert']],
+  ['Storingen', ['utilities', 'outages']],
+  ['Economie & politiek', ['economy', 'markets', 'politics']],
+  ['Sport', ['sports']],
+  ['Security & privacy', ['threats', 'nlthreat', 'advisories', 'breaches', 'ransomware', 'ap']],
+];
 function renderWelcome() {
   const box = $('#welcome');
   if (!catalog || prefs.onboarded || prefs.sources !== null || !catalog.presets?.length) { box.hidden = true; box.replaceChildren(); return; }
@@ -3368,20 +3401,28 @@ function renderWelcome() {
     inputs.push(cb);
     return h('label', { class: 'preset' }, cb, h('span', { translate: 'no' }, h('strong', { text: loc(p, 'name') }), h('small', { text: desc }))); // already localised
   });
+  const groups = PANEL_GROUPS.map(([name, ids]) => [name, ids.filter(id => PANELS[id])]).filter(([, ids]) => ids.length);
+  const gInputs = groups.map(([name, ids]) => h('input', { type: 'checkbox', value: name, checked: PANEL_GROUPS_ON.has(name), 'data-panels': ids.join(' ') }));
+  const gCards = groups.map(([name, ids], i) => h('label', { class: 'pgrp' }, gInputs[i], h('span', null, h('strong', { text: t(name) }), h('small', { text: ids.map(id => t(PANELS[id])).join(', ') }))));
   done.addEventListener('click', () => {
     const ids = new Set();
     for (const cb of inputs) if (cb.checked) presetSources(catalog.presets.find(p => p.id === cb.value)).forEach(i => ids.add(i));
     prefs.sources = [...ids];
     prefs.onboarded = true;
+    for (const cb of gInputs) for (const id of cb.dataset.panels.split(' ')) { if (cb.checked) delete prefs.panels.hidden[id]; else prefs.panels.hidden[id] = true; }
     savePrefs();
+    buildPanels();
     renderWelcome(); buildChips(); renderSkeleton();
     loadNews({ replace: true }); loadTrending();
     $('#news').focus({ preventScroll: true });
   });
   box.replaceChildren(h('section', { class: 'welcome', 'aria-labelledby': 'welcome-h' },
-    h('h3', { id: 'welcome-h', text: 'Welkom! Wat wil je volgen?' }),
+    h('h3', { id: 'welcome-h', text: 'Welkom! Welke bronnen wil je volgen?' }),
     h('p', { class: 'hint', text: 'Kies een of meer onderwerpen. Je kunt dit later altijd aanpassen onder Instellingen → Bronnen.' }),
     h('div', { class: 'presets', role: 'group', 'aria-labelledby': 'welcome-h' }, cards),
+    h('h3', { id: 'welcome-p-h', class: 'wpanels-h', text: t('Welke panelen wil je zien?') }),
+    h('p', { class: 'hint', text: t('Zet aan wat je wilt zien. Later aan te passen onder Instellingen → Panelen.') }),
+    h('div', { class: 'presets pgroups', role: 'group', 'aria-labelledby': 'welcome-p-h' }, gCards),
     h('div', { class: 'row' }, done, h('button', { class: 'btn', type: 'button', text: 'Overslaan',
       onclick: () => { prefs.onboarded = true; savePrefs(); renderWelcome(); } }))));
   update();
@@ -5023,6 +5064,11 @@ function wireAirSettings() {
   $('#air-save').addEventListener('click', save);
   input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); save(); } });
   $('#air-wx').addEventListener('click', () => setAirLocation(null, t('Luchtkwaliteit volgt weer je weerlocatie.')));
+  $('#air-default').addEventListener('click', () => { // the server's default place from config.yaml, whatever the weather location
+    const d = catalog?.weather_location;
+    if (!d || !Number.isFinite(d.lat)) { setAirLocation(null, t('Luchtkwaliteit volgt weer je weerlocatie.')); return; }
+    setAirLocation({ name: d.name || t('standaardlocatie'), lat: d.lat, lon: d.lon, region: d.region }, t('Luchtkwaliteit en hooikoorts gebruiken nu de standaardplaats van deze server ({name}).', { name: d.name || t('standaardlocatie') }));
+  });
 }
 
 // ---------------------------------------------------------------- treinstoringen (NS)

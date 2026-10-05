@@ -46,7 +46,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Language**: Nederlands / English / Auto (browser language), switchable at the top and under Instellingen → Weergave. Only the interface is translated; news, advisories and alerts stay in their original language.
 
 **Reading features:**
-- **First visit:** pick topics (presets) instead of 80 switches.
+- **First visit:** pick topics (presets) instead of 80 switches, and which panels you want to see, in groups (Weer & natuur, Gezondheid, Thuis & vandaag, Verkeer & reizen, Alarmeringen, Storingen, Economie & politiek, Sport, Security & privacy; Weer & natuur, Thuis & vandaag and Verkeer & reizen are on by default, *Overslaan* keeps every panel).
 - **Story grouping:** the same story from several outlets becomes one item, with "Ook bij: …" links and a **coverage view** (which outlets, when, and who reported first).
 - **Trending:** words and names that suddenly appear in many headlines in the last 3 hours; click one to search. Hover over one (or tap ⓘ) for a short explanation from Wikipedia.
 - **Search operators:** `bron:nos` or `source:nos` (only that source; `bron:"de volkskrant"` for names with a space), `"exact words"`, and `-word` or `-bron:x` to leave out.
@@ -813,6 +813,12 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.31.4
+- **Sources:** Hacker News was listed twice (`hacker-news` and, since 1.31.0, `hackernews`); only `hacker-news` remains, also in the Tech & security preset, and visitors who had chosen `hackernews` are moved to it. **The Hacker News** (`thehackernews`) moved from the category Datalekken to Tech, privacy & security.
+- **New sources** (off by default): Computable and AG Connect (Dutch ICT news, Tech), Politico Europe (EU politics) and South China Morning Post (International). **Techzine** removed: the site answers feed readers with HTTP 403.
+- **First visit:** a second block, *Welke panelen wil je zien?*, with 9 panel groups (Weer & natuur, Thuis & vandaag and Verkeer & reizen on by default); unchecked groups become hidden panels, and *Overslaan* keeps every panel.
+- **Instellingen:** the place for air quality and hay fever has a **Standaardplaats** button (the server's default location), next to *Zelfde als weerlocatie*.
 
 ### 1.31.3
 - **Dreigingsbeeld NL:** the incident list only shows incidents at Dutch organisations: the headline or summary must name the Netherlands, a Dutch place or province, a type of Dutch organisation (gemeente, waterschap, ziekenhuis, …) or a well-known Dutch company or authority; headlines from domestic sources (regional broadcasters, NOS Binnenland) also count unless they name another country.

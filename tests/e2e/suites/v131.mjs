@@ -133,8 +133,17 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
 { // live: the catalog has Hacker News; the server's own data for the new parts
   const [ctx, p, errs] = await open(1440, { live: true });
   const cat = await p.evaluate(() => fetch('api/catalog').then(r => r.json()));
-  const hn = cat.sources.find(s => s.id === 'hackernews'), tech = cat.presets.find(x => x.id === 'tech');
-  ok(hn && hn.category === 'tech' && !hn.default_enabled && tech.sources.includes('hackernews'), 'Hacker News: a Tech source, off by default, in the Tech & security preset');
+  const hn = cat.sources.find(s => s.id === 'hacker-news'), tech = cat.presets.find(x => x.id === 'tech'), thn = cat.sources.find(s => s.id === 'thehackernews');
+  ok(hn && hn.category === 'tech' && !hn.default_enabled && tech.sources.includes('hacker-news') && !cat.sources.some(s => s.id === 'hackernews') && cat.sources.filter(s => s.name === 'Hacker News').length === 1, 'Hacker News: one Tech source (hacker-news), off by default, in the Tech & security preset');
+  { // a visitor who had chosen the removed duplicate keeps Hacker News
+    const c2 = await b.newContext({ viewport: { width: 1440, height: 1000 }, serviceWorkers: 'block' });
+    await c2.addInitScript(() => localStorage.setItem('ndb:prefs', JSON.stringify({ v: 2, onboarded: true, sources: ['nos-algemeen', 'hackernews'] })));
+    const p2 = await c2.newPage(); const urls = []; p2.on('request', r => { if (/\/api\/news\?/.test(r.url())) urls.push(decodeURIComponent(r.url())); });
+    await p2.goto(BASEURL); await p2.waitForTimeout(2500);
+    ok(urls.some(u => /sources=[^&]*\bhacker-news\b/.test(u) && !/\bhackernews\b/.test(u)), `old choice "hackernews" becomes "hacker-news" (${urls[0]?.match(/sources=[^&]*/)?.[0]})`);
+    await c2.close();
+  }
+  ok(thn?.category === 'tech', `The Hacker News is a Tech, privacy & security source (category ${thn?.category})`);
   const ex = await p.evaluate(() => fetch('api/exploits').then(r => r.json()));
   ok(ex.enabled && (ex.exploitdb.items?.length > 0 || ex.exploitdb.error === undefined), `live exploits: ${ex.exploitdb.items?.length ?? 0} from Exploit-DB${ex.epss.date ? ', EPSS ' + ex.epss.date : ''}`);
   const adv = await p.evaluate(() => fetch('api/advisories?limit=30').then(r => r.json()));
@@ -173,6 +182,69 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   await Promise.all([p.waitForEvent('load'), p.click('.updbar button')]); await p.waitForSelector('#stream .item'); await p.waitForTimeout(800);
   ok(!(await p.$('.updbar')), 'Vernieuwen reloads; with matching builds the bar is gone');
   await ctx.close();
+}
+{ // settings transfer: export everything on one device, import on another (including the phone pages)
+  const P = { v: 2, onboarded: true, theme: 'dark', lang: 'nl', sources: ['nos-algemeen', 'tweakers', 'security-nl'], known: [], pageSize: 100, summaries: false,
+    density: 'comfortable', category: 'tech', threatTab: 'feodo', advTab: 'edge', advFilter: 'high', alarmCity: 'den-haag', alarmCityName: 'Den Haag',
+    group: false, hideRead: true, images: true, trending: false, pushTopics: ['water', 'quakes'], waste: { postcode: '2511AB', number: 1, suffix: '', provider: '' },
+    sports: ['f1'], sportsSeen: ['f1', 'road', 'mtb', 'athletics', 'football'], solar: { kwp: 4.5, tilt: 35, az: 0 }, saver: 'off', hazardTab: 'world',
+    watch: ['fortinet'], mute: ['voetbal'], weather: { name: 'Utrecht', lat: 52.09, lon: 5.12, region: 'Utrecht', cc: 'NL' }, air: { name: 'Amsterdam', lat: 52.37, lon: 4.9 },
+    mode: 'normal', panels: { order: null, collapsed: { sky: true }, hidden: { satellite: true }, page: { weather: 'b', markets: 'a', economy: 'a' } } };
+  const c1 = await b.newContext({ viewport: { width: 1440, height: 1000 }, serviceWorkers: 'block' });
+  await c1.addInitScript(x => { if (!sessionStorage.getItem('t-init')) { sessionStorage.setItem('t-init', '1'); const o = JSON.parse(x); o.panels.order = undefined; localStorage.setItem('ndb:prefs', JSON.stringify(o)); } }, JSON.stringify(P));
+  const p1 = await c1.newPage(); await p1.goto(BASEURL); await p1.waitForSelector('#stream .item', { state: 'attached' }); await p1.waitForTimeout(1500);
+  await p1.click('#open-settings'); await p1.click('#prefs-copy').catch(() => {}); await p1.waitForTimeout(300);
+  const exported = JSON.parse(await p1.$eval('#prefs-json', t => t.value));
+  await c1.close();
+  const keys = Object.keys(P).filter(k => !['sources', 'known', 'panels', 'v'].includes(k));
+  const canon = v => Array.isArray(v) ? v.map(canon) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map(k => [k, canon(v[k])])) : v;
+  const same = (a, b) => JSON.stringify(canon(a)) === JSON.stringify(canon(b)); // key order does not matter
+  const lostOnExport = keys.filter(k => !same(exported[k], P[k]));
+  ok(lostOnExport.length === 0 && same(exported.panels.page, P.panels.page) && same(exported.panels.collapsed, P.panels.collapsed) && same(exported.panels.hidden, P.panels.hidden),
+    `export contains every setting, including the phone pages (${keys.length + 3} checked${lostOnExport.length ? '; different: ' + lostOnExport.join(', ') : ''})`);
+  const c2 = await b.newContext({ viewport: { width: 1440, height: 1000 }, serviceWorkers: 'block' });
+  await c2.addInitScript(() => { if (!sessionStorage.getItem('t-init')) { sessionStorage.setItem('t-init', '1'); localStorage.setItem('ndb:prefs', JSON.stringify({ v: 2, onboarded: true })); } });
+  const p2 = await c2.newPage(); await p2.goto(BASEURL); await p2.waitForSelector('#stream .item', { state: 'attached' }); await p2.waitForTimeout(1000);
+  await p2.click('#open-settings'); await p2.fill('#prefs-json', JSON.stringify(exported)); await p2.click('#prefs-import'); await p2.waitForTimeout(800);
+  const imported = await p2.evaluate(() => JSON.parse(localStorage.getItem('ndb:prefs')));
+  const lostOnImport = keys.filter(k => !same(imported[k], exported[k]));
+  ok(/Voorkeuren geïmporteerd/.test(await p2.textContent('#prefs-msg')) && lostOnImport.length === 0 && same(imported.panels, exported.panels) && P.sources.every(id => imported.sources.includes(id)),
+    `import on another device restores every setting${lostOnImport.length ? ' (different: ' + lostOnImport.join(', ') + ')' : ''}`);
+  await p2.keyboard.press('Escape'); await p2.setViewportSize({ width: 360, height: 900 }); await p2.waitForTimeout(400);
+  await p2.click('#mv-panels2'); await p2.waitForTimeout(400);
+  const onB = await p2.evaluate(() => [...document.querySelectorAll('#side .panel')].filter(x => getComputedStyle(x).display !== 'none').map(x => x.id.replace('panel-', '')));
+  ok(onB.includes('weather') && !onB.includes('markets') && !onB.includes('economy'), `phone pages follow the imported choice: Achtergrond has ${onB.slice(0, 5).join(', ')}…`);
+  await c2.close();
+}
+for (const w of [1440, 360]) { // first visit: panel groups (all on); unchecked groups become hidden panels
+  const c = await b.newContext({ viewport: { width: w, height: 1000 }, serviceWorkers: 'block', isMobile: w < 700, hasTouch: w < 700 });
+  const p = await c.newPage(); await p.goto(BASEURL); await p.waitForSelector('#welcome .pgrp');
+  const g = await p.$$eval('#welcome .pgrp', l => l.map(x => ({ name: x.querySelector('strong').textContent, on: x.querySelector('input').checked })));
+  const hgt = await p.evaluate(() => Math.round(document.querySelector('#welcome .welcome').getBoundingClientRect().height));
+  console.log(`welcome height at ${w}px: ${hgt}`);
+  ok(g.length === 9 && g.map(x => x.name).join('|') === 'Weer & natuur|Gezondheid|Thuis & vandaag|Verkeer & reizen|Alarmeringen|Storingen|Economie & politiek|Sport|Security & privacy'
+    && g.filter(x => x.on).map(x => x.name).join('|') === 'Weer & natuur|Thuis & vandaag|Verkeer & reizen', `${w}px: nine panel groups, on by default: ${g.filter(x => x.on).map(x => x.name).join(', ')}`);
+  if (w === 1440) {
+    await p.locator('#welcome').screenshot({ path: `${OUT}/welcome-panels.png` });
+    const r = await new AxeBuilder({ page: p }).include('#welcome').analyze();
+    ok(r.violations.length === 0, `first visit axe: ${r.violations.map(v => v.id).join(', ') || 0}`);
+    await p.click('#welcome .pgrp:has-text("Security & privacy") input'); // switch one more group on
+    await p.click('#welcome .btn.primary'); await p.waitForTimeout(800);
+    const st = await p.evaluate(() => ({ hidden: JSON.parse(localStorage.getItem('ndb:prefs')).panels.hidden, shown: [...document.querySelectorAll('#side .panel')].map(x => x.id.replace('panel-', '')) }));
+    const on = ['weather', 'satellite', 'sky', 'quakes', 'today', 'waste', 'energy', 'fuel', 'traffic', 'trains', 'threats', 'nlthreat', 'advisories', 'breaches', 'ransomware', 'ap'];
+    ok(st.shown.slice().sort().join() === on.slice().sort().join() && ['sports', 'economy', 'alarms', 'pollen', 'outages'].every(id => st.hidden[id]), `default groups plus Security & privacy shown (${st.shown.length} panels), the rest hidden`);
+  }
+  await c.close();
+}
+{ // Instellingen: Standaardplaats for air quality and hay fever
+  const c = await b.newContext({ viewport: { width: 1440, height: 1000 }, serviceWorkers: 'block' });
+  await c.addInitScript(() => { if (!sessionStorage.getItem('t-init')) { sessionStorage.setItem('t-init', '1'); localStorage.setItem('ndb:prefs', JSON.stringify({ v: 2, onboarded: true, air: { name: 'Groningen', lat: 53.22, lon: 6.57 } })); } });
+  const p = await c.newPage(); await p.goto(BASEURL); await p.waitForSelector('#stream .item', { state: 'attached' }); await p.waitForTimeout(800);
+  const def = (await (await fetch(BASEURL + 'api/catalog')).json()).weather_location;
+  await p.click('#open-settings'); await p.click('#air-default'); await p.waitForTimeout(400);
+  const air = await p.evaluate(() => JSON.parse(localStorage.getItem('ndb:prefs')).air);
+  ok(air && air.name === def.name && air.lat === Math.round(def.lat * 100) / 100 && /standaardplaats van deze server/.test(await p.textContent('#air-msg')), `Standaardplaats sets the air place to the server default (${air?.name})`);
+  await c.close();
 }
 await b.close();
 console.log(fails ? `${fails} FAILED` : 'ALL PASSED');
