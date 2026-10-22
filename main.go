@@ -1738,15 +1738,25 @@ func (s *staticAsset) serve(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-var gzPool = sync.Pool{New: func() any { w, _ := gzip.NewWriterLevel(io.Discard, gzip.DefaultCompression); return w }}
+// gzWriters keeps at most two gzip writers (~0.8 MB each) for reuse; sync.Pool would keep one
+// per CPU. BestSpeed: twice as fast as the default level, responses ~6 % larger.
+var gzWriters = make(chan *gzip.Writer, 2)
 
 func gzipBytes(b []byte) []byte {
 	var buf bytes.Buffer
-	zw := gzPool.Get().(*gzip.Writer)
-	zw.Reset(&buf)
+	var zw *gzip.Writer
+	select {
+	case zw = <-gzWriters:
+		zw.Reset(&buf)
+	default:
+		zw, _ = gzip.NewWriterLevel(&buf, gzip.BestSpeed)
+	}
 	_, _ = zw.Write(b)
 	_ = zw.Close()
-	gzPool.Put(zw)
+	select {
+	case gzWriters <- zw:
+	default:
+	}
 	return buf.Bytes()
 }
 
@@ -2312,7 +2322,7 @@ func (a *App) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	a.geo.mu.Lock()
 	geoN := a.geo.ll.Len()
 	a.geo.mu.Unlock()
-	metric("ndb_image_cache_bytes", "Bytes held by the image proxy cache (max 50 MB).", "gauge")
+	metric("ndb_image_cache_bytes", "Bytes held by the image proxy cache (max 20 MB).", "gauge")
 	fmt.Fprintf(&b, "ndb_image_cache_bytes %d\nndb_image_cache_entries %d\n", imgBytes, imgN)
 	metric("ndb_geo_cache_entries", "Cached ip-api lookups (max 10 000).", "gauge")
 	fmt.Fprintf(&b, "ndb_geo_cache_entries %d\n", geoN)
@@ -2331,12 +2341,12 @@ func (a *App) handleMetrics(w http.ResponseWriter, r *http.Request) {
 // Image proxy (features.proxy_images): only URLs the server signed itself are
 // fetched, every connection is checked against private ranges after DNS
 // resolution (also after redirects), images become ≤ 320 px JPEG thumbnails,
-// and results live in an in-memory LRU of at most 50 MB.
+// and results live in an in-memory LRU of at most 20 MB.
 
 const (
 	thumbWidth    = 320
-	imgCacheBytes = 50 << 20
-	imgMaxPixels  = 40_000_000
+	imgCacheBytes = 20 << 20
+	imgMaxDecode  = 40 << 20 // bytes a decoded image may take (the container has 128 MiB)
 )
 
 type imageProxy struct {
@@ -2534,12 +2544,14 @@ func thumbnail(body []byte) ([]byte, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
-	if cfg.Width <= 0 || cfg.Height <= 0 || cfg.Width*cfg.Height > imgMaxPixels {
+	if cfg.Width <= 0 || cfg.Height <= 0 || cfg.Width > 20000 || cfg.Height > 20000 || cfg.Width*cfg.Height*decodedBytesPerPixel(cfg.ColorModel) > imgMaxDecode {
 		return nil, "", errors.New("image dimensions out of range")
 	}
 	if format == "jpeg" && cfg.Width <= thumbWidth && len(body) <= 80<<10 {
 		return body, "image/jpeg", nil // already small
 	}
+	decodeSem <- struct{}{} // one decode at a time keeps the peak at one image
+	defer func() { <-decodeSem }()
 	src, _, err := image.Decode(bytes.NewReader(body))
 	if err != nil {
 		return nil, "", err
@@ -2551,7 +2563,30 @@ func thumbnail(body []byte) ([]byte, string, error) {
 	return buf.Bytes(), "image/jpeg", nil
 }
 
-// scaleDown averages up to 4×4 source samples per destination pixel onto white.
+var decodeSem = make(chan struct{}, 1)
+
+// decodedBytesPerPixel: what image.Decode allocates per pixel for a colour model (JPEG
+// counts as 4:4:4, its worst case).
+func decodedBytesPerPixel(m color.Model) int {
+	switch m {
+	case color.GrayModel, color.AlphaModel:
+		return 1
+	case color.Gray16Model:
+		return 2
+	case color.YCbCrModel:
+		return 3
+	case color.RGBA64Model, color.NRGBA64Model:
+		return 8
+	}
+	if _, ok := m.(color.Palette); ok {
+		return 1
+	}
+	return 4
+}
+
+// scaleDown averages up to 4×4 source samples per destination pixel onto white. The sample
+// positions are computed once per column and row, and the common image types are read
+// directly instead of through At (which allocates a colour per sample).
 func scaleDown(src image.Image, maxW int) *image.RGBA {
 	b := src.Bounds()
 	w, hh := b.Dx(), b.Dy()
@@ -2560,14 +2595,46 @@ func scaleDown(src image.Image, maxW int) *image.RGBA {
 	dst := image.NewRGBA(image.Rect(0, 0, dw, dh))
 	fx, fy := float64(w)/float64(dw), float64(hh)/float64(dh)
 	sx, sy := min(4, max(1, int(fx))), min(4, max(1, int(fy)))
-	for y := 0; y < dh; y++ {
-		for x := 0; x < dw; x++ {
+	xs := make([]int, dw*sx)
+	for x := range dw {
+		for i := range sx {
+			xs[x*sx+i] = min(b.Min.X+int((float64(x)+(float64(i)+0.5)/float64(sx))*fx), b.Max.X-1)
+		}
+	}
+	ys := make([]int, dh*sy)
+	for y := range dh {
+		for j := range sy {
+			ys[y*sy+j] = min(b.Min.Y+int((float64(y)+(float64(j)+0.5)/float64(sy))*fy), b.Max.Y-1)
+		}
+	}
+	at := func(x, y int) (r, g, b, a uint32) { return src.At(x, y).RGBA() }
+	switch m := src.(type) {
+	case *image.YCbCr:
+		at = func(x, y int) (r, g, b, a uint32) { return m.YCbCrAt(x, y).RGBA() }
+	case *image.RGBA:
+		at = func(x, y int) (r, g, b, a uint32) { return m.RGBAAt(x, y).RGBA() }
+	case *image.NRGBA:
+		at = func(x, y int) (r, g, b, a uint32) { return m.NRGBAAt(x, y).RGBA() }
+	case *image.Gray:
+		at = func(x, y int) (r, g, b, a uint32) { return m.GrayAt(x, y).RGBA() }
+	case *image.Paletted:
+		pal := make([][4]uint32, len(m.Palette))
+		for i, c := range m.Palette {
+			pal[i][0], pal[i][1], pal[i][2], pal[i][3] = c.RGBA()
+		}
+		at = func(x, y int) (r, g, b, a uint32) {
+			if i := int(m.ColorIndexAt(x, y)); i < len(pal) {
+				return pal[i][0], pal[i][1], pal[i][2], pal[i][3]
+			}
+			return 0, 0, 0, 0
+		}
+	}
+	for y := range dh {
+		for x := range dw {
 			var r, g, bl, n uint32
-			for j := 0; j < sy; j++ {
-				for i := 0; i < sx; i++ {
-					px := b.Min.X + int((float64(x)+(float64(i)+0.5)/float64(sx))*fx)
-					py := b.Min.Y + int((float64(y)+(float64(j)+0.5)/float64(sy))*fy)
-					cr, cg, cb, ca := src.At(min(px, b.Max.X-1), min(py, b.Max.Y-1)).RGBA()
+			for _, py := range ys[y*sy : (y+1)*sy] {
+				for _, px := range xs[x*sx : (x+1)*sx] {
+					cr, cg, cb, ca := at(px, py)
 					white := 0xffff - ca // premultiplied colour over white
 					r, g, bl, n = r+cr+white, g+cg+white, bl+cb+white, n+1
 				}

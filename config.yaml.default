@@ -37,7 +37,7 @@ cache:
 features:
   allow_custom_feeds: false
   show_images: true               # include feed images (https only); each visitor still opts in under Instellingen
-  proxy_images: true              # serve them through /api/img (in-memory, max 50 MB): browsers never contact publishers
+  proxy_images: true              # serve them through /api/img (in-memory, max 20 MB): browsers never contact publishers
   source_icons: true              # each news site's own small icon instead of a coloured dot; fetched and served by
                                   # this server (weekly, in memory), so browsers never contact the news sites
   icon_services: true             # when a site blocks the server (cookie wall, bot protection): ask DuckDuckGo's,

@@ -680,7 +680,7 @@ A URL sets the mode for that visit only, without changing the saved choice: `htt
   - checks every connection *after DNS resolution* and on each redirect, and refuses private, loopback, link-local (incl. `169.254.169.254`), CGNAT and other special-purpose ranges (IPv4 and IPv6)
   - accepts `https` only, at most 3 redirects, 5 MB, 40 megapixels
   - turns JPEG/PNG/GIF into 320 px JPEG thumbnails. WebP is passed through up to 250 KB, because the standard library cannot decode it.
-  - keeps results in an in-memory LRU of at most 50 MB, rate-limited per client IP
+  - keeps results in an in-memory LRU of at most 20 MB, rate-limited per client IP
 
 ---
 
@@ -699,7 +699,7 @@ A URL sets the mode for that visit only, without changing the saved choice: `htt
 - **Outbound requests from user input:** only the image proxy fetches addresses that originate outside the configuration. It accepts only URLs this server signed, and checks every connection's IP after DNS resolution (so also redirects and DNS rebinding) against private and special-purpose ranges. See *Privacy*.
 - **Abuse limits:**
   - Weather, geocoding and image requests that cause upstream traffic are rate-limited per client IP.
-  - Every cache has a fixed maximum (news per source, 500 weather locations, 1000 geocoding queries, 10 000 IP lookups, 50 MB of images).
+  - Every cache has a fixed maximum (news per source, 500 weather locations, 1000 geocoding queries, 10 000 IP lookups, 20 MB of images).
   - The rate limiter itself is bounded and prunes at most once a minute.
 - **Tested:** `main_test.go` feeds a hostile RSS fixture through the real fetcher and `/api/news`. It also checks:
   - security headers on every route
@@ -840,6 +840,14 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.34.1
+- **Performance** (measured with pprof against a full config):
+  - **Verkeer:** the NDW situation feed (~5 MB of XML every 5 minutes) is read by a small streaming scanner instead of encoding/xml: 5× faster, 6× less memory per run (it was 85 % of all steady-state allocations). The VILD location table keeps one copy of each name: 4.2 → 2.2 MB.
+  - **EPSS:** the newer file is read first and only its CVEs at 10 % or more are looked up in the older one, so the ~300 000-entry map is gone.
+  - **Image proxy:** thumbnails are scaled without per-pixel allocations (1.7× faster, identical output); decodes run one at a time and are refused above ~40 MB decoded (was 40 megapixels, which a PNG could turn into 160 MB); the cache holds at most 20 MB (was 50 MB).
+  - **Responses:** gzip at BestSpeed (twice as fast, ~6 % larger) with at most two writers kept for reuse instead of one per CPU.
+  - **Phishing op NL-merken:** host matching no longer builds a string replacer per host and brand.
 
 ### 1.34.0
 - **New panel Bekendmakingen** (Thuis & vandaag): permits, traffic decisions and other official notices within 500 m of the visitor's address (the Afvalkalender address), last 14 days, from officielebekendmakingen.nl (KOOP SRU, PDOK for the municipality). New config section `notices`, endpoint `GET /api/notices`.

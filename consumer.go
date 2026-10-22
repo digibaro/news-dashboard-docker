@@ -135,7 +135,7 @@ func (b phishBrand) matchHost(host string) bool {
 			return false
 		}
 	}
-	if len(b.slug) >= 7 && strings.Contains(strings.NewReplacer("-", "", ".", "").Replace(host), b.slug) { // mijn.overheid.nl.evil.example
+	if len(b.slug) >= 7 && strings.Contains(hostJoin.Replace(host), b.slug) { // mijn.overheid.nl.evil.example
 		return true
 	}
 	for _, tok := range strings.FieldsFunc(host, func(r rune) bool { return r == '.' || r == '-' }) {
@@ -145,6 +145,8 @@ func (b phishBrand) matchHost(host string) bool {
 	}
 	return false
 }
+
+var hostJoin = strings.NewReplacer("-", "", ".", "")
 
 func phishHost(raw string) string {
 	u, err := url.Parse(strings.TrimSpace(raw))

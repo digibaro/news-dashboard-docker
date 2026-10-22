@@ -284,9 +284,9 @@ func parseFISBridges(body []byte) []BridgeInfo {
 	return slices.Clip(out)
 }
 
-func htmlUnescape(s string) string {
-	return strings.NewReplacer("&amp;", "&", "&apos;", "'", "&#39;", "'", "&quot;", `"`, "&lt;", "<", "&gt;", ">").Replace(s)
-}
+var xmlUnescaper = strings.NewReplacer("&amp;", "&", "&apos;", "'", "&#39;", "'", "&quot;", `"`, "&lt;", "<", "&gt;", ">")
+
+func htmlUnescape(s string) string { return xmlUnescaper.Replace(s) }
 
 // info for an index (caller holds mu).
 func (s *bridgeStore) info(i int32) BridgeInfo {

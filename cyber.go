@@ -72,8 +72,9 @@ type EPSSData struct {
 }
 
 // readEPSS streams an EPSS daily file (gzip CSV: "#model_version:…,score_date:2026-10-03T…",
-// "cve,epss,percentile", rows) and calls fn per row; it returns the score date.
-func readEPSS(gz []byte, fn func(cve string, epss, pct float64)) (string, error) {
+// "cve,epss,percentile", rows) and calls fn per row; it returns the score date. The files have
+// ~300 000 rows, so rows are read without allocating: cve is only valid during the call.
+func readEPSS(gz []byte, fn func(cve []byte, epss, pct float64)) (string, error) {
 	zr, err := gzip.NewReader(bytes.NewReader(gz))
 	if err != nil {
 		return "", fmt.Errorf("epss: %w", err)
@@ -81,23 +82,25 @@ func readEPSS(gz []byte, fn func(cve string, epss, pct float64)) (string, error)
 	sc := bufio.NewScanner(io.LimitReader(zr, 128<<20))
 	date, rows := "", 0
 	for sc.Scan() {
-		line := sc.Text()
-		if strings.HasPrefix(line, "#") {
-			if i := strings.Index(line, "score_date:"); i >= 0 && len(line) >= i+21 {
-				date = line[i+11 : i+21]
+		line := sc.Bytes()
+		if len(line) > 0 && line[0] == '#' {
+			if i := bytes.Index(line, []byte("score_date:")); i >= 0 && len(line) >= i+21 {
+				date = string(line[i+11 : i+21])
 			}
 			continue
 		}
-		f := strings.Split(line, ",")
-		if len(f) < 3 || !strings.HasPrefix(f[0], "CVE-") {
+		cve, rest, ok1 := bytes.Cut(line, []byte(","))
+		es, ps, ok2 := bytes.Cut(rest, []byte(","))
+		if !ok1 || !ok2 || !bytes.HasPrefix(cve, []byte("CVE-")) {
 			continue
 		}
-		e, err1 := strconv.ParseFloat(f[1], 64)
-		p, err2 := strconv.ParseFloat(f[2], 64)
+		ps, _, _ = bytes.Cut(ps, []byte(","))
+		e, err1 := strconv.ParseFloat(string(es), 64)
+		p, err2 := strconv.ParseFloat(string(ps), 64)
 		if err1 != nil || err2 != nil {
 			continue
 		}
-		fn(f[0], e, p)
+		fn(cve, e, p)
 		rows++
 	}
 	if err := sc.Err(); err != nil {
@@ -109,24 +112,31 @@ func readEPSS(gz []byte, fn func(cve string, epss, pct float64)) (string, error)
 	return date, nil
 }
 
-// epssRisers: the CVEs with the biggest rise between two files, ending at least at 10 %.
+// epssRisers: the CVEs with the biggest rise between two files, ending at least at 10 %. The
+// newer file goes first: only its CVEs at 10 % or more (a few thousand) are looked up in the older.
 func epssRisers(older, newer []byte, n int) (EPSSData, error) {
-	prev := map[string]float32{}
-	since, err := readEPSS(older, func(c string, e, _ float64) { prev[c] = float32(e) })
-	if err != nil {
-		return EPSSData{}, err
-	}
-	var all []EPSSRiser
-	date, err := readEPSS(newer, func(c string, e, p float64) {
-		if e < 0.1 {
-			return
-		}
-		if d := e - float64(prev[c]); d >= 0.05 {
-			all = append(all, EPSSRiser{CVE: c, EPSS: e, Prev: float64(prev[c]), Percentile: p})
+	cand := map[string]*EPSSRiser{}
+	date, err := readEPSS(newer, func(c []byte, e, p float64) {
+		if e >= 0.1 {
+			cand[string(c)] = &EPSSRiser{CVE: string(c), EPSS: e, Percentile: p}
 		}
 	})
 	if err != nil {
 		return EPSSData{}, err
+	}
+	since, err := readEPSS(older, func(c []byte, e, _ float64) {
+		if r, ok := cand[string(c)]; ok {
+			r.Prev = float64(float32(e))
+		}
+	})
+	if err != nil {
+		return EPSSData{}, err
+	}
+	all := []EPSSRiser{}
+	for _, r := range cand {
+		if r.EPSS-r.Prev >= 0.05 {
+			all = append(all, *r)
+		}
 	}
 	sort.Slice(all, func(i, j int) bool {
 		di, dj := all[i].EPSS-all[i].Prev, all[j].EPSS-all[j].Prev
@@ -137,9 +147,6 @@ func epssRisers(older, newer []byte, n int) (EPSSData, error) {
 	})
 	if len(all) > n {
 		all = all[:n]
-	}
-	if all == nil {
-		all = []EPSSRiser{}
 	}
 	return EPSSData{Date: date, Since: since, Risers: all}, nil
 }

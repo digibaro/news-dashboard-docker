@@ -1,13 +1,18 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"image"
+	"image/color"
+	"image/png"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"testing/iotest"
 	"time"
 )
 
@@ -296,5 +301,53 @@ func TestEnergyAndBreachesExtras(t *testing.T) {
 	a.threats.ok("nvwa:recalls", []Recall{{Title: "X", URL: "https://www.nvwa.nl/x"}}, "", "")
 	if b := get(h, "GET", "/api/recalls", nil).Body.String(); !strings.Contains(b, `"title":"X"`) {
 		t.Errorf("recalls: %s", b)
+	}
+}
+
+func TestParseNDWScanner(t *testing.T) {
+	doc := `<?xml version="1.0" encoding="UTF-8"?>
+<!-- a comment with <tags> and > signs -->
+<d2:payload xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" note="a > b">
+  <situation><situationRecord id="r1" xsi:type="d2:Accident" version='2'>
+    <validity><validityStatus> active </validityStatus><empty/></validity>
+    <overallStartTime><![CDATA[2026-10-22T08:00:00Z]]></overallStartTime>
+    <delayTimeValue>120</delayTimeValue><abnormalTrafficType>a&amp;b</abnormalTrafficType>
+    <alertCDirectionCoded>positive</alertCDirectionCoded><alertCDirectionCoded>negative</alertCDirectionCoded>
+    <specificLocation>11</specificLocation><specificLocation>12</specificLocation>
+    <latitude>52.1</latitude><longitude>4.5</longitude>
+  </situationRecord>
+  <situationRecord xsi:type="Roadworks"><validityStatus>suspended</validityStatus></situationRecord></situation>
+  <validityStatus>outside a record</validityStatus>
+</d2:payload>`
+	recs, err := parseNDW(iotest.OneByteReader(strings.NewReader(doc)))
+	if err != nil || len(recs) != 2 {
+		t.Fatalf("parseNDW = %+v, %v", recs, err)
+	}
+	r := recs[0]
+	if r.typ != "Accident" || r.status != "active" || r.start != "2026-10-22T08:00:00Z" || r.delay != "120" || r.abnormal != "a&b" ||
+		r.dir != "positive" || len(r.locs) != 2 || r.locs[1] != 12 || r.lat != 52.1 || r.lon != 4.5 {
+		t.Errorf("record = %+v", r)
+	}
+	if recs[1].typ != "" || recs[1].status != "suspended" { // a type without prefix has no part after ':'
+		t.Errorf("record 2 = %+v", recs[1])
+	}
+	if _, err := parseNDW(strings.NewReader(`<a><situationRecord type="x:Y`)); err == nil {
+		t.Error("an unterminated tag must be an error")
+	}
+}
+
+func TestThumbnailDecodeBudget(t *testing.T) {
+	if decodedBytesPerPixel(color.YCbCrModel) != 3 || decodedBytesPerPixel(color.NRGBA64Model) != 8 || decodedBytesPerPixel(color.Palette{color.Black}) != 1 {
+		t.Error("bytes per pixel")
+	}
+	var b bytes.Buffer // 16-bit PNG: 2400×2400×8 bytes decoded = 46 MB, too much
+	_ = png.Encode(&b, image.NewNRGBA64(image.Rect(0, 0, 2400, 2400)))
+	if _, _, err := thumbnail(b.Bytes()); err == nil {
+		t.Error("a 46 MB decode was accepted")
+	}
+	b.Reset() // the same size in 8-bit grey (6 MB) is fine
+	_ = png.Encode(&b, image.NewGray(image.Rect(0, 0, 2400, 2400)))
+	if out, ct, err := thumbnail(b.Bytes()); err != nil || ct != "image/jpeg" || len(out) == 0 {
+		t.Errorf("grey png: %v", err)
 	}
 }

@@ -6,6 +6,7 @@ package main
 
 import (
 	"archive/zip"
+	"bufio"
 	"bytes"
 	"compress/gzip"
 	"container/list"
@@ -16,6 +17,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"html"
 	"io"
 	"log/slog"
 	"math"
@@ -2366,92 +2368,186 @@ type ndwRecord struct {
 	lat, lon                                                             float64
 }
 
-// parseNDW streams a DATEX II situation publication and keeps the fields we use.
+// parseNDW streams a DATEX II situation publication and keeps the fields we use. The feed is
+// ~5 MB of XML every interval; encoding/xml makes ~25 MB of garbage of that, so this is a small
+// scanner instead: element names (without prefix), their text, and situationRecord's type
+// attribute. Comments, processing instructions and CDATA are skipped or read; entities in
+// the kept values are decoded.
 func parseNDW(r io.Reader) ([]ndwRecord, error) {
-	dec := xml.NewDecoder(r)
-	dec.Strict = false
+	br := bufio.NewReaderSize(r, 64<<10)
 	var recs []ndwRecord
 	var cur *ndwRecord
-	var stack []string
+	var tag []byte
+	field := 0 // the ndwFields index of the open element, if it is one we keep
 	for {
-		tok, err := dec.Token()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
+		text, err := br.ReadSlice('<')
+		switch {
+		case err == bufio.ErrBufferFull: // a long text: none of our values
+			field = 0
+			continue
+		case err == io.EOF:
+			return recs, nil
+		case err != nil:
 			return recs, fmt.Errorf("ndw: %w", err)
 		}
-		switch t := tok.(type) {
-		case xml.StartElement:
-			if t.Name.Local == "situationRecord" {
-				cur = &ndwRecord{}
-				for _, at := range t.Attr {
-					if at.Name.Local == "type" {
-						_, cur.typ, _ = strings.Cut(at.Value, ":")
-					}
-				}
+		if cur != nil && field != 0 {
+			cur.set(field, text[:len(text)-1])
+		}
+		tag = tag[:0]
+		for {
+			part, err := br.ReadSlice('>')
+			tag = append(tag, part...)
+			if err == nil && tagComplete(tag) {
+				break
 			}
-			stack = append(stack, t.Name.Local)
-		case xml.EndElement:
-			if len(stack) > 0 {
-				stack = stack[:len(stack)-1]
+			if err == io.EOF {
+				err = io.ErrUnexpectedEOF
 			}
-			if t.Name.Local == "situationRecord" && cur != nil {
+			if err != nil && err != bufio.ErrBufferFull || len(tag) > 1<<20 {
+				return recs, fmt.Errorf("ndw: unterminated tag: %v", err)
+			}
+		}
+		tag = tag[:len(tag)-1]
+		switch {
+		case bytes.HasPrefix(tag, []byte("![CDATA[")):
+			if cur != nil && field != 0 {
+				cur.set(field, tag[8:len(tag)-2])
+			}
+			continue
+		case len(tag) == 0 || tag[0] == '!' || tag[0] == '?':
+			continue
+		case tag[0] == '/':
+			field = 0
+			if cur != nil && string(xmlLocalName(tag[1:])) == "situationRecord" {
 				recs = append(recs, *cur)
 				cur = nil
 			}
-		case xml.CharData:
-			if cur == nil || len(stack) == 0 {
-				continue
+			continue
+		}
+		name := xmlLocalName(tag)
+		field = 0
+		if string(name) == "situationRecord" {
+			cur = &ndwRecord{typ: ndwTypeAttr(tag)}
+			if tag[len(tag)-1] == '/' {
+				recs = append(recs, *cur)
+				cur = nil
 			}
-			v := strings.TrimSpace(string(t))
-			if v == "" {
-				continue
-			}
-			first := func(dst *string) {
-				if *dst == "" {
-					*dst = v
-				}
-			}
-			switch stack[len(stack)-1] {
-			case "validityStatus":
-				first(&cur.status)
-			case "overallStartTime":
-				first(&cur.start)
-			case "overallEndTime":
-				first(&cur.end)
-			case "delayTimeValue":
-				first(&cur.delay)
-			case "abnormalTrafficType":
-				first(&cur.abnormal)
-			case "roadOrCarriagewayOrLaneManagementType":
-				first(&cur.mgmt)
-			case "alertCDirectionCoded":
-				first(&cur.dir)
-			case "alertCLocationTableNumber":
-				first(&cur.table)
-			case "alertCLocationTableVersion":
-				first(&cur.tableVer)
-			case "generalNetworkManagementType":
-				first(&cur.gnm)
-			case "externalLocationCode":
-				first(&cur.extCode)
-			case "latitude":
-				if f, err := strconv.ParseFloat(v, 64); err == nil && cur.lat == 0 {
-					cur.lat = f
-				}
-			case "longitude":
-				if f, err := strconv.ParseFloat(v, 64); err == nil && cur.lon == 0 {
-					cur.lon = f
-				}
-			case "specificLocation":
-				if n, err := strconv.Atoi(v); err == nil && len(cur.locs) < 4 {
-					cur.locs = append(cur.locs, n)
-				}
-			}
+		} else if cur != nil && tag[len(tag)-1] != '/' {
+			field = ndwFields[string(name)]
 		}
 	}
-	return recs, nil
+}
+
+var ndwFields = map[string]int{"validityStatus": 1, "overallStartTime": 2, "overallEndTime": 3, "delayTimeValue": 4,
+	"abnormalTrafficType": 5, "roadOrCarriagewayOrLaneManagementType": 6, "alertCDirectionCoded": 7, "alertCLocationTableNumber": 8,
+	"alertCLocationTableVersion": 9, "generalNetworkManagementType": 10, "externalLocationCode": 11, "latitude": 12, "longitude": 13,
+	"specificLocation": 14}
+
+// set stores a value read for field (the first one counts; up to 4 locations).
+func (rec *ndwRecord) set(field int, b []byte) {
+	b = bytes.TrimSpace(b)
+	if len(b) == 0 {
+		return
+	}
+	v := string(b)
+	if bytes.IndexByte(b, '&') >= 0 {
+		v = html.UnescapeString(v)
+	}
+	first := func(dst *string) {
+		if *dst == "" {
+			*dst = v
+		}
+	}
+	switch field {
+	case 1:
+		first(&rec.status)
+	case 2:
+		first(&rec.start)
+	case 3:
+		first(&rec.end)
+	case 4:
+		first(&rec.delay)
+	case 5:
+		first(&rec.abnormal)
+	case 6:
+		first(&rec.mgmt)
+	case 7:
+		first(&rec.dir)
+	case 8:
+		first(&rec.table)
+	case 9:
+		first(&rec.tableVer)
+	case 10:
+		first(&rec.gnm)
+	case 11:
+		first(&rec.extCode)
+	case 12:
+		if f, err := strconv.ParseFloat(v, 64); err == nil && rec.lat == 0 {
+			rec.lat = f
+		}
+	case 13:
+		if f, err := strconv.ParseFloat(v, 64); err == nil && rec.lon == 0 {
+			rec.lon = f
+		}
+	case 14:
+		if n, err := strconv.Atoi(v); err == nil && len(rec.locs) < 4 {
+			rec.locs = append(rec.locs, n)
+		}
+	}
+}
+
+// tagComplete: whether t (the text after '<', up to a '>') is a whole tag: '>' outside quotes,
+// a comment up to "-->", CDATA up to "]]>".
+func tagComplete(t []byte) bool {
+	switch {
+	case bytes.HasPrefix(t, []byte("!--")):
+		return len(t) >= 6 && bytes.HasSuffix(t, []byte("-->"))
+	case bytes.HasPrefix(t, []byte("![CDATA[")):
+		return len(t) >= 11 && bytes.HasSuffix(t, []byte("]]>"))
+	}
+	var q byte
+	for _, c := range t[:len(t)-1] {
+		if q == 0 && (c == '"' || c == '\'') {
+			q = c
+		} else if c == q {
+			q = 0
+		}
+	}
+	return q == 0
+}
+
+// xmlLocalName: the element name at the start of a tag, without its namespace prefix.
+func xmlLocalName(tag []byte) []byte {
+	end := bytes.IndexAny(tag, " \t\r\n/")
+	if end < 0 {
+		end = len(tag)
+	}
+	name := tag[:end]
+	if i := bytes.LastIndexByte(name, ':'); i >= 0 {
+		name = name[i+1:]
+	}
+	return name
+}
+
+// ndwTypeAttr: the part after the prefix of a (xsi:)type attribute, e.g. "Accident".
+func ndwTypeAttr(tag []byte) string {
+	for rest := tag; ; {
+		i := bytes.Index(rest, []byte("type="))
+		if i < 0 || len(rest) < i+6 {
+			return ""
+		}
+		pre, q := rest[max(i-1, 0)], rest[i+5]
+		rest = rest[i+6:]
+		if i == 0 || (pre != ':' && pre != ' ' && pre != '\t' && pre != '\n' && pre != '\r') || (q != '"' && q != '\'') {
+			continue
+		}
+		end := bytes.IndexByte(rest, q)
+		if end < 0 {
+			return ""
+		}
+		_, t, _ := strings.Cut(string(rest[:end]), ":")
+		return t
+	}
 }
 
 var abnormalNL = map[string]string{
@@ -2677,12 +2773,21 @@ func parseVILD(b []byte) (map[int]vildLoc, error) {
 	if off > rlen || hlen+nrec*rlen > len(b) {
 		return nil, errors.New("dbf: inconsistent header")
 	}
+	// fields are space-padded and names repeat (roads, places): trim before decoding and
+	// keep one copy of each string
+	seen := map[string]string{}
 	get := func(rec []byte, name string) string {
 		f, ok := fields[name]
 		if !ok {
 			return ""
 		}
-		return strings.TrimSpace(latin1(rec[f.off : f.off+f.len]))
+		v := bytes.TrimSpace(rec[f.off : f.off+f.len])
+		if s, ok := seen[string(v)]; ok {
+			return s
+		}
+		s := latin1(v)
+		seen[string(v)] = s
+		return s
 	}
 	locs := make(map[int]vildLoc, nrec)
 	for i := 0; i < nrec; i++ {
@@ -2706,6 +2811,7 @@ func parseVILD(b []byte) (map[int]vildLoc, error) {
 
 func latin1(b []byte) string {
 	var sb strings.Builder
+	sb.Grow(len(b))
 	for _, c := range b {
 		if c >= 0x80 && c <= 0x9f {
 			sb.WriteRune(cp1252[c-0x80])
