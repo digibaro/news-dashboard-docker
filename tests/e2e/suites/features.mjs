@@ -142,7 +142,8 @@ const chips = p => p.$$eval('#chips .chip', cs => cs.map(c => c.textContent.trim
   const { ctx, p } = await fresh({}, { onboarded: true });
   await p.goto(URL); await p.waitForSelector('#panel-advisories .adv');
   const advTitles = await p.$$eval('#panel-advisories .adv .ttl', a => a.map(x => x.textContent));
-  const target = (advTitles.find(t => /Adobe|Check Point|WordPress|IBM/.test(t)) || advTitles[3]).match(/(Adobe|Check Point|WordPress|IBM|F5)/)?.[1] || 'WordPress';
+  // a vendor if one is in the list, else a capitalised word from an advisory further down (the list is live)
+  const target = advTitles.join(' ').match(/\b(Adobe|Check Point|WordPress|IBM|F5)\b/)?.[1] || (advTitles[3] || advTitles[0]).match(/\b[A-Z][A-Za-z]{3,}\b/)?.[0] || 'WordPress';
   await p.click('#open-settings');
   await p.fill('#watch-in', target); await p.press('#watch-in', 'Tab');
   await p.fill('#mute-in', 'NOS'); await p.press('#mute-in', 'Tab');
@@ -161,7 +162,7 @@ const chips = p => p.$$eval('#chips .chip', cs => cs.map(c => c.textContent.trim
 // ---------- G: freshness
 {
   const { ctx, p } = await fresh({}, { onboarded: true });
-  await p.goto(URL); await p.waitForSelector('#panel-threats .spark'); await p.waitForSelector('#panel-advisories .adv'); await p.waitForSelector('#panel-ap .plist');
+  await p.goto(URL); await p.waitForSelector('#panel-threats .spark'); await p.waitForSelector('#panel-advisories .adv'); await p.waitForSelector('#panel-ap .plist, #panel-ap .pnote'); // the AP site can be unreachable
   // every panel shows its data age, or explains why there is no data (a live source can be down during a test run)
   const fr = await p.$$eval('.pfresh, #news-meta', els => els.map(e => {
     const body = e.id.startsWith('p-') && document.querySelector('#' + e.id.replace('-fresh', '-body'));

@@ -459,6 +459,18 @@ traffic:
   url: "https://opendata.ndw.nu/actueel_beeld.xml.gz"
   vild_base: "https://opendata.ndw.nu/"
 
+# Bruggen in the Verkeer panel: bridges open now (from traffic.url above; that download then
+# runs every interval) and planned openings (NDW planning feed, mostly Noord-Holland). Names and
+# places of all ~1500 movable bridges come from Rijkswaterstaat's vaarweginformatie.nl (FIS, once a
+# day); empty names_url = only bridges NDW reports, named by ISRS code. Visitors choose favourite
+# bridges in the panel or under Instellingen → Bruggen.
+bridges:
+  enabled: true
+  interval: 2m
+  planned_url: "https://opendata.ndw.nu/planningsfeed_brugopeningen.xml.gz"
+  planned_interval: 15m
+  names_url: "https://www.vaarweginformatie.nl/wfswms/services"
+
 # Alarmeringen panel: P2000 alerts per city from Zwaailicht.nl (Atom feeds, refreshed every minute,
 # house numbers left out). city is the default; visitors can choose their own under Instellingen.
 # Slugs are lowercase with hyphens (den-haag, alphen-aan-den-rijn). Not for emergencies: call 112.
@@ -513,6 +525,7 @@ refresh:
   alerts: 3m        # top bar: NCTV, KNMI code, P2000 counts
   weather: 15m      # Open-Meteo updates hourly; rain radar/warnings follow the server cache
   traffic: 5m       # NDW
+  bridges: 2m       # bridges open now and planned openings (Verkeer panel)
   alarms: 2m        # P2000 alarms in your place
   threats: 15m
   advisories: 30m

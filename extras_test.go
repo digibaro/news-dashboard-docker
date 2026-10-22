@@ -78,10 +78,10 @@ func TestParseFuelPrices(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if d.Date != "2026-09-27" || len(d.Prices) != 3 {
+	if d.Date != "2026-09-27" || len(d.Prices) != 4 {
 		t.Fatalf("date %q, %d prices", d.Date, len(d.Prices))
 	}
-	want := []FuelPrice{{"euro95", "Euro95 (E10)", 2.729, -1.2}, {"diesel", "Diesel", 2.788, 0}, {"lpg", "LPG", 1.265, 0.4}}
+	want := []FuelPrice{{"euro95", "Euro95 (E10)", 2.729, -1.2}, {"euro98", "Euro98 (E5)", 2.939, 0}, {"diesel", "Diesel", 2.788, 0}, {"lpg", "LPG", 1.265, 0.4}}
 	for i, w := range want {
 		if d.Prices[i] != w {
 			t.Errorf("price %d: %+v, want %+v", i, d.Prices[i], w)

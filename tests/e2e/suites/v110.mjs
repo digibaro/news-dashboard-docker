@@ -197,7 +197,9 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
     nl: document.querySelector('#panel-nlalert .pbody').innerText, fuel: document.querySelector('#panel-fuel .pbody').innerText, waste: document.querySelector('#panel-waste .pbody').innerText,
     trend: document.querySelector('#trending .tl').textContent, cov: document.querySelector('.covbtn')?.textContent }));
   ok(e.heads.join() === 'NL-Alert,Fuel prices,Waste collection', `English names: ${e.heads}`);
-  ok(/in the last 14 days/.test(e.nl) && /Fire|Smoke|smoke|fire|No NL-Alerts/.test(e.nl) && !/personal use/.test(e.fuel) && /Set your address/.test(e.waste) && /Coverage \(\d+ sources\)/.test(e.cov || ''), 'English texts (NL-Alert shows the English part)');
+  // the alerts themselves are live data in any language; the panel's own texts must be English
+  ok(/in the last 14 days/.test(e.nl) && !/afgelopen 14 dagen|Geen actieve/.test(e.nl) && !/personal use/.test(e.fuel) && /Set your address/.test(e.waste) && /Coverage \(\d+ sources\)/.test(e.cov || ''),
+    `English texts: ${[e.nl, e.fuel, e.waste, e.cov].map(x => (x || '').replace(/\s+/g, ' ').slice(0, 60)).join(' | ')}`);
   await ctx.close();
 }
 

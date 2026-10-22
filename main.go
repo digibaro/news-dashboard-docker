@@ -242,6 +242,14 @@ type Config struct {
 		URL      string   `yaml:"url"`       // NDW DATEX II situation publication (.xml or .xml.gz)
 		VILDBase string   `yaml:"vild_base"` // where VILD<version>.zip location tables live
 	} `yaml:"traffic"`
+	// Bruggen in the Verkeer panel: open now (from traffic.url, at this interval) and planned openings.
+	Bridges struct {
+		Enabled         bool     `yaml:"enabled"`
+		Interval        Duration `yaml:"interval"`         // open now; the traffic download then runs this often
+		PlannedURL      string   `yaml:"planned_url"`      // NDW planning feed for bridge openings
+		PlannedInterval Duration `yaml:"planned_interval"` // planning feed
+		NamesURL        string   `yaml:"names_url"`        // Rijkswaterstaat FIS WFS: every movable bridge (names); empty = ISRS codes only
+	} `yaml:"bridges"`
 	Alarms struct {
 		Enabled  bool     `yaml:"enabled"`
 		City     string   `yaml:"city"`     // default city slug; visitors can pick their own
@@ -513,6 +521,11 @@ func defaultConfig() *Config {
 	c.Traffic.Interval = Duration(5 * time.Minute)
 	c.Traffic.URL = "https://opendata.ndw.nu/actueel_beeld.xml.gz"
 	c.Traffic.VILDBase = "https://opendata.ndw.nu/"
+	c.Bridges.Enabled = true
+	c.Bridges.Interval = Duration(2 * time.Minute)
+	c.Bridges.PlannedURL = "https://opendata.ndw.nu/planningsfeed_brugopeningen.xml.gz"
+	c.Bridges.PlannedInterval = Duration(15 * time.Minute)
+	c.Bridges.NamesURL = "https://www.vaarweginformatie.nl/wfswms/services"
 	c.Alarms.Enabled = true
 	c.Alarms.City = "utrecht"
 	c.Alarms.Base = "https://zwaailicht.nl/feed/meldingen/"
@@ -685,7 +698,7 @@ var removedRefresh = map[string]bool{"vulns": true}
 
 var defaultRefresh = map[string]time.Duration{
 	"news": 5 * time.Minute, "weather": 15 * time.Minute, "alerts": 3 * time.Minute,
-	"traffic": 5 * time.Minute, "alarms": 2 * time.Minute, "threats": 15 * time.Minute,
+	"traffic": 5 * time.Minute, "bridges": 2 * time.Minute, "alarms": 2 * time.Minute, "threats": 15 * time.Minute,
 	"advisories": 30 * time.Minute, "outages": 10 * time.Minute, "ap": 30 * time.Minute, "breaches": 30 * time.Minute,
 	"energy": 30 * time.Minute, "air": 15 * time.Minute, "trains": 3 * time.Minute, "politics": 15 * time.Minute,
 	"today": 60 * time.Minute, "ransomware": 30 * time.Minute,
@@ -780,6 +793,10 @@ func (c *Config) validate() error {
 	}
 	if c.Traffic.Enabled && (!isHTTPURL(c.Traffic.URL) || !isHTTPURL(c.Traffic.VILDBase) || c.Traffic.Interval.D() < 2*time.Minute) {
 		fail("traffic: url and vild_base must be http(s), interval at least 2m")
+	}
+	if c.Bridges.Enabled && (!isHTTPURL(c.Traffic.URL) || !isHTTPURL(c.Bridges.PlannedURL) || (c.Bridges.NamesURL != "" && !isHTTPURL(c.Bridges.NamesURL)) ||
+		c.Bridges.Interval.D() < time.Minute || c.Bridges.PlannedInterval.D() < 5*time.Minute) {
+		fail("bridges: traffic.url, planned_url and names_url must be http(s) URLs, interval at least 1m, planned_interval at least 5m")
 	}
 	if c.Alarms.Enabled && (!citySlugRe.MatchString(c.Alarms.City) || !isHTTPURL(c.Alarms.Base) || c.Alarms.Interval.D() < time.Minute) {
 		fail("alarms: city must be a slug like den-haag, base an http(s) URL, interval at least 1m")
@@ -1183,14 +1200,15 @@ type App struct {
 	air       *ttlCache[[]AirComponent] // pollutant values per Luchtmeetnet station
 	pollen    *ttlCache[PollenData]     // pollen forecast per ~10 km cell
 	p2k       map[string]*p2kCounter    // national alerts per service, last hour
-	trend     trendCache                // trending words, recomputed at most every 5 min
-	waste     *ttlCache[WasteResult]    // pickups per visitor address
-	insects   *ttlCache[InsectData]     // tick/mosquito estimate per ~10 km cell
-	wikiCache *ttlCache[WikiSummary]    // Wikipedia summary per trending term, 24 h
-	solar     *ttlCache[[]SolarDay]     // solar yield per ~10 km cell, tilt and direction
-	icons     *iconCache                // news site icons per host
-	skyClouds *ttlCache[[]cloudPoint]   // cloud cover per ~10 km cell
-	tides     *ttlCache[[]Tide]         // tide extremes per coastal station
+	bridges   *bridgeStore
+	trend     trendCache              // trending words, recomputed at most every 5 min
+	waste     *ttlCache[WasteResult]  // pickups per visitor address
+	insects   *ttlCache[InsectData]   // tick/mosquito estimate per ~10 km cell
+	wikiCache *ttlCache[WikiSummary]  // Wikipedia summary per trending term, 24 h
+	solar     *ttlCache[[]SolarDay]   // solar yield per ~10 km cell, tilt and direction
+	icons     *iconCache              // news site icons per host
+	skyClouds *ttlCache[[]cloudPoint] // cloud cover per ~10 km cell
+	tides     *ttlCache[[]Tide]       // tide extremes per coastal station
 	asnMu     sync.Mutex
 	asnNames  map[int]string    // AS number -> organisation (public Shadowserver lookup)
 	sea       *ttlCache[SeaNow] // sea temperature and waves per coastal station
@@ -1353,7 +1371,7 @@ func run(cfgPath string) error {
 
 	a := &App{cfgPath: cfgPath, level: level, started: time.Now(), news: newNewsCache(), sched: newScheduler(), wx: newWeatherCaches(),
 		threats: newStateStore(), geo: newGeoCache(10000), metrics: newHTTPMetrics(),
-		alarms: newTTLCache[[]Alarm](500), air: newTTLCache[[]AirComponent](200), pollen: newTTLCache[PollenData](300), p2k: newP2KCounters(),
+		alarms: newTTLCache[[]Alarm](500), air: newTTLCache[[]AirComponent](200), pollen: newTTLCache[PollenData](300), p2k: newP2KCounters(), bridges: newBridgeStore(),
 		push: newPushHub(), waste: newTTLCache[WasteResult](1000), insects: newTTLCache[InsectData](300), wikiCache: newTTLCache[WikiSummary](200), solar: newTTLCache[[]SolarDay](500), icons: newIconCache(), skyClouds: newTTLCache[[]cloudPoint](300), tides: newTTLCache[[]Tide](50), sea: newTTLCache[SeaNow](50), asnNames: map[int]string{}}
 	if st, err := os.Stat(cfgPath); err == nil {
 		a.cfgMod = st.ModTime()
@@ -1379,6 +1397,7 @@ func run(cfgPath string) error {
 	checkWritable(cfg)
 	a.applyConfig(cfg)
 	a.loadPushState()
+	a.loadBridgeState()
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -1591,6 +1610,8 @@ func (a *App) routes(basePath string) http.Handler {
 	handle("GET /api/sea", a.handleSea)
 	handle("GET /api/exploits", a.handleExploits)
 	handle("GET /api/alarmwatch", a.handleAlarmWatch)
+	handle("GET /api/bridges", a.handleBridges)
+	handle("GET /api/bridges/list", a.handleBridgeList)
 	handle("GET /api/nlthreat", a.handleNLThreat)
 	handle("GET /api/sports", a.handleSports)
 	handle("GET /api/push", a.handlePushInfo)
@@ -1825,6 +1846,7 @@ func (a *App) handleCatalog(w http.ResponseWriter, r *http.Request) {
 		"sports":           map[string]any{"enabled": cfg.Sports.Enabled, "sports": cfg.Sports.Sports},
 		"accent":           cfg.UI.Accent,
 		"alarms":           map[string]any{"enabled": cfg.Alarms.Enabled, "city": cfg.Alarms.City},
+		"bridges":          cfg.Bridges.Enabled,
 		"alerts":           map[string]bool{"nctv": cfg.Alerts.NCTV.Enabled, "knmi": cfg.Alerts.KNMI},
 		"presets":          cfg.Presets,
 		"advisories":       advisories,

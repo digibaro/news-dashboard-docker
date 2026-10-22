@@ -1773,8 +1773,15 @@ func (a *App) threatJobs(cfg *Config) []Job {
 		jobs = append(jobs, Job{Key: "nctv", Sig: cfg.Alerts.NCTV.URL, Interval: cfg.Alerts.NCTV.Interval.D(),
 			Run: a.fetchJob("nctv", func() string { return a.config().Alerts.NCTV.URL }, "text/html", nil, parseNCTV, nil)})
 	}
-	if cfg.Traffic.Enabled {
-		jobs = append(jobs, Job{Key: "ndw:traffic", Sig: cfg.Traffic.URL, Interval: cfg.Traffic.Interval.D(), Run: a.runTraffic})
+	if cfg.Traffic.Enabled || cfg.Bridges.Enabled { // one download for traffic and the bridges that are open now
+		iv := cfg.Traffic.Interval.D()
+		if cfg.Bridges.Enabled && (!cfg.Traffic.Enabled || cfg.Bridges.Interval.D() < iv) {
+			iv = cfg.Bridges.Interval.D()
+		}
+		jobs = append(jobs, Job{Key: "ndw:traffic", Sig: cfg.Traffic.URL, Interval: iv, Run: a.runTraffic})
+	}
+	if cfg.Bridges.Enabled {
+		jobs = append(jobs, Job{Key: "ndw:bridgeplan", Sig: cfg.Bridges.PlannedURL + cfg.Bridges.NamesURL, Interval: cfg.Bridges.PlannedInterval.D(), Run: a.runBridgePlan})
 	}
 	if cfg.Energy.Enabled {
 		jobs = append(jobs, Job{Key: "energyzero", Sig: fmt.Sprint(cfg.Energy.URL, cfg.Energy.VAT, cfg.Energy.ElectricityExtra, cfg.Energy.GasExtra),
@@ -2340,6 +2347,8 @@ type TrafficData struct {
 type ndwRecord struct {
 	typ, status, start, end, delay, abnormal, mgmt, dir, table, tableVer string
 	locs                                                                 []int
+	gnm, extCode                                                         string // bridge openings: generalNetworkManagementType, ISRS code
+	lat, lon                                                             float64
 }
 
 // parseNDW streams a DATEX II situation publication and keeps the fields we use.
@@ -2408,6 +2417,18 @@ func parseNDW(r io.Reader) ([]ndwRecord, error) {
 				first(&cur.table)
 			case "alertCLocationTableVersion":
 				first(&cur.tableVer)
+			case "generalNetworkManagementType":
+				first(&cur.gnm)
+			case "externalLocationCode":
+				first(&cur.extCode)
+			case "latitude":
+				if f, err := strconv.ParseFloat(v, 64); err == nil && cur.lat == 0 {
+					cur.lat = f
+				}
+			case "longitude":
+				if f, err := strconv.ParseFloat(v, 64); err == nil && cur.lon == 0 {
+					cur.lon = f
+				}
 			case "specificLocation":
 				if n, err := strconv.Atoi(v); err == nil && len(cur.locs) < 4 {
 					cur.locs = append(cur.locs, n)
@@ -2720,6 +2741,9 @@ func (a *App) runTraffic(ctx context.Context) error {
 				}
 			}
 			a.threats.ok(key, buildTraffic(recs, t, time.Now()), resp.ETag, resp.LastMo)
+			if a.config().Bridges.Enabled {
+				a.setBridgesOpen(recs, time.Now())
+			}
 			return nil
 		}
 	}

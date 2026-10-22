@@ -56,7 +56,7 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   ok(/EK mountainbike 2027.*\(datum voorlopig\)/.test(mtb.evs[0]) && !/voorlopig/.test(mtb.evs[1]), 'mtb: provisional EK marked, WK not');
   // readable countdowns: days up to a month, then months, then years; the exact number of days on hover
   const tags = await p.$$eval('#panel-sports .spev .tag.plain', l => l.map(x => ({ text: x.textContent, title: x.title })));
-  const shape = x => /^(vandaag|morgen|over \d+ dagen|over 1 maand|over \d+ maanden|over \d+(,5)? jaar)$/.test(x.text)
+  const shape = x => x.text === 'afgelopen' && !x.title || /^(vandaag|morgen|over \d+ dagen|over 1 maand|over \d+ maanden|over \d+(,5)? jaar)$/.test(x.text)
     && (/dagen|vandaag|morgen/.test(x.text) ? !x.title : /^over \d+ dagen$/.test(x.title));
   const wk30 = tags.at(-1);
   ok(tags.length > 5 && tags.every(shape) && /jaar$/.test(wk30.text) && tags.some(x => /maanden$/.test(x.text)), `countdowns: ${tags.map(x => x.text).join(' · ')}`);

@@ -72,8 +72,9 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
 // phone: three views, pull to refresh
 {
   const [ctx, p, errs] = await open(390);
-  const swipe = (x0, x1) => p.evaluate(([x0, x1]) => { const target = document.elementFromPoint(x0, 500); const t = x => new Touch({ identifier: 1, target, clientX: x, clientY: 500 });
-    target.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, touches: [t(x0)], changedTouches: [t(x0)] })); target.dispatchEvent(new TouchEvent('touchend', { bubbles: true, touches: [], changedTouches: [t(x1)] })); }, [x0, x1]);
+  // sel: start the swipe on that element (a point can land on a widget that scrolls sideways, where swipes are ignored)
+  const swipe = (x0, x1, sel) => p.evaluate(([x0, x1, sel]) => { const target = sel ? [...document.querySelectorAll(sel)].find(e => e.getBoundingClientRect().width) : document.elementFromPoint(x0, 500); const t = x => new Touch({ identifier: 1, target, clientX: x, clientY: 500 });
+    target.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, touches: [t(x0)], changedTouches: [t(x0)] })); target.dispatchEvent(new TouchEvent('touchend', { bubbles: true, touches: [], changedTouches: [t(x1)] })); }, [x0, x1, sel]);
   const view = () => p.evaluate(() => ({ v: document.documentElement.dataset.mview, digest: getComputedStyle(document.querySelector('#digest')).display, cards: document.querySelectorAll('#dgrid .dcard').length,
     exit: getComputedStyle(document.querySelector('#digest-exit')).display, tabs: [...document.querySelectorAll('#mview button')].map(b => b.textContent + (b.getAttribute('aria-selected') === 'true' ? '*' : '')).join('|') }));
   ok((await view()).tabs === 'Overzicht|Nieuws*|Dagelijks|Achtergrond', 'phone: four tabs, starts on the news');
@@ -82,8 +83,10 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   ok(v.v === 'overview' && v.digest === 'block' && v.cards >= 3 && v.exit === 'none', `swipe right from the news: overview (${v.cards} cards, no "Volledige weergave" button)`);
   await swipe(300, 100); await p.waitForTimeout(200); await swipe(300, 100); await p.waitForTimeout(200);
   ok((await view()).v === 'panels', 'two swipes left: panels');
-  await swipe(300, 100); await p.waitForTimeout(200);
-  ok((await view()).v === 'panels', 'no view after the panels');
+  await swipe(300, 100, '.panel h2'); await p.waitForTimeout(200);
+  ok((await view()).v === 'panels2', 'third swipe left: Achtergrond');
+  await swipe(300, 100, '.panel h2'); await p.waitForTimeout(200);
+  ok((await view()).v === 'panels2', 'no view after Achtergrond');
   await p.click('#mv-news'); await p.evaluate(() => scrollTo(0, 0));
   const n0 = await p.evaluate(() => performance.getEntriesByType('resource').filter(e => /api\/news/.test(e.name)).length);
   await p.evaluate(() => { const target = document.querySelector('#stream'); const t = y => new Touch({ identifier: 2, target, clientX: 200, clientY: y });

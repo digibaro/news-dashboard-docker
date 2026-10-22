@@ -154,8 +154,8 @@ func (a *App) handleNLAlert(w http.ResponseWriter, r *http.Request) {
 // from every network.
 
 type FuelPrice struct {
-	Fuel   string  `json:"fuel"`   // euro95 | diesel | lpg
-	Name   string  `json:"name"`   // Euro95 (E10), Diesel, LPG
+	Fuel   string  `json:"fuel"`   // euro95 | euro98 | diesel | lpg
+	Name   string  `json:"name"`   // Euro95 (E10), Euro98 (E5), Diesel, LPG
 	Price  float64 `json:"price"`  // euro per litre
 	Change float64 `json:"change"` // cents compared with yesterday
 }
@@ -166,7 +166,8 @@ type FuelData struct {
 }
 
 var (
-	fuelProducts = []struct{ slug, name string }{{"euro95", "Euro95 (E10)"}, {"diesel", "Diesel"}, {"lpg", "LPG"}}
+	// page is the product slug at UnitedConsumers, where "Super" is Super 98 (E5): Euro98
+	fuelProducts = []struct{ page, slug, name string }{{"euro95", "euro95", "Euro95 (E10)"}, {"super", "euro98", "Euro98 (E5)"}, {"diesel", "diesel", "Diesel"}, {"lpg", "lpg", "LPG"}}
 	fuelPriceRe  = regexp.MustCompile(`€(?:\s|&nbsp;|&#160;|\x{a0})*(\d),(\d{3})`)
 	fuelChangeRe = regexp.MustCompile(`(?s)Verschil.*?</span>\s*([+\-−]?\s?\d{1,3},\d)\s*</div>`)
 	fuelArrowRe  = regexp.MustCompile(`pijl-(omhoog|omlaag|linksrechts)`)
@@ -179,7 +180,7 @@ func parseFuelPrices(body []byte) (FuelData, error) {
 	s := string(body)
 	d := FuelData{Prices: []FuelPrice{}}
 	for _, p := range fuelProducts {
-		i := strings.Index(s, `href="/tanken/brandstofprijzen/product/`+p.slug+`"`)
+		i := strings.Index(s, `href="/tanken/brandstofprijzen/product/`+p.page+`"`)
 		if i < 0 {
 			continue
 		}

@@ -251,6 +251,19 @@ svg.i { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor;
 .awmsg .awtxt strong { display: block; font-size: 15px; color: var(--sev-crit); }
 .awmsg .btn { flex: none; }
 @media (max-width: 480px) { .awmsg { flex-wrap: wrap; } .awmsg .awtxt { flex-basis: calc(100% - 40px); } }
+.brsec .brl .brg { display: grid; grid-template-columns: 1.6rem minmax(0, 1fr) auto; column-gap: 8px; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--line); }
+.brstar { border: 0; background: none; padding: 0; font-size: 17px; line-height: 1; cursor: pointer; color: var(--text-3); min-width: 24px; min-height: 24px; }
+.brstar[aria-pressed="true"] { color: var(--sev-med); }
+.brg .where { min-width: 0; font-size: 13px; }
+.brg .where b { font-weight: 600; }
+.brg .where > span { display: block; color: var(--text-3); font-size: 12px; }
+.brst { font-size: 13px; font-weight: 650; white-space: nowrap; color: var(--text-2); }
+.brst.open { color: var(--sev-crit); }
+.brst.soon { color: var(--sev-high); }
+.brst.shut { color: var(--text-3); font-weight: 500; }
+.brlist { max-height: 320px; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px; padding: 0 10px; margin-top: 6px; }
+.brlist .opt { font-size: 13px; }
+.brlist .brnone { color: var(--text-3); }
 .awlist { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .awlist li { display: flex; align-items: flex-start; gap: 8px; justify-content: space-between; padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px; }
 .awlist li > div { min-width: 0; }
@@ -691,8 +704,8 @@ table.tt { width: 100%; border-collapse: collapse; font-size: 12px; }
 
 /* ---------- Brandstofprijzen ---------- */
 .fuel .chg { min-width: 6em; }
-.fusk { height: 124px; }
-@media (max-width: 699px) { .fusk { height: 141px; } }
+.fusk { height: 149px; }
+@media (max-width: 699px) { .fusk { height: 166px; } }
 
 /* ---------- Afvalkalender ---------- */
 .waste { list-style: none; margin: 0; padding: 0; font-size: 13px; }
@@ -1177,6 +1190,12 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.33.0</h3>
+    <ul>
+      <li>Nieuw in het paneel Verkeer: Bruggen. Zie welke bruggen nu open zijn en wanneer bruggen open gaan (bron: NDW, namen van Rijkswaterstaat).</li>
+      <li>Kies je favoriete bruggen uit alle beweegbare bruggen van Nederland, met ☆ of onder Instellingen → Bruggen (zoek op naam of plaats). Onder Favorieten zie je of ze open zijn en wanneer ze volgens de planning opengaan; onder Gepland de andere openingen. De planning gaat vooral over Noord-Holland.</li>
+      <li>Brandstofprijzen: Euro98 staat er nu ook bij.</li>
+    </ul>
     <h3>Versie 1.32.0</h3>
     <ul>
       <li>Nieuw: de Alarmeringen-wachter. Volg tot 10 straten (straat en plaats, eventueel alleen bij spoed) onder Instellingen → Alarmeringen-wachter. Bij een nieuwe alarmering in zo'n straat krijg je een melding in beeld, een alarmgeluid en een bureaubladmelding, ook als het dashboard in een tabblad op de achtergrond staat.</li>
@@ -1443,6 +1462,12 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.33.0</h3>
+    <ul>
+      <li>New in the Traffic panel: Bridges. See which bridges are open now and when bridges will open (source: NDW, names from Rijkswaterstaat).</li>
+      <li>Choose your favourite bridges from all movable bridges in the Netherlands, with ☆ or under Settings → Bridges (search by name or place). Under Favourites you see whether they are open and when they are planned to open; under Planned the other openings. The planning mainly covers Noord-Holland.</li>
+      <li>Fuel prices: Euro98 is now included.</li>
+    </ul>
     <h3>Version 1.32.0</h3>
     <ul>
       <li>New: the emergency alert watch. Watch up to 10 streets (street and place, optionally urgent only) under Settings → Emergency alert watch. A new emergency alert in such a street gives an on-screen alert, an alarm sound and a desktop notification, also when the dashboard is in a background tab.</li>
@@ -1780,6 +1805,14 @@ textarea.json {
       </div>
       <p class="msg" id="alarm-msg" role="status"></p>
     </section>
+    <section aria-labelledby="set-bridges-h" id="set-bridges">
+      <h3 id="set-bridges-h">Bruggen</h3>
+      <p class="hint">Favoriete bruggen staan in het paneel Verkeer onder Favorieten, met hun volgende openingen; de andere openingen staan onder Gepland. Je kunt ook kiezen met ☆ in het paneel. Tot 20 bruggen. Zoek op de naam van de brug of de plaats (niet op wegnummer).</p>
+      <input class="field" style="width:100%" id="br-q" placeholder="Zoek brug of plaats, bijv. Zaandam" autocomplete="off" aria-label="Zoek brug of plaats">
+      <p class="hint" id="br-count"></p>
+      <div class="brlist" id="br-list" role="group" aria-labelledby="set-bridges-h"></div>
+      <p class="msg" id="br-msg" role="status"></p>
+    </section>
     <section aria-labelledby="set-aw-h" id="set-aw">
       <h3 id="set-aw-h">Alarmeringen-wachter</h3>
       <p class="hint">Een melding met geluid bij een alarmering (P2000) in een straat die je volgt. Werkt terwijl het dashboard open is, ook in een tabblad op de achtergrond; met Meldingen aan (hieronder) ook als het dicht is. Bron: Zwaailicht.nl, meestal binnen enkele minuten. Geen vervanging van officiële alarmering.</p>
@@ -1963,7 +1996,7 @@ const MIN = 60e3;
 const DEFAULTS = {
   v: 2, theme: 'auto', sources: null, known: [], pageSize: 60, summaries: true,
   density: 'compact', category: 'all', weather: null, threatTab: 'ips', advTab: 'adv', advFilter: 'all',
-  lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, trending: true, pushTopics: null, waste: null, sports: null, sportsSeen: null, solar: null, saver: 'auto', hazardTab: 'nl', watch: [], mute: [], alarmWatch: [], alarmSound: true,
+  lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, trending: true, pushTopics: null, waste: null, sports: null, sportsSeen: null, solar: null, saver: 'auto', hazardTab: 'nl', watch: [], mute: [], alarmWatch: [], alarmSound: true, bridges: [], bridgeTab: 'fav',
   panels: { order: PANEL_IDS.slice(), collapsed: {}, hidden: {}, page: {} },
 };
 
@@ -3025,6 +3058,16 @@ const EN = {
   "Geluid staat uit.": "Sound is off.", "Geen bureaubladmelding: deze browser staat meldingen voor deze site niet toe.": "No desktop notification: this browser does not allow notifications for this site.",
   "Alarmeringen-wachter: een alarmering in een straat die je volgt": "Emergency alert watch: an alert in a street you watch",
   "Krijg een melding op dit apparaat, ook als het dashboard dicht is. Voor NL-Alerts wordt je weerlocatie (afgerond op ongeveer 1 km) naar deze server gestuurd, voor de afvalmelding je adres en voor de Alarmeringen-wachter je straten.": "Get a notification on this device, even when the dashboard is closed. For NL-Alerts your weather location (rounded to about 1 km) is sent to this server, for the waste reminder your address, and for the emergency alert watch your streets.",
+  "Bruggen": "Bridges", "Brugopeningen worden voor het eerst opgehaald.": "Bridge openings are being fetched for the first time.", "Brug {id}": "Bridge {id}",
+  "{name} uit favorieten halen": "Remove {name} from favourites", "{name} aan favorieten toevoegen": "Add {name} to favourites", "Je hebt al 20 favoriete bruggen.": "You already have 20 favourite bridges.",
+  "Favorieten ({n})": "Favourites ({n})", "Gepland": "Planned", "Nog geen favorieten. Kies bruggen met ☆ onder Gepland of in Instellingen → Bruggen.": "No favourites yet. Choose bridges with ☆ under Planned or in Settings → Bridges.",
+  "Open sinds {t}": "Open since {t}", "daarna gepland {t}": "then planned {t}", "Gepland open tot {t}": "Planned open until {t}", "Open {a}–{b}": "Open {a}–{b}", "daarna {list}": "then {list}",
+  "Dicht": "Closed", "geen opening gepland (24 uur)": "no opening planned (24 hours)", "Geen brugopeningen gepland.": "No bridge openings planned.", "nu open": "open now", "{a}–{b}": "{a}–{b}",
+  "Meer bruggen ({n})": "More bridges ({n})", "Nu open: bruggen die bij NDW zijn aangesloten · gepland: vooral Noord-Holland · namen: Rijkswaterstaat vaarweginformatie": "Open now: bridges connected to NDW · planned: mainly Noord-Holland · names: Rijkswaterstaat fairway information",
+  "Geen brug gevonden.": "No bridge found.", "De lijst met bruggen wordt nog opgehaald.": "The list of bridges is still being fetched.",
+  "Favoriete bruggen staan in het paneel Verkeer onder Favorieten, met hun volgende openingen; de andere openingen staan onder Gepland. Je kunt ook kiezen met ☆ in het paneel. Tot 20 bruggen. Zoek op de naam van de brug of de plaats (niet op wegnummer).": "Favourite bridges are in the Traffic panel under Favourites, with their next openings; the other openings are under Planned. You can also choose with ☆ in the panel. Up to 20 bridges. Search by bridge name or place (not by road number).",
+  "{n} favorieten · {m} beweegbare bruggen, {k} met gegevens van NDW": "{n} favourites · {m} movable bridges, {k} with NDW data", "nog geen gegevens van NDW": "no NDW data yet", "{n} meer; zoek verder op naam of plaats.": "{n} more; search by name or place.",
+  "Zoek brug of plaats, bijv. Zaandam": "Search bridge or place, e.g. Zaandam", "Zoek brug of plaats": "Search bridge or place", "Euro98 (E5)": "Euro98 (E5)",
   "Hoogwater en stormvloed": "High water and storm surge", "Rijkswaterstaat is niet bereikbaar ({err}).": "Rijkswaterstaat cannot be reached ({err}).",
   "Overal code groen: geen hoogwater.": "Code green everywhere: no high water.", "Verwacht: {code} vanaf {t}.": "Expected: {code} from {t}.",
   "Stormvloedkering dicht": "Storm-surge barrier closed", "Stormvloedkeringen: alle {n} open.": "Storm-surge barriers: all {n} open.",
@@ -3226,6 +3269,9 @@ function sanitize(p) {
   }
   if (['all', 'high', 'new', 'watch'].includes(p.advFilter)) d.advFilter = p.advFilter;
   for (const k of ['onboarded', 'group', 'hideRead', 'images', 'trending', 'alarmSound']) if (typeof p[k] === 'boolean') d[k] = p[k];
+  if (Array.isArray(p.bridges)) d.bridges = p.bridges.filter(b => b && typeof b === 'object' && /^[A-Z][A-Z0-9]{2,24}$/.test(b.id) && typeof b.name === 'string')
+    .slice(0, 20).map(b => ({ id: b.id, name: b.name.slice(0, 80), city: typeof b.city === 'string' ? b.city.slice(0, 60) : '' }));
+  if (['fav', 'plan'].includes(p.bridgeTab)) d.bridgeTab = p.bridgeTab;
   if (Array.isArray(p.alarmWatch)) d.alarmWatch = p.alarmWatch.filter(r => r && typeof r === 'object' && /^[a-z0-9][a-z0-9-]{1,48}$/.test(r.city) && typeof r.street === 'string' && r.street.trim().length >= 3)
     .slice(0, 10).map(r => ({ city: r.city, cityName: typeof r.cityName === 'string' ? r.cityName.slice(0, 60) : null, street: r.street.trim().slice(0, 60), spoed: r.spoed === true }));
   if (p.waste && typeof p.waste === 'object') {
@@ -3908,7 +3954,7 @@ const summaryOf = {
   energy: () => { const en = panelData.energy?.data?.data; if (!en) return null; const ds = energyDays(en), cur = pointAt(ds.all, Date.now());
     const win = cheapestWindow(ds.today.filter(p => +p.date + 36e5 > Date.now()), 3);
     return [cur ? t('nu {p}/kWh', { p: eur(cur.p) }) : null, win ? t('goedkoopst {span}', { span: hourSpan(win.from, 3) }) : null].filter(Boolean).join(' · ') || null; },
-  fuel: () => { const f = panelData.fuel?.data?.data?.prices; return f?.length ? f.filter(p => p.fuel !== 'lpg').map(p => `${tr(p.name).replace(' (E10)', '')} ${euro3(p.price)}`).join(' · ') : null; },
+  fuel: () => { const f = panelData.fuel?.data?.data?.prices; return f?.length ? f.filter(p => p.fuel !== 'lpg').map(p => `${tr(p.name).replace(/ \(E\d+\)$/, '')} ${euro3(p.price)}`).join(' · ') : null; },
   economy: () => { const e = panelData.economy?.data?.data; if (!e) return null;
     return [e.inflation?.at(-1) ? t('inflatie {v}', { v: pct1(e.inflation.at(-1).value) }) : null, e.rate ? t('ECB {v}', { v: e.rate.value.toLocaleString(locale(), { minimumFractionDigits: 2 }) + '%' }) : null].filter(Boolean).join(' · ') || null; },
   markets: () => { const aex = panelData.markets?.data?.data?.indices?.find(q => q.symbol === '^AEX'); return aex ? `AEX ${price2(aex.price)} ${pctSigned(aex.change_pct)}` : null; },
@@ -4608,9 +4654,114 @@ async function loadAlerts() {
 // ---------------------------------------------------------------- traffic (NDW)
 let jamsShown = 8;
 async function loadTraffic() {
+  const br = loadBridges(false);
   try { panelData.traffic = { data: await api('api/traffic') }; }
   catch (e) { panelData.traffic = { ...(panelData.traffic || {}), error: e }; }
+  await br;
   renderPanel('traffic');
+}
+
+// ---------------------------------------------------------------- bruggen (Verkeer panel)
+// Open now and planned openings from NDW; favourites (prefs.bridges) get their own tab with
+// their next openings, the other bridges are under Gepland.
+let bridgesShown = 10;
+async function loadBridges(render = true) {
+  if (!catalog?.bridges) { panelData.bridges = null; return; }
+  const fav = prefs.bridges.map(b => b.id).join(',');
+  try { panelData.bridges = { data: await api('api/bridges' + (fav ? '?fav=' + encodeURIComponent(fav) : '')) }; }
+  catch (e) { panelData.bridges = { ...(panelData.bridges || {}), error: e }; }
+  const ren = panelData.bridges?.data?.data?.renamed; // favourites saved with an NDW code get the bridge id
+  if (ren && prefs.bridges.some(b => ren[b.id])) { prefs.bridges = prefs.bridges.map(b => ren[b.id] ? { ...b, id: ren[b.id] } : b); savePrefs(); }
+  if (render) renderPanel('traffic');
+}
+const isFavBridge = id => prefs.bridges.some(b => b.id === id);
+function toggleFavBridge(b, on) {
+  prefs.bridges = prefs.bridges.filter(x => x.id !== b.id);
+  if (on) {
+    if (prefs.bridges.length >= 20) return false;
+    prefs.bridges.push({ id: b.id, name: b.name, city: b.city || '' });
+  }
+  savePrefs();
+  loadBridges();
+  if ($('#settings')?.open) renderBridgeSettings();
+  return true;
+}
+const hhmm = d => fmt.time.format(new Date(d));
+function bridgeNodes() {
+  const r = panelData.bridges?.data;
+  if (!r?.enabled) return [];
+  const d = r.data;
+  if (!d) return [h('div', { class: 'wxsec brsec' }, h('h3', { text: t('Bruggen') }), h('p', { class: 'pnote', text: r.error ? t('NDW is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: r.error }) : t('Brugopeningen worden voor het eerst opgehaald.') }))];
+  const info = new Map(d.bridges.map(b => [b.id, b]));
+  for (const f of prefs.bridges) if (!info.has(f.id)) info.set(f.id, f); // not seen since the server started
+  const nameOf = id => info.get(id) || { id, name: t('Brug {id}', { id }), city: '' };
+  const open = new Map(d.open.map(o => [o.id, o]));
+  const star = b => {
+    const on = isFavBridge(b.id);
+    return h('button', { class: 'brstar', type: 'button', 'aria-pressed': String(on), text: on ? '★' : '☆',
+      'aria-label': on ? t('{name} uit favorieten halen', { name: b.name }) : t('{name} aan favorieten toevoegen', { name: b.name }),
+      onclick: () => { if (!toggleFavBridge(b, !on)) alert(t('Je hebt al 20 favoriete bruggen.')); } });
+  };
+  const row = (b, status, cls, sub) => h('li', { class: 'brg' }, star(b),
+    h('span', { class: 'where' }, h('b', { text: b.name, translate: 'no' }), h('span', null, b.city ? h('span', { class: 'brcity', text: b.city, translate: 'no' }) : null, b.city && sub ? ' · ' : '', sub || '')),
+    h('span', { class: 'brst ' + (cls || ''), text: status }));
+  const tab = prefs.bridgeTab === 'plan' ? 'plan' : 'fav';
+  const tabs = h('div', { class: 'sectabs', role: 'group', 'aria-label': t('Bruggen') }, [['fav', t('Favorieten ({n})', { n: prefs.bridges.length })], ['plan', t('Gepland')]].map(([id, label]) =>
+    h('button', { class: 'chip', type: 'button', 'aria-pressed': String(tab === id), text: label,
+      onclick: () => { prefs.bridgeTab = id; bridgesShown = 10; savePrefs(); renderPanel('traffic'); $('#panel-traffic .brsec .sectabs [aria-pressed="true"]')?.focus(); } })));
+  const out = [];
+  if (tab === 'fav') {
+    if (!prefs.bridges.length) out.push(h('p', { class: 'pnote', text: t('Nog geen favorieten. Kies bruggen met ☆ onder Gepland of in Instellingen → Bruggen.') }));
+    else out.push(h('ul', { class: 'jams brl' }, prefs.bridges.map(f => {
+      const b = nameOf(f.id), o = open.get(f.id), next = d.fav_planned.filter(p => p.id === f.id);
+      if (!o && !next.length && d.bridges.some(x => x.id === f.id && !x.ndw)) return row(b, '—', 'shut', t('nog geen gegevens van NDW'));
+      if (o) return row(b, t('Open sinds {t}', { t: hhmm(o.start) }), 'open', next[0] && new Date(next[0].start) > new Date() ? t('daarna gepland {t}', { t: hhmm(next[0].start) }) : '');
+      if (next.length) {
+        const now = Date.now(), cur = next.find(p => Date.parse(p.start) <= now && Date.parse(p.end) > now);
+        return row(b, cur ? t('Gepland open tot {t}', { t: hhmm(cur.end) }) : t('Open {a}–{b}', { a: hhmm(next[0].start), b: hhmm(next[0].end) }), cur ? 'soon' : '',
+          next.length > 1 ? t('daarna {list}', { list: next.slice(1).map(p => hhmm(p.start)).join(', ') }) : '');
+      }
+      return row(b, t('Dicht'), 'shut', t('geen opening gepland (24 uur)'));
+    })));
+  } else {
+    const items = [...d.open.filter(o => !isFavBridge(o.id)).map(o => ({ o, open: true })), ...d.planned.filter(p => !open.has(p.id)).map(o => ({ o, open: false }))];
+    if (!items.length) out.push(h('p', { class: 'pnote', text: t('Geen brugopeningen gepland.') }));
+    else {
+      out.push(h('ul', { class: 'jams brl' }, items.slice(0, bridgesShown).map(({ o, open: isOpen }) => {
+        const b = nameOf(o.id);
+        return isOpen ? row(b, t('Open sinds {t}', { t: hhmm(o.start) }), 'open', t('nu open'))
+          : row(b, t('{a}–{b}', { a: hhmm(o.start), b: hhmm(o.end) }), Date.parse(o.start) <= Date.now() ? 'soon' : '', t('gepland'));
+      })));
+      if (items.length > bridgesShown) out.push(h('button', { class: 'more small', type: 'button', text: t('Meer bruggen ({n})', { n: items.length - bridgesShown }),
+        onclick: () => { bridgesShown += 20; renderPanel('traffic'); } }));
+    }
+  }
+  return [h('div', { class: 'wxsec brsec' }, h('h3', { text: t('Bruggen') }), tabs, ...out,
+    h('p', { class: 'pfoot' }, t('Nu open: bruggen die bij NDW zijn aangesloten · gepland: vooral Noord-Holland · namen: Rijkswaterstaat vaarweginformatie')))];
+}
+let bridgeList = null; // every movable bridge, fetched when Instellingen opens
+async function renderBridgeSettings() {
+  const box = $('#br-list');
+  if (!box) return;
+  $('#set-bridges').hidden = !catalog?.bridges;
+  if (!catalog?.bridges) return;
+  if (!bridgeList) {
+    box.replaceChildren(h('p', { class: 'hint', text: t('De lijst met bruggen wordt nog opgehaald.') }));
+    try { bridgeList = (await api('api/bridges/list')).bridges || []; } catch { bridgeList = null; return; }
+  }
+  const q = fold($('#br-q').value.trim());
+  const known = new Map(bridgeList.map(b => [b.id, b]));
+  for (const f of prefs.bridges) if (!known.has(f.id)) known.set(f.id, f);
+  const ndwN = bridgeList.filter(b => b.ndw).length;
+  // without a search: favourites and the bridges NDW reports; with a search: every match
+  const list = [...known.values()].filter(b => q ? fold(`${b.name} ${b.city || ''}`).includes(q) : isFavBridge(b.id) || b.ndw)
+    .sort((a, b) => (isFavBridge(b.id) - isFavBridge(a.id)) || (!!b.ndw - !!a.ndw) || (a.city || '').localeCompare(b.city || '', 'nl') || a.name.localeCompare(b.name, 'nl'));
+  $('#br-count').textContent = t('{n} favorieten · {m} beweegbare bruggen, {k} met gegevens van NDW', { n: prefs.bridges.length, m: bridgeList.length, k: ndwN });
+  box.replaceChildren(...(list.length ? list.slice(0, 150).map(b => h('label', { class: 'opt' },
+    h('span', null, h('span', { translate: 'no' }, h('b', { text: b.name }), b.city ? ' · ' + b.city : ''), b.ndw ? null : h('small', { class: 'brnone', text: ' · ' + t('nog geen gegevens van NDW') })),
+    h('input', { type: 'checkbox', checked: isFavBridge(b.id), onchange: e => { if (!toggleFavBridge(b, e.target.checked)) { e.target.checked = false; $('#br-msg').textContent = t('Je hebt al 20 favoriete bruggen.'); } } })))
+    : [h('p', { class: 'hint', text: t('Geen brug gevonden.') })]),
+    ...(list.length > 150 ? [h('p', { class: 'hint', text: t('{n} meer; zoek verder op naam of plaats.', { n: list.length - 150 }) })] : []));
 }
 const minutes = s => Math.max(1, Math.round(s / 60));
 function durationNL(s) {
@@ -4661,6 +4812,7 @@ function renderTraffic(body) {
         h('span', { class: 'where', translate: 'no' }, h('b', { text: tr(a.dir) || a.road || t('Onbekende weg') }), h('span', { text: a.to ? t('bij {a}', { a: a.to }) : '' })),
         h('span', { class: 'dl', text: a.since ? fmt.time.format(new Date(a.since)) : '' }))))));
   }
+  out.push(...bridgeNodes());
   out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink(r.source.url, tr(r.source.name)), ', open data',
     d.location_table ? t(' · wegnamen: VILD {v}', { v: d.location_table }) : t(' · wegnamen niet beschikbaar')));
   body.replaceChildren(...out);
@@ -6903,7 +7055,7 @@ function renderDigest() {
     if (panelOn('markets') && st.length >= 2) lines.push(h('p', { translate: 'no', text: `▲ ${st[0].name} ${st[0].change_pct > 0 ? '+' : ''}${st[0].change_pct.toLocaleString(locale())}% · ▼ ${st.at(-1).name} ${st.at(-1).change_pct.toLocaleString(locale())}%` }));
     if (panelOn('economy') && ec) lines.push(h('p', { text: [ec.inflation?.at(-1) ? t('inflatie {v}', { v: pct1(ec.inflation.at(-1).value) }) : null, ec.unemployment?.at(-1) ? t('werkloosheid {v}', { v: pct1(ec.unemployment.at(-1).value) }) : null,
       ec.rate ? t('ECB {v}', { v: ec.rate.value.toLocaleString(locale(), { minimumFractionDigits: 2 }) + '%' }) : null].filter(Boolean).join(' · ') }));
-    if (panelOn('fuel') && fu?.prices?.length) lines.push(h('p', { text: fu.prices.filter(p => p.fuel !== 'lpg').map(p => `${tr(p.name).replace(' (E10)', '')} ${euro3(p.price)}`).join(' · ') }));
+    if (panelOn('fuel') && fu?.prices?.length) lines.push(h('p', { text: fu.prices.filter(p => p.fuel !== 'lpg').map(p => `${tr(p.name).replace(/ \(E\d+\)$/, '')} ${euro3(p.price)}`).join(' · ') }));
     cards.push(dCard(panelOn('markets') ? 'markets' : panelOn('economy') ? 'economy' : 'fuel', 'Beurs en economie', lines));
   }
   const air = panelData.air?.data;
@@ -7116,6 +7268,7 @@ function openSettings(target) {
   $('#alarm-city').value = prefs.alarmCity ? alarmCityName() : '';
   $('#alarm-msg').textContent = '';
   renderAwList(); $('#aw-msg').textContent = '';
+  renderBridgeSettings(); $('#br-msg').textContent = '';
   $('#prefs-json').value = JSON.stringify(prefs, null, 2);
   $('#prefs-msg').textContent = '';
   if (!dlg.open) dlg.showModal();
@@ -7486,6 +7639,7 @@ function wire() {
   $('#wx-geo').addEventListener('click', useMyLocation);
   wireAirSettings();
   wireAwSettings();
+  $('#br-q').addEventListener('input', renderBridgeSettings);
   wireWasteSettings();
   wireSolarSettings();
   for (const r of document.querySelectorAll('input[name="mode"]')) r.addEventListener('change', () => setMode(r.value));
@@ -7574,6 +7728,7 @@ async function init() {
   every(R('ap', 30), loadAP);
   every(R('alerts', 3), loadAlerts);
   every(R('traffic', 5), loadTraffic);
+  every(R('bridges', 2), loadBridges);
   every(R('alarms', 2), loadAlarms);
   every(R('breaches', 30), loadBreaches);
   every(R('energy', 30), loadEnergy);

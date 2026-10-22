@@ -140,3 +140,4 @@ for (const lng of ['nl', 'en']) {
 }
 await b.close();
 console.log(fails ? `${fails} FAILED` : 'ALL PASSED');
+process.exit(fails ? 1 : 0);

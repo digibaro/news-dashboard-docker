@@ -25,3 +25,4 @@ for (const [w, lang] of [[1440, 'nl'], [360, 'nl'], [1440, 'en']]) {
 }
 await b.close();
 console.log(fails ? `\n${fails} FAILED` : '\nALL PASSED');
+process.exit(fails ? 1 : 0);

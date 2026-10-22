@@ -30,13 +30,14 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Satellietbeeld:** the latest Meteosat image of the Benelux from EUMETSAT, every 10 minutes: true colour by day, clouds and city lights at night, with coastlines and borders. The server fetches it and serves it itself.
 - **Vanavond aan de hemel:** when it gets dark, the moon, the planets you can see tonight (when and in which direction), the chance of northern lights, the clouds and active meteor showers, **space weather** (the NOAA scales for geomagnetic storms, radiation storms and radio blackouts, now and for 3 days, and the strongest solar flare of the day) and the next rocket launches (Launch Library 2).
 - **Sportagenda:** Formula 1 (next race with qualifying, last podium, standings) and the important races and tournaments of road cycling (classics, grand tours, EK, WK), mountain biking (EK, WK), athletics (NK, EK, WK, big marathons) and football (EK and WK only): per sport what is on now and the next three, with matching headlines while an event is on. Visitors choose their sports.
-- **Brandstofprijzen:** the national average recommended pump price (GLA) for Euro95, diesel and LPG, with the change since yesterday.
+- **Brandstofprijzen:** the national average recommended pump price (GLA) for Euro95, Euro98, diesel and LPG, with the change since yesterday.
 - **Treinstoringen:** current rail disruptions and engineering works from the NS Disruptions API (needs a free key).
 - **Economie in cijfers:** Dutch inflation (with the euro-area figure and a 12-month trend), unemployment, the ECB deposit rate and the euro in dollars, from Eurostat and the ECB.
 - **Beurs:** the AEX, AMX, BEL 20, DAX, Euro Stoxx 50, S&P 500 and Nasdaq, Brent oil, gold and bitcoin, plus the top 3 risers and fallers of the AEX (delayed prices, Yahoo Finance).
 - **Energieprijzen:** today's and tomorrow's hourly electricity prices and the gas price (EnergyZero), with a chart and the cheapest 3 hours.
 - **Politiek vandaag:** today's debates and committee meetings of the Tweede Kamer (or the next sitting day) and the latest votes.
 - **Verkeer:** jams, accidents and road closures from NDW open data (Rijkswaterstaat), with readable road names.
+- **Bruggen** (in Verkeer): bridges open now and planned openings from NDW, with names from Rijkswaterstaat's vaarweginformatie.nl. Tab *Favorieten*: your chosen bridges (☆ in the panel or *Instellingen → Bruggen*, up to 20, from all ~1500 movable bridges in the Netherlands) with their status and next openings, or "no NDW data yet" for a bridge NDW has not reported; tab *Gepland*: the bridges open now and the next planned openings of the others. The planning feed covers mainly Noord-Holland.
 - **Alarmeringen:** the latest P2000 alerts for your city from Zwaailicht.nl, grouped as Brandweer, Ambulance, Politie and Lifeliner (at most 2 each). The city is chosen per visitor under Instellingen.
 - **Alarmeringen-wachter:** watch up to 10 specific streets (street + place, optionally only urgent alerts). A new alert in such a street gives a banner, a two-tone sound and a desktop notification while the dashboard is open (also in a background tab), and a push notification that stays on screen when it is closed (topic *Alarmeringen-wachter*). Set under *Instellingen → Alarmeringen-wachter*, with a test button.
 - **Datalekken:** the latest 3 Dutch and 3 other data breaches at organisations, from Have I Been Pwned: number of accounts, leak date, and what data leaked. Below them **Oplichting en phishing**: the latest scam warnings of the Fraudehelpdesk.
@@ -204,6 +205,7 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 | `nlthreat` | Dreigingsbeeld NL: `enabled`, `radar_url` (Cloudflare Radar API), `country` (default NL), `interval` (default 30m, min. 15m) |
 | `alerts` | top bar: `nctv` (`enabled`, `url`, `interval`, min. 1h) and `knmi` (`true`/`false`) |
 | `traffic` | `enabled`, `interval` (min. 2m), `url` (NDW DATEX II publication), `vild_base` (where the VILD location tables live) |
+| `bridges` | Bruggen in Verkeer: `enabled`, `interval` (open now, default 2m, min. 1m; the `traffic.url` download then runs this often), `planned_url` (NDW planning feed), `planned_interval` (default 15m, min. 5m), `names_url` (Rijkswaterstaat FIS WFS: every movable bridge; empty = only bridges NDW reports, named by ISRS code) |
 | `alarms` | `enabled`, `city` (default city slug, e.g. `den-haag`), `base` (feed URL prefix), `interval` (cache per city, min. 1m); `counts` for the top bar: `label`, `cities` (one or more slugs, e.g. a whole safety region), `interval` (1m–10m) |
 | `breaches` | Datalekken panel: `enabled`, `url` (HIBP breach list), `interval` (min. 1h, default 3h), `include_sensitive` (default `false`), `phishing` (default true) and `phishing_url` (Fraudehelpdesk alerts RSS, read every 2 hours) |
 | `outages` | `enabled`, `interval` (min. 5m), `internet` (`enabled`, `base`, `country`, `networks`: `asn` + `name`, max. 10, `interval` min. 10m), `providers`: `id`, `name`, `url`, `homepage`, `format` (`statuspage` for any Atlassian Statuspage `summary.json` / `rss` / `m365` / `gcp` for Google Cloud's `incidents.json`) |
@@ -249,6 +251,7 @@ There are two separate rates:
 | Aardbevingen en natuurrampen | 15m | KNMI 15m, USGS and EONET 30m, natuurbrandrisico 1h, water 10m |
 | Luchtkwaliteit | 15m | index 30m, station list daily; Hitte en smog from the KNMI warnings, RIVM news and the ozone forecast |
 | Traffic | 5m | 5m |
+| Bruggen | 2m | open now 2m (with the traffic download), planned 15m, names once per bridge |
 | Treinstoringen | 3m | 5m |
 | Energieprijzen | 30m | 1h |
 | Economie in cijfers | 60m | 6h (monthly and daily figures) |
@@ -583,7 +586,8 @@ The server fetches everything; browsers only talk to the dashboard itself.
 | CISA KEV (optional) | exploited vulnerabilities | US government work, public domain. |
 | [NCTV](https://www.nctv.nl/onderwerpen/d/dtn) | terrorism threat level | Public page. There is no feed or structured field, so only the sentence "… niveau N op een schaal van 5" is read, every 6 h. If the wording changes the badge says *onbekend*; it never guesses. This is the one deliberate exception to "no HTML scraping". |
 | KNMI via MeteoAlarm | top-bar weather code | KNMI's own RSS (`rss_KNMIwaarschuwingen.xml`) has not been updated since October 2023, so the code comes from the MeteoAlarm feed that carries KNMI's warnings. |
-| [NDW](https://www.ndw.nu/) | traffic | Open data (Rijkswaterstaat, provinces, municipalities), polled every 5 min (≈ 260 KB). ANWB has no public API, and its site is not scraped. Road names come from NDW's VILD location table: only its ~400 KB table is read from the 42 MB zip with HTTP range requests, kept in memory and refreshed weekly or when NDW switches versions. |
+| [NDW](https://www.ndw.nu/) | traffic | Open data (Rijkswaterstaat, provinces, municipalities), polled every 5 min (≈ 260 KB). ANWB has no public API, and its site is not scraped. Road names come from NDW's VILD location table: only its ~400 KB table is read from the 42 MB zip with HTTP range requests, kept in memory and refreshed weekly or when NDW switches versions. Bridges: open now from the same download, planned openings from `planningsfeed_brugopeningen.xml.gz` (≈ 125 KB, every 15 min). |
+| [Rijkswaterstaat vaarweginformatie.nl](https://www.vaarweginformatie.nl/) (FIS) | movable bridges | Every movable bridge (name, place, position; one WFS request of ~0.8 MB a day, kept compactly in memory). NDW names a bridge only by ISRS code and position; an opening belongs to the FIS bridge at that point (within 150 m). Bridges NDW has reported are remembered in `<snapshot>.bridges.json`. |
 | Akamai, AWS, Cloudflare, Azure, Microsoft 365, Google Cloud, STACKIT | outages | The providers' public status feeds. Microsoft 365 uses the JSON behind status.cloud.microsoft (consumer services, undocumented). Google Cloud publishes `incidents.json` (all incidents with start, end, severity and affected locations; no key); STACKIT (Schwarz Digits) uses Atlassian Statuspage. The health of your own tenant would need Microsoft Graph with an app registration. |
 | [RIVM](https://www.rivm.nl/) | health alerts | Public RSS. |
 | [EnergyZero](https://www.energyzero.nl/) | Energieprijzen | The public price API behind EnergyZero's website (day-ahead EPEX prices). Not officially documented and no published terms (checked September 2026); fetched hourly, two small requests. |
@@ -725,6 +729,8 @@ All JSON responses:
 | `GET /api/nlthreat` | Dreigingsbeeld NL: `radar` (`data`: `trend`, `days`, `vectors`, `origins`, `hijacks`, `leaks`, `hijacks_n`, `leaks_n`, `as_names`; or `missing_key`) |
 | `GET /api/alerts` | top bar: NCTV level (`level`, `name`, `since`) KNMI summary (`level`, `active`, `onset`, `types`, `areas`, `heat`) and `water` (`level`, `sectors`, `peak`, `peak_at`, `barriers`, `outlook`) |
 | `GET /api/traffic` | jams (road, direction, from/to, delay), accidents, closure count, VILD version |
+| `GET /api/bridges?fav=` | Bruggen: `open` (open now), `fav_planned` (next 3 openings per favourite; bridge ids comma-separated in `fav`), `planned` (next 60 of the other bridges, 24 h), `bridges` (the bridges these refer to: id, name, city, lat, lon, `ndw` when NDW has reported it), `renamed` (old NDW-code favourites → bridge id) |
+| `GET /api/bridges/list` | every movable bridge in the Netherlands (Rijkswaterstaat FIS, ~1500), for choosing favourites |
 | `GET /api/alarmwatch?r=` | Alarmeringen-wachter: alerts of the last 6 hours in watched streets; `r=<city slug>\|<street>\|<1 = urgent only>`, up to 10 rules; unknown places are reported per city |
 | `GET /api/alarms?city=` | P2000 alerts for a city slug (default from config): per service at most 2, with urgency, units and detail; Lifeliner falls back to national when the city has none |
 | `GET /api/energy` | Energieprijzen: hourly `electricity` (today, tomorrow from ~13:00) and `gas` prices in € incl. VAT (+ configured extras) |
@@ -735,7 +741,7 @@ All JSON responses:
 | `GET /api/utilities` | Kritieke infrastructuur: per grid operator the `active` and `planned` outages (energy, place, status, reported, estimate, customers) and `resolved_24h` |
 | `GET /api/economy` | Economie in cijfers: `inflation` and `unemployment` (13 months), `inflation_ea`, `rate` with `rate_since`, `eurusd` (last 2 days) |
 | `GET /api/nlalert?lat=&lon=` | NL-Alert: `alerts` of the last 14 days (text, English text, start, stop, withdrawn, `near` for the given point or the configured weather location) and the number `active` |
-| `GET /api/fuel` | Brandstofprijzen: `date` and `prices` (fuel, name, price per litre, change in cents) |
+| `GET /api/fuel` | Brandstofprijzen: `date` and `prices` (fuel: euro95, euro98, diesel, lpg; name, price per litre, change in cents) |
 | `GET /api/waste?postcode=&number=&suffix=&provider=` | Afvalkalender for the given address (`own`, `pickups`, `provider`, `calendar`, `home`, or `not_found`); `provider` is optional (default: find automatically). Without parameters the server's default address (`needs_address` when there is none). The address is not echoed. The enabled providers are in `/api/catalog` (`waste_providers`) |
 | `GET /api/amber?lat=&lon=` | AMBER Alert and Vermist Kind Alert: the active `alerts` (title, text, kind, url, photo via `api/img`, area) with `near` for the given point or the weather location |
 | `GET /api/insects?lat=&lon=` | Gezondheid, Teken en muggen: 3 `days` with `ticks` and `mosquito` levels 0–3 (an estimate) |
@@ -816,6 +822,10 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.33.0
+- **Bruggen** in the Verkeer panel: bridges open now and planned openings from NDW open data, with names from Rijkswaterstaat's vaarweginformatie.nl. Choose favourite bridges from all ~1500 movable bridges in the Netherlands (Rijkswaterstaat FIS) with ☆ or under *Instellingen → Bruggen*; tab *Favorieten* shows their status and next openings (or that NDW has no data for that bridge yet), tab *Gepland* the bridges open now and the other planned openings. New config section `bridges`, endpoints `GET /api/bridges` and `GET /api/bridges/list`.
+- **Brandstofprijzen:** Euro98 (E5) added (UnitedConsumers lists it as "Super").
 
 ### 1.32.0
 - **Alarmeringen-wachter:** watch specific streets (up to 10; street + place, optionally only urgent). A new P2000 alert in such a street gives a banner, a two-tone sound and a desktop notification while the dashboard is open (also in a background tab), and a push notification when it is closed (new topic; it stays on screen and vibrates). Matching runs on the server against the whole city feed (whole words, case and accents ignored, a house number is dropped). Alerts from before a street was added never sound; a test button checks sound and notifications. New endpoint `GET /api/alarmwatch`.
