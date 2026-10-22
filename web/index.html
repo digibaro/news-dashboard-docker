@@ -252,6 +252,23 @@ svg.i { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor;
 .awmsg .btn { flex: none; }
 @media (max-width: 480px) { .awmsg { flex-wrap: wrap; } .awmsg .awtxt { flex-basis: calc(100% - 40px); } }
 .brsec .brl .brg { display: grid; grid-template-columns: 1.6rem minmax(0, 1fr) auto; column-gap: 8px; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--line); }
+.mixbar { display: flex; height: 14px; border-radius: 4px; overflow: hidden; margin: 6px 0 4px; background: var(--line); }
+.mixbar span { display: block; height: 100%; }
+.mixleg { list-style: none; margin: 0 0 4px; padding: 0; display: flex; flex-wrap: wrap; gap: 2px 10px; font-size: 12px; color: var(--text-2); }
+.mixleg .sw { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+.mx-wind { background: #3b8fd9; } .mx-solar { background: #f2b705; } .mx-gas { background: #e07b39; } .mx-coal { background: #6b5b53; }
+.mx-nuclear { background: #9b6bd6; } .mx-biomass { background: #4caf50; } .mx-other { background: #9aa0a6; }
+.gasbar { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; margin: 4px 0 6px; }
+.gasbar span { display: block; height: 100%; background: #e07b39; }
+.ggrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 6px 0; }
+.gside { border: 1px solid var(--line); border-radius: 8px; padding: 8px; min-width: 0; }
+.gside .gl { font-size: 12px; color: var(--text-3); }
+.gside .gv { font-weight: 650; font-size: 14px; margin: 2px 0; }
+.gside .gv.bad { color: var(--sev-high); } .gside .gv.ok { color: var(--sev-low); }
+.gside .gs { font-size: 12px; color: var(--text-2); }
+.glv.bad { color: var(--sev-crit); font-weight: 600; } .glv.warn { color: var(--sev-high); font-weight: 600; }
+.phgrp .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; overflow-wrap: anywhere; }
+.rtag { font-size: 11px; padding: 0 5px; border-radius: 4px; background: var(--chip, var(--line)); color: var(--text-2); }
 .brstar { border: 0; background: none; padding: 0; font-size: 17px; line-height: 1; cursor: pointer; color: var(--text-3); min-width: 24px; min-height: 24px; }
 .brstar[aria-pressed="true"] { color: var(--sev-med); }
 .brg .where { min-width: 0; font-size: 13px; }
@@ -827,8 +844,8 @@ table.tt { width: 100%; border-collapse: collapse; font-size: 12px; }
 .bgrp .m, .phgrp .m { flex-wrap: wrap; row-gap: 0; }
 .bgrp .m span + span::before { content: "·"; margin-right: 8px; }
 .bgrp .bdc { margin-top: 2px; font-size: 12px; color: var(--text-2); }
-.bsk { height: 710px; } .bsk .sk { height: 670px; } /* loading placeholder ≈ 2 × 3 breaches + 3 scam warnings */
-@media (max-width: 699px) { .bsk { height: 870px; } .bsk .sk { height: 830px; } }
+.bsk { height: 825px; } .bsk .sk { height: 785px; } /* loading placeholder ≈ 2 × 3 breaches + 3 scam warnings + phishing on Dutch brands */
+@media (max-width: 699px) { .bsk { height: 985px; } .bsk .sk { height: 945px; } }
 
 /* ---------- Outages ---------- */
 .outs { list-style: none; margin: 0; padding: 0; }
@@ -1190,6 +1207,15 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.34.0</h3>
+    <ul>
+      <li>Nieuw paneel Bekendmakingen: vergunningen, verkeersbesluiten en andere officiële besluiten binnen 500 meter van je adres (het adres van de afvalkalender), van officielebekendmakingen.nl.</li>
+      <li>Nieuw paneel Productwaarschuwingen: terugroepacties en veiligheidswaarschuwingen van de NVWA, met een label bij allergieën.</li>
+      <li>Energieprijzen heeft nu tabbladen. Mix &amp; gas: hoeveel stroom nu duurzaam is (wind, zon, gas, kolen…), de groenste 3 uur van vandaag en hoe vol de gasopslag in Nederland en de EU is. Netcongestie: de wachtrij voor zakelijke aansluitingen in jouw gebied.</li>
+      <li>Economie in cijfers: hypotheekrente, huizenprijzen en faillissementen erbij.</li>
+      <li>Datalekken: phishingsites die zich voordoen als een Nederlandse bank, overheid of winkel (alleen de domeinnaam, onschadelijk gemaakt).</li>
+      <li>Nieuwe bron: BNR (via Google News). Computable en AG Connect zitten nu in het onderwerp Tech &amp; security.</li>
+    </ul>
     <h3>Versie 1.33.0</h3>
     <ul>
       <li>Nieuw in het paneel Verkeer: Bruggen. Zie welke bruggen nu open zijn en wanneer bruggen open gaan (bron: NDW, namen van Rijkswaterstaat).</li>
@@ -1462,6 +1488,15 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.34.0</h3>
+    <ul>
+      <li>New panel Official notices: permits, traffic decisions and other official decisions within 500 metres of your address (the waste calendar address), from officielebekendmakingen.nl.</li>
+      <li>New panel Product warnings: recalls and safety warnings from the NVWA, with a label for allergies.</li>
+      <li>Energy prices now has tabs. Mix &amp; gas: how much power is renewable right now (wind, solar, gas, coal…), the greenest 3 hours of today and how full gas storage in the Netherlands and the EU is. Grid congestion: the waiting list for business connections in your area.</li>
+      <li>Economy in figures: mortgage rate, house prices and bankruptcies added.</li>
+      <li>Data breaches: phishing sites posing as a Dutch bank, government service or shop (domain name only, defanged).</li>
+      <li>New source: BNR (via Google News). Computable and AG Connect are now part of the Tech &amp; security topic.</li>
+    </ul>
     <h3>Version 1.33.0</h3>
     <ul>
       <li>New in the Traffic panel: Bridges. See which bridges are open now and when bridges will open (source: NDW, names from Rijkswaterstaat).</li>
@@ -1840,6 +1875,7 @@ textarea.json {
     </section>
     <section aria-labelledby="set-waste-h" id="set-waste">
       <h3 id="set-waste-h">Adres voor de afvalkalender</h3>
+      <p class="hint">Ook gebruikt voor Bekendmakingen in je buurt en Netcongestie (in Energieprijzen).</p>
       <p class="hint" id="waste-now"></p>
       <div class="row" style="margin-top:0">
         <input class="field" style="width:7.5rem" id="waste-pc" placeholder="Postcode" aria-label="Postcode" autocomplete="postal-code" maxlength="7" spellcheck="false">
@@ -1966,8 +2002,10 @@ const PANELS = {
   satellite: 'Satellietbeeld',
   today: 'Vandaag',
   waste: 'Afvalkalender',
+  notices: 'Bekendmakingen',
   air: 'Luchtkwaliteit',
   pollen: 'Gezondheid',
+  recalls: 'Productwaarschuwingen',
   sky: 'Vanavond aan de hemel',
   traffic: 'Verkeer',
   trains: 'Treinstoringen',
@@ -1996,7 +2034,7 @@ const MIN = 60e3;
 const DEFAULTS = {
   v: 2, theme: 'auto', sources: null, known: [], pageSize: 60, summaries: true,
   density: 'compact', category: 'all', weather: null, threatTab: 'ips', advTab: 'adv', advFilter: 'all',
-  lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, trending: true, pushTopics: null, waste: null, sports: null, sportsSeen: null, solar: null, saver: 'auto', hazardTab: 'nl', watch: [], mute: [], alarmWatch: [], alarmSound: true, bridges: [], bridgeTab: 'fav',
+  lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, trending: true, pushTopics: null, waste: null, sports: null, sportsSeen: null, solar: null, saver: 'auto', hazardTab: 'nl', watch: [], mute: [], alarmWatch: [], alarmSound: true, bridges: [], bridgeTab: 'fav', energyTab: 'prices',
   panels: { order: PANEL_IDS.slice(), collapsed: {}, hidden: {}, page: {} },
 };
 
@@ -3125,6 +3163,94 @@ const EN = {
   "Voor de verwachte zonnestroom in Energieprijzen, op je weerlocatie. Alleen in je eigen browser bewaard.": "For the expected solar power in Energy prices, at your weather location. Stored only in your own browser.",
   "Vermogen (kWp)": "Power (kWp)", "Richting": "Direction", "Hellingshoek (°)": "Tilt (°)", "Wissen": "Clear",
   "Zuid": "South", "Zuidoost": "South-east", "Zuidwest": "South-west", "Oost": "East", "West": "West", "Noordoost": "North-east", "Noordwest": "North-west", "Noord": "North",
+  // 1.34: bekendmakingen, productwaarschuwingen, stroommix, gasvoorraad, netcongestie, economie, phishing
+  "Productwaarschuwingen": "Product warnings",
+  "Bekendmakingen": "Official notices",
+  "Productwaarschuwingen konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.": "Product warnings could not be loaded ({err}). Retrying automatically.",
+  "De NVWA is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.": "The NVWA cannot be reached ({err}); retrying automatically.",
+  "De waarschuwingen worden voor het eerst opgehaald.": "The warnings are being loaded for the first time.",
+  "allergie": "allergy",
+  "Geen veiligheidswaarschuwingen van de NVWA in de afgelopen 30 dagen.": "No safety warnings from the NVWA in the last 30 days.",
+  " · terugroepacties en waarschuwingen voor voedsel en producten": " · recalls and warnings for food and products",
+  "{m} m": "{m} m",
+  "{km} km": "{km} km",
+  "Adres wijzigen": "Change address",
+  "adres instellen": "set address",
+  "Bekendmakingen worden opgehaald; bij een grote gemeente duurt dat de eerste keer tot 15 seconden.": "Loading notices; for a big municipality this takes up to 15 seconds the first time.",
+  "Bekendmakingen konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.": "Notices could not be loaded ({err}). Retrying automatically.",
+  "Stel je adres in (hetzelfde als voor de afvalkalender) om vergunningen en besluiten in je buurt te zien.": "Set your address (the same as for the waste calendar) to see permits and decisions near you.",
+  "Dit adres is niet gevonden. Controleer postcode en huisnummer.": "This address was not found. Check the postcode and house number.",
+  "Officiële bekendmakingen zijn niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.": "Official notices cannot be reached ({err}); retrying automatically.",
+  "Binnen {r} van je adres, afgelopen {d} dagen · ": "Within {r} of your address, last {d} days · ",
+  "Officiële bekendmakingen nu niet bereikbaar; je ziet de laatst opgehaalde lijst.": "Official notices cannot be reached now; you see the last list loaded.",
+  "Geen bekendmakingen in je buurt in deze periode.": "No notices near you in this period.",
+  "Toon meer ({n})": "Show more ({n})",
+  " · vergunningen, verkeersbesluiten en andere besluiten met een locatie": " · permits, traffic decisions and other decisions with a location",
+  "wind": "wind",
+  "zon": "solar",
+  "kolen": "coal",
+  "kernenergie": "nuclear",
+  "biomassa": "biomass",
+  "{v} MW": "{v} MW",
+  "Stroommix": "Electricity mix",
+  "energy-charts is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.": "energy-charts cannot be reached ({err}); retrying automatically.",
+  "De stroommix wordt voor het eerst opgehaald.": "The electricity mix is being loaded for the first time.",
+  "duurzaam": "renewable",
+  "gemeten om {t}": "measured at {t}",
+  "Opwekking {g} · verbruik {l}": "Generation {g} · consumption {l}",
+  "Groenste 3 uur vandaag: ": "Greenest 3 hours today: ",
+  " (~{p}% duurzaam)": " (~{p}% renewable)",
+  "Gasvoorraad": "Gas storage",
+  "Voor de gasvoorraad is een gratis sleutel van GIE AGSI+ nodig (keys.agsi_api_key of AGSI_API_KEY in de serverinstellingen).": "Gas storage needs a free GIE AGSI+ key (keys.agsi_api_key or AGSI_API_KEY in the server settings).",
+  "GIE AGSI+ is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.": "GIE AGSI+ cannot be reached ({err}); retrying automatically.",
+  "De gasvoorraad wordt voor het eerst opgehaald.": "Gas storage is being loaded for the first time.",
+  "{p}% vol": "{p}% full",
+  "punt per dag": "points per day",
+  "vorig jaar {p}%": "last year {p}%",
+  "Nederland {p}% vol": "Netherlands {p}% full",
+  "EU": "EU",
+  "Stand op {d}": "As of {d}",
+  "Grootschalige opwekking volgens ENTSO-E, ongeveer 3 uur vertraagd; zonnepanelen op daken tellen grotendeels niet mee.": "Large-scale generation according to ENTSO-E, about 3 hours behind; rooftop solar panels are mostly not included.",
+  "Stel je adres in (hetzelfde als voor de afvalkalender) om de netcongestie bij jou te zien.": "Set your address (the same as for the waste calendar) to see grid congestion where you live.",
+  "Netcongestie wordt opgehaald…": "Loading grid congestion…",
+  "De capaciteitskaart kon niet worden opgehaald ({err}).": "The capacity map could not be loaded ({err}).",
+  "Deze postcode staat niet op de capaciteitskaart.": "This postcode is not on the capacity map.",
+  "De capaciteitskaart is niet bereikbaar ({err}); probeer het later opnieuw.": "The capacity map cannot be reached ({err}); try again later.",
+  "Voedingsgebied ": "Supply area ",
+  "Wachtrij": "Waiting list",
+  "Geen wachtrij": "No waiting list",
+  "{n} verzoeken": "{n} requests",
+  "opgelost verwacht in {y}": "expected to be solved in {y}",
+  "TenneT: ": "TenneT: ",
+  "voldoende": "enough",
+  "in onderzoek": "under study",
+  "tekort": "shortage",
+  "Afname (stroom gebruiken)": "Withdrawal (using power)",
+  "Invoeding (stroom leveren)": "Injection (supplying power)",
+  "Gepland: ": "Planned: ",
+  "Geldt voor nieuwe of zwaardere zakelijke aansluitingen; een gewone huisaansluiting krijg je meestal gewoon. Bron: ": "Applies to new or heavier business connections; an ordinary home connection is usually still possible. Source: ",
+  "congestierapport": "congestion report",
+  "1 waarschuwing (7 dagen)": "1 warning (7 days)",
+  "{n} waarschuwingen (7 dagen)": "{n} warnings (7 days)",
+  "geen nieuwe (7 dagen)": "none new (7 days)",
+  "1 bekendmaking in je buurt": "1 notice near you",
+  "{n} bekendmakingen in je buurt": "{n} notices near you",
+  "niets in je buurt": "nothing near you",
+  "{p}% duurzaam": "{p}% renewable",
+  "Prijzen": "Prices",
+  "Mix & gas": "Mix & gas",
+  "Netcongestie": "Grid congestion",
+  "Hypotheekrente": "Mortgage rate",
+  "nieuwe leningen": "new loans",
+  "Huizenprijzen": "House prices",
+  "gemiddeld {p}": "average {p}",
+  "Faillissementen": "Bankruptcies",
+  "per maand": "per month",
+  "Phishing op Nederlandse merken": "Phishing aimed at Dutch brands",
+  "De phishinglijsten zijn niet bereikbaar ({err}).": "The phishing lists cannot be reached ({err}).",
+  "Geen phishingsites op Nederlandse merken in de openbare lijsten van de afgelopen 90 dagen.": "No phishing sites aimed at Dutch brands in the public lists of the last 90 days.",
+  "Alleen de domeinnaam, onschadelijk gemaakt ([.]) en nooit als link. Bron: PhishStats en OpenPhish.": "Only the domain name, defanged ([.]) and never as a link. Source: PhishStats and OpenPhish.",
+  "Ook gebruikt voor Bekendmakingen in je buurt en Netcongestie (in Energieprijzen).": "Also used for Official notices near you and Grid congestion (in Energy prices).",
 };
 
 // Sentences the server composes from parts (rain summary, directions, source names).
@@ -3272,6 +3398,7 @@ function sanitize(p) {
   if (Array.isArray(p.bridges)) d.bridges = p.bridges.filter(b => b && typeof b === 'object' && /^[A-Z][A-Z0-9]{2,24}$/.test(b.id) && typeof b.name === 'string')
     .slice(0, 20).map(b => ({ id: b.id, name: b.name.slice(0, 80), city: typeof b.city === 'string' ? b.city.slice(0, 60) : '' }));
   if (['fav', 'plan'].includes(p.bridgeTab)) d.bridgeTab = p.bridgeTab;
+  if (['prices', 'mix', 'grid'].includes(p.energyTab)) d.energyTab = p.energyTab;
   if (Array.isArray(p.alarmWatch)) d.alarmWatch = p.alarmWatch.filter(r => r && typeof r === 'object' && /^[a-z0-9][a-z0-9-]{1,48}$/.test(r.city) && typeof r.street === 'string' && r.street.trim().length >= 3)
     .slice(0, 10).map(r => ({ city: r.city, cityName: typeof r.cityName === 'string' ? r.cityName.slice(0, 60) : null, street: r.street.trim().slice(0, 60), spoed: r.spoed === true }));
   if (p.waste && typeof p.waste === 'object') {
@@ -3469,8 +3596,8 @@ const presetSources = p => p.region ? regionSources() : (p.sources || []).filter
 const PANEL_GROUPS_ON = new Set(['Weer & natuur', 'Thuis & vandaag', 'Verkeer & reizen']);
 const PANEL_GROUPS = [
   ['Weer & natuur', ['weather', 'satellite', 'sky', 'quakes']],
-  ['Gezondheid', ['air', 'pollen', 'health']],
-  ['Thuis & vandaag', ['today', 'waste', 'energy', 'fuel']],
+  ['Gezondheid', ['air', 'pollen', 'recalls', 'health']],
+  ['Thuis & vandaag', ['today', 'waste', 'notices', 'energy', 'fuel']],
   ['Verkeer & reizen', ['traffic', 'trains']],
   ['Alarmeringen', ['alarms', 'nlalert']],
   ['Storingen', ['utilities', 'outages']],
@@ -3953,7 +4080,8 @@ const summaryOf = {
   quakes: () => panelData.quakes?.data || alertsData ? nlSummary() : null,
   energy: () => { const en = panelData.energy?.data?.data; if (!en) return null; const ds = energyDays(en), cur = pointAt(ds.all, Date.now());
     const win = cheapestWindow(ds.today.filter(p => +p.date + 36e5 > Date.now()), 3);
-    return [cur ? t('nu {p}/kWh', { p: eur(cur.p) }) : null, win ? t('goedkoopst {span}', { span: hourSpan(win.from, 3) }) : null].filter(Boolean).join(' · ') || null; },
+    const mix = panelData.energy?.data?.mix?.data;
+    return [cur ? t('nu {p}/kWh', { p: eur(cur.p) }) : null, win ? t('goedkoopst {span}', { span: hourSpan(win.from, 3) }) : null, mix ? t('{p}% duurzaam', { p: Math.round(mix.share) }) : null].filter(Boolean).join(' · ') || null; },
   fuel: () => { const f = panelData.fuel?.data?.data?.prices; return f?.length ? f.filter(p => p.fuel !== 'lpg').map(p => `${tr(p.name).replace(/ \(E\d+\)$/, '')} ${euro3(p.price)}`).join(' · ') : null; },
   economy: () => { const e = panelData.economy?.data?.data; if (!e) return null;
     return [e.inflation?.at(-1) ? t('inflatie {v}', { v: pct1(e.inflation.at(-1).value) }) : null, e.rate ? t('ECB {v}', { v: e.rate.value.toLocaleString(locale(), { minimumFractionDigits: 2 }) + '%' }) : null].filter(Boolean).join(' · ') || null; },
@@ -3978,6 +4106,10 @@ const summaryOf = {
     return bad.length ? bad.map(p => `${p.name}: ${t(OUT_NL[p.data.status])}`).slice(0, 2).join(' · ') : t('alles werkt normaal'); },
   ap: () => { const a = panelData.ap?.items; if (!a) return null; const n = a.filter(isRecent).length;
     return n ? t(n === 1 ? '1 bericht (14 dagen)' : '{n} berichten (14 dagen)', { n }) : t('geen berichten (14 dagen)'); },
+  recalls: () => { const a = panelData.recalls?.data?.items; if (!a) return null; const n = a.filter(x => Date.now() - new Date(x.published) <= 7 * 864e5).length;
+    return n ? t(n === 1 ? '1 waarschuwing (7 dagen)' : '{n} waarschuwingen (7 dagen)', { n }) : t('geen nieuwe (7 dagen)'); },
+  notices: () => { const d = panelData.notices?.data; if (d?.needs_address) return t('adres instellen'); const a = d?.items; if (!a) return null;
+    return a.length ? t(a.length === 1 ? '1 bekendmaking in je buurt' : '{n} bekendmakingen in je buurt', { n: a.length }) : t('niets in je buurt'); },
   health: () => { const a = panelData.health?.items; if (!a) return null;
     return a.length ? t(a.length === 1 ? '1 melding (14 dagen)' : '{n} meldingen (14 dagen)', { n: a.length }) : t('geen meldingen (14 dagen)'); },
 };
@@ -4012,6 +4144,8 @@ const freshOf = {
   breaches: () => { const d = panelData.breaches?.data; return d?.enabled && { ts: d.fetched_at, max: 400, stale: !!d.error }; },
   outages: () => { const d = panelData.outages?.data; return d?.enabled && { ts: oldest(d.providers), max: 25, stale: d.providers?.some(p => p.error) }; },
   health: () => { const s = panelData.health?.status; return s && { ts: s.fetched_at, max: 65, stale: !!s.error }; },
+  recalls: () => { const d = panelData.recalls?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 130, stale: !!d.error }; },
+  notices: () => { const d = panelData.notices?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 250, stale: !!d.error }; },
 };
 const soon = text => body => body.replaceChildren(h('p', { class: 'pnote', text }));
 const panelRenderers = {
@@ -4042,6 +4176,8 @@ const panelRenderers = {
   politics: renderPolitics,
   health: renderHealth,
   ap: renderAP,
+  recalls: renderRecalls,
+  notices: renderBekendmakingen,
 };
 
 // ---------------------------------------------------------------- weather
@@ -4990,6 +5126,16 @@ function renderBreaches(body) {
           : h('p', { class: 'pnote', text: t('Geen nieuwe waarschuwingen van de Fraudehelpdesk in de afgelopen 30 dagen.') }),
       h('p', { class: 'm fnote' }, t('Twijfel je? '), extLink(ph.url || 'https://www.fraudehelpdesk.nl/actueel/', t('Alle waarschuwingen en hulp (Fraudehelpdesk)')))));
   }
+  const pn = r.phishing_nl;
+  if (pn) {
+    const sites = (pn.sites || []).slice(0, 6);
+    out.push(h('div', { class: 'phgrp' }, h('h3', null, h('span', { 'aria-hidden': 'true', text: '🪝 ' }), t('Phishing op Nederlandse merken')),
+      !pn.sites ? h('p', { class: 'pnote', text: pn.error ? t('De phishinglijsten zijn niet bereikbaar ({err}).', { err: pn.error }) : t('Wordt voor het eerst opgehaald.') })
+        : sites.length ? h('ul', { class: 'plist' }, sites.map(x => h('li', null, h('b', { translate: 'no', text: x.brand }), ' ', h('span', { class: 'mono', translate: 'no', text: x.host }),
+          h('div', { class: 'm' }, timeEl(new Date(x.seen), false), h('span', { text: x.source })))))
+          : h('p', { class: 'pnote', text: t('Geen phishingsites op Nederlandse merken in de openbare lijsten van de afgelopen 90 dagen.') }),
+      h('p', { class: 'm fnote', text: t('Alleen de domeinnaam, onschadelijk gemaakt ([.]) en nooit als link. Bron: PhishStats en OpenPhish.') })));
+  }
   out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://haveibeenpwned.com/', 'Have I Been Pwned'), ' (CC BY 4.0)', ph ? [' · ', extLink('https://www.fraudehelpdesk.nl/', 'Fraudehelpdesk')] : null, h('br'),
     t('Alleen geverifieerde lekken bij organisaties; zonder spamlijsten, malware en gevoelige sites.')));
   body.replaceChildren(...out);
@@ -5044,13 +5190,20 @@ function renderEnergy(body) {
   const r = st.data;
   if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('Energieprijzen konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
   if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (energy.enabled).' })); return; }
+  const tabs = [['prices', t('Prijzen')], (r.mix || r.gas_storage) && ['mix', t('Mix & gas')], r.grid && catalog?.grid && ['grid', t('Netcongestie')]].filter(Boolean);
+  let tab = tabs.some(([id]) => id === prefs.energyTab) ? prefs.energyTab : 'prices';
+  const tabRow = tabs.length > 1 ? h('div', { class: 'sectabs', role: 'group', 'aria-label': t('Soort informatie') }, tabs.map(([id, label]) =>
+    h('button', { class: 'chip', type: 'button', 'aria-pressed': String(tab === id), text: label,
+      onclick: () => { prefs.energyTab = id; savePrefs(); renderPanel('energy'); $('#panel-energy .sectabs [aria-pressed="true"]')?.focus(); } }))) : null;
+  if (tab === 'mix') { body.replaceChildren(tabRow, ...mixSection(r)); return; }
+  if (tab === 'grid') { body.replaceChildren(tabRow, ...gridSection()); return; }
   const d = r.data;
-  if (!d) { body.replaceChildren(h('p', { class: 'pnote', text: r.error ? t('EnergyZero is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: r.error }) : t('Energieprijzen worden voor het eerst opgehaald.') })); return; }
+  if (!d) { body.replaceChildren(...[tabRow, h('p', { class: 'pnote', text: r.error ? t('EnergyZero is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: r.error }) : t('Energieprijzen worden voor het eerst opgehaald.') })].filter(Boolean)); return; }
   const now = Date.now(), days = energyDays(d);
   if (energyDay === 'tomorrow' && !days.tomorrow.length) energyDay = 'today';
   const list = days[energyDay], cur = pointAt(days.all, now);
   const gas = (d.gas || []).map(p => ({ ...p, date: new Date(p.t) })).filter(p => +p.date <= now).pop();
-  const out = [];
+  const out = tabRow ? [tabRow] : [];
   if (cur) out.push(h('div', { class: 'enow' }, h('span', { class: 'big', text: eur(cur.p) }), h('span', { class: 'unit', text: t('per kWh') }),
     h('span', { class: 'sub', text: t('stroom nu ({span})', { span: hourSpan(cur.date, 1) }) })));
   if (gas) out.push(h('p', { class: 'eline' }, t('Gas: '), h('b', { text: eur(gas.p) }), t(' per m³')));
@@ -5623,12 +5776,13 @@ async function loadEconomy() {
 }
 const pct1 = v => v.toLocaleString(locale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
 const monthLabel = p => new Intl.DateTimeFormat(locale(), { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(p + '-15T12:00:00Z'));
-function econSpark(points, label) {
+const pct2 = v => v.toLocaleString(locale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+function econSpark(points, label, f = pct1) {
   if (!points || points.length < 3) return null;
   const vals = points.map(p => p.value), lo = Math.min(...vals), hi = Math.max(...vals), W = 100, H = 22;
   const x = i => i * W / (vals.length - 1), y = v => H - 2 - (H - 4) * (v - lo) / (hi - lo || 1);
   const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, class: 'espark', role: 'img', preserveAspectRatio: 'none',
-    'aria-label': t('{label}, afgelopen 12 maanden: van {a} naar {b}', { label, a: pct1(vals[0]), b: pct1(vals.at(-1)) }) });
+    'aria-label': t('{label}, afgelopen 12 maanden: van {a} naar {b}', { label, a: f(vals[0]), b: f(vals.at(-1)) }) });
   svg.append(svgEl('path', { d: vals.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('') }));
   return svg;
 }
@@ -5659,9 +5813,18 @@ function renderEconomy(body) {
     tiles.push(econTile(t('Euro in dollar'), fx.value.toLocaleString(locale(), { minimumFractionDigits: 4, maximumFractionDigits: 4 }),
       [fmt.date.format(dateOnly(fx.period)), ch != null ? `${ch >= 0 ? '+' : ''}${ch.toLocaleString(locale(), { maximumFractionDigits: 2 })}%` : null].filter(Boolean).join(' · ')));
   }
+  const mo = d.mortgage?.at(-1);
+  if (mo) tiles.push(econTile(t('Hypotheekrente'), pct2(mo.value), [monthLabel(mo.period), t('nieuwe leningen')].join(' · '), econSpark(d.mortgage, t('Hypotheekrente'), pct2)));
+  const hp = d.house_prices?.at(-1);
+  if (hp) tiles.push(econTile(t('Huizenprijzen'), pctSigned(hp.value), [monthLabel(hp.period), d.house_avg ? t('gemiddeld {p}', { p: eur(d.house_avg.value, 0) }) : null].filter(Boolean).join(' · '),
+    econSpark(d.house_prices, t('Huizenprijzen'))));
+  const bk = d.bankruptcies?.at(-1);
+  if (bk) tiles.push(econTile(t('Faillissementen'), Math.round(bk.value).toLocaleString(locale()), [monthLabel(bk.period), t('per maand')].join(' · '),
+    econSpark(d.bankruptcies, t('Faillissementen'), v => Math.round(v).toLocaleString(locale()))));
   const out = [h('div', { class: 'egrid' }, tiles)];
   if (d.errors?.length) out.push(h('p', { class: 'pnote', text: t('Niet alle cijfers konden worden opgehaald; er wordt automatisch opnieuw geprobeerd.') }));
   out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://ec.europa.eu/eurostat', 'Eurostat'), ', ', extLink('https://data.ecb.europa.eu/', 'ECB'),
+    d.house_prices || d.bankruptcies ? [', ', extLink('https://opendata.cbs.nl/', 'CBS')] : null,
     t(' · inflatie en werkloosheid per maand (Europese meetmethode), rente en koers per werkdag')));
   body.replaceChildren(...out);
 }
@@ -5874,6 +6037,7 @@ function setWasteAddress(w, msg, data) {
   prefs.waste = w; savePrefs(); updateWasteHint();
   const m = $('#waste-msg'); m.classList.remove('err'); m.textContent = msg;
   if (data) { panelData.waste = { data }; renderPanel('waste'); } else { panelData.waste = null; renderPanel('waste'); loadWaste(); }
+  panelData.notices = null; noticesShown = 8; loadNotices(); panelData.grid = null; renderPanel('energy');
   pushSub().then(sub => sub && Notification.permission === 'granted' && pushRegister(sub)).catch(() => {}); // the reminder follows the address
 }
 function wireWasteSettings() {
@@ -6968,7 +7132,7 @@ function wireMobileViews() {
 function refreshView(v) {
   const panels = () => [loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(), loadBreaches(), loadOutages(), loadHealthPanel(),
     loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadNLThreat(), loadExploits(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(),
-    loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar(), loadWorld()];
+    loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar(), loadWorld(), loadRecalls(), loadNotices()];
   const jobs = v === 'news' ? [loadNews({ replace: true }), loadTrending()] : v === 'panels' || v === 'panels2' ? panels() : [loadNews({ replace: true }), ...panels()];
   return Promise.allSettled(jobs);
 }
@@ -7153,6 +7317,156 @@ function stopKiosk() {
   removeEventListener('resize', kioskFit);
   $('#news').style.height = $('#side').style.height = '';
   wakeLock?.release().catch(() => {}); wakeLock = null;
+}
+
+// ---------------------------------------------------------------- productwaarschuwingen (NVWA)
+async function loadRecalls() {
+  try { panelData.recalls = { data: await api('api/recalls') }; }
+  catch (e) { panelData.recalls = { ...(panelData.recalls || {}), error: e }; }
+  renderPanel('recalls');
+}
+function renderRecalls(body) {
+  const st = panelData.recalls;
+  if (!st) { body.replaceChildren(h('div', { class: 'tsk', style: 'height:200px', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:160px' }))); return; }
+  const r = st.data;
+  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('Productwaarschuwingen konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
+  if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (recalls.enabled).' })); return; }
+  const out = [];
+  if (!r.items) out.push(h('p', { class: 'pnote', text: r.error ? t('De NVWA is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: r.error }) : t('De waarschuwingen worden voor het eerst opgehaald.') }));
+  else {
+    const recent = r.items.filter(x => Date.now() - new Date(x.published) <= 30 * 864e5).slice(0, 8);
+    out.push(recent.length ? h('ul', { class: 'plist' }, recent.map(x => h('li', null, h('span', { translate: 'no' }, extLink(x.url, x.title)),
+      h('div', { class: 'm' }, timeEl(new Date(x.published), false), x.allergen ? h('span', { class: 'rtag', text: t('allergie') }) : null))))
+      : h('p', { class: 'pnote', text: t('Geen veiligheidswaarschuwingen van de NVWA in de afgelopen 30 dagen.') }));
+  }
+  out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://www.nvwa.nl/actueel/veiligheidswaarschuwingen', 'NVWA'), t(' · terugroepacties en waarschuwingen voor voedsel en producten')));
+  body.replaceChildren(...out);
+}
+
+// ---------------------------------------------------------------- bekendmakingen in je buurt (officielebekendmakingen.nl)
+const addrQuery = () => prefs.waste ? `?postcode=${encodeURIComponent(prefs.waste.postcode)}&number=${prefs.waste.number}` : '';
+let noticesSeq = 0;
+async function loadNotices() {
+  if (!catalog?.notices?.enabled) { panelData.notices = { data: { enabled: false } }; renderPanel('notices'); return; }
+  if (!prefs.waste) { panelData.notices = { data: { enabled: true, needs_address: true } }; renderPanel('notices'); return; }
+  const seq = ++noticesSeq;
+  try { const d = await api('api/notices' + addrQuery()); if (seq !== noticesSeq) return; panelData.notices = { data: d }; }
+  catch (e) { if (seq !== noticesSeq) return; panelData.notices = { ...(panelData.notices || {}), error: e }; }
+  renderPanel('notices');
+}
+const metres = m => m < 1000 ? t('{m} m', { m }) : t('{km} km', { km: (m / 1000).toLocaleString(locale(), { maximumFractionDigits: 1 }) });
+let noticesShown = 8;
+function renderBekendmakingen(body, extra) {
+  const st = panelData.notices;
+  extra.replaceChildren(prefs.waste ? h('span', { translate: 'no', text: wasteLabel() + ' · ' }) : '',
+    h('button', { class: 'linkbtn', type: 'button', onclick: () => openSettings('waste'), 'aria-label': t('Adres wijzigen'), text: prefs.waste ? t('wijzigen') : t('adres instellen') }));
+  if (!st) { body.replaceChildren(h('p', { class: 'pnote', text: t('Bekendmakingen worden opgehaald; bij een grote gemeente duurt dat de eerste keer tot 15 seconden.') })); return; }
+  const r = st.data;
+  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('Bekendmakingen konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
+  if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (notices.enabled).' })); return; }
+  if (r.needs_address) {
+    body.replaceChildren(h('p', { class: 'pnote', text: t('Stel je adres in (hetzelfde als voor de afvalkalender) om vergunningen en besluiten in je buurt te zien.') }),
+      h('button', { class: 'btn', type: 'button', onclick: () => openSettings('waste'), text: t('Adres instellen') }));
+    return;
+  }
+  if (r.not_found) { body.replaceChildren(h('p', { class: 'pnote', text: t('Dit adres is niet gevonden. Controleer postcode en huisnummer.') })); return; }
+  if (!r.items) { body.replaceChildren(h('p', { class: 'pnote', text: t('Officiële bekendmakingen zijn niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: r.error || '' }) })); return; }
+  const out = [h('p', { class: 'eline' }, t('Binnen {r} van je adres, afgelopen {d} dagen · ', { r: metres(r.radius), d: r.days }), h('b', { translate: 'no', text: r.gemeente }))];
+  if (r.error) out.push(h('p', { class: 'pnote', text: t('Officiële bekendmakingen nu niet bereikbaar; je ziet de laatst opgehaalde lijst.') }));
+  if (!r.items.length) out.push(h('p', { class: 'pnote', text: t('Geen bekendmakingen in je buurt in deze periode.') }));
+  else {
+    out.push(h('ul', { class: 'plist' }, r.items.slice(0, noticesShown).map(x => h('li', null, h('span', { translate: 'no' }, extLink(x.url, x.title)),
+      h('div', { class: 'm' }, h('span', null, x.type ? [h('span', { translate: 'no', text: capFirst(x.type) }), ' · '] : null, fmt.date.format(dateOnly(x.date)), ' · ', metres(x.m)))))));
+    if (r.items.length > noticesShown) out.push(h('button', { class: 'linkbtn', type: 'button', text: t('Toon meer ({n})', { n: r.items.length - noticesShown }),
+      onclick: () => { noticesShown += 10; renderPanel('notices'); } }));
+  }
+  out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://www.officielebekendmakingen.nl/', 'officielebekendmakingen.nl'), t(' · vergunningen, verkeersbesluiten en andere besluiten met een locatie')));
+  body.replaceChildren(...out);
+}
+const capFirst = s => s ? s[0].toUpperCase() + s.slice(1) : s;
+
+// ---------------------------------------------------------------- energieprijzen, tabs Mix & gas and Netcongestie
+const MIX_NAMES = { wind: 'wind', solar: 'zon', gas: 'gas', coal: 'kolen', nuclear: 'kernenergie', biomass: 'biomassa', other: 'overig' };
+const mw = v => t('{v} MW', { v: Math.round(v).toLocaleString(locale()) });
+function greenestWindow(points, n = 3) {
+  const now = Date.now(), rest = points.filter(p => p.t * 1000 + 36e5 > now);
+  let best = null;
+  for (let i = 0; i + n <= rest.length; i++) {
+    const avg = rest.slice(i, i + n).reduce((a, p) => a + p.share, 0) / n;
+    if (!best || avg > best.avg) best = { from: new Date(rest[i].t * 1000), avg };
+  }
+  return best;
+}
+function mixSection(r) {
+  const out = [], m = r.mix;
+  if (m) {
+    const d = m.data;
+    out.push(h('h3', null, h('span', { 'aria-hidden': 'true', text: '🌬️ ' }), t('Stroommix')));
+    if (!d) out.push(h('p', { class: 'pnote', text: m.error ? t('energy-charts is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: m.error }) : t('De stroommix wordt voor het eerst opgehaald.') }));
+    else {
+      out.push(h('div', { class: 'enow' }, h('span', { class: 'big', text: Math.round(d.share) + '%' }), h('span', { class: 'unit', text: t('duurzaam') }),
+        h('span', { class: 'sub', text: t('gemeten om {t}', { t: fmt.time.format(new Date(d.at)) }) })));
+      const bar = h('div', { class: 'mixbar', role: 'img', 'aria-label': d.sources.map(s => `${t(MIX_NAMES[s.key])} ${Math.round(s.mw / d.total_mw * 100)}%`).join(', ') },
+        d.sources.map(s => h('span', { class: 'mx-' + s.key, style: `width:${(s.mw / d.total_mw * 100).toFixed(1)}%`, title: `${t(MIX_NAMES[s.key])}: ${mw(s.mw)}` })));
+      out.push(bar, h('ul', { class: 'mixleg' }, d.sources.map(s => h('li', null, h('span', { class: 'sw mx-' + s.key, 'aria-hidden': 'true' }),
+        `${t(MIX_NAMES[s.key])} ${Math.round(s.mw / d.total_mw * 100)}%`))));
+      out.push(h('p', { class: 'eline', text: t('Opwekking {g} · verbruik {l}', { g: mw(d.total_mw), l: mw(d.load_mw) }) }));
+      const win = d.forecast?.length ? greenestWindow(d.forecast, 3) : null;
+      if (win) out.push(h('p', { class: 'eline' }, t('Groenste 3 uur vandaag: '), h('b', { text: hourSpan(win.from, 3) }), t(' (~{p}% duurzaam)', { p: Math.round(win.avg) })));
+    }
+  }
+  const g = r.gas_storage;
+  if (g) {
+    out.push(h('h3', null, h('span', { 'aria-hidden': 'true', text: '🔥 ' }), t('Gasvoorraad')));
+    if (!g.key) out.push(h('p', { class: 'pnote', text: t('Voor de gasvoorraad is een gratis sleutel van GIE AGSI+ nodig (keys.agsi_api_key of AGSI_API_KEY in de serverinstellingen).') }));
+    else if (!g.data) out.push(h('p', { class: 'pnote', text: g.error ? t('GIE AGSI+ is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: g.error }) : t('De gasvoorraad wordt voor het eerst opgehaald.') }));
+    else {
+      const row = (label, x) => x && h('p', { class: 'eline' }, h('b', { text: label + ' ' }), t('{p}% vol', { p: x.full.toLocaleString(locale(), { maximumFractionDigits: 1 }) }),
+        h('span', { class: 'm', text: [x.trend ? ` · ${x.trend > 0 ? '+' : ''}${x.trend.toLocaleString(locale(), { maximumFractionDigits: 2 })} ${t('punt per dag')}` : '',
+          x.year_ago ? ` · ${t('vorig jaar {p}%', { p: x.year_ago.toLocaleString(locale(), { maximumFractionDigits: 1 }) })}` : ''].join('') }));
+      out.push(h('div', { class: 'gasbar', role: 'img', 'aria-label': t('Nederland {p}% vol', { p: g.data.nl.full }) }, h('span', { style: `width:${Math.min(100, g.data.nl.full)}%` })));
+      out.push(row(t('Nederland'), g.data.nl), row(t('EU'), g.data.eu));
+      out.push(h('p', { class: 'm fnote', text: t('Stand op {d}', { d: fmt.date.format(dateOnly(g.data.nl.day)) }) }));
+    }
+  }
+  out.push(h('p', { class: 'pfoot' }, t('Bron: '), r.mix ? [extLink('https://www.energy-charts.info/?l=nl', 'Fraunhofer ISE energy-charts'), ' (CC BY 4.0)'] : null,
+    r.mix && g ? ', ' : null, g ? extLink('https://agsi.gie.eu/', 'GIE AGSI+') : null, h('br'),
+    r.mix ? t('Grootschalige opwekking volgens ENTSO-E, ongeveer 3 uur vertraagd; zonnepanelen op daken tellen grotendeels niet mee.') : null));
+  return out;
+}
+let gridSeq = 0;
+async function loadGrid() {
+  if (!catalog?.grid || !prefs.waste) { panelData.grid = null; renderPanel('energy'); return; }
+  const seq = ++gridSeq;
+  try { const d = await api('api/grid?pc=' + encodeURIComponent(prefs.waste.postcode)); if (seq !== gridSeq) return; panelData.grid = { data: d }; }
+  catch (e) { if (seq !== gridSeq) return; panelData.grid = { error: e }; }
+  renderPanel('energy');
+}
+const TENNET_LV = { 0: ['voldoende', 'ok'], 1: ['beperkt', 'warn'], 2: ['in onderzoek', 'warn'], 3: ['tekort', 'bad'] };
+function gridSection() {
+  if (!prefs.waste) return [h('p', { class: 'pnote', text: t('Stel je adres in (hetzelfde als voor de afvalkalender) om de netcongestie bij jou te zien.') }),
+    h('button', { class: 'btn', type: 'button', onclick: () => openSettings('waste'), text: t('Adres instellen') })];
+  const st = panelData.grid;
+  if (!st) { loadGrid(); return [h('p', { class: 'pnote', text: t('Netcongestie wordt opgehaald…') })]; }
+  const r = st.data;
+  if (!r) return [h('p', { class: 'pnote', text: t('De capaciteitskaart kon niet worden opgehaald ({err}).', { err: tr(st.error?.message) }) })];
+  if (r.not_found) return [h('p', { class: 'pnote', text: t('Deze postcode staat niet op de capaciteitskaart.') })];
+  if (!r.area) return [h('p', { class: 'pnote', text: t('De capaciteitskaart is niet bereikbaar ({err}); probeer het later opnieuw.', { err: r.error || '' }) })];
+  const a = r.area, out = [];
+  out.push(h('p', { class: 'eline' }, t('Voedingsgebied '), h('b', { translate: 'no', text: a.name }), a.operator ? h('span', { class: 'm', translate: 'no', text: ` · ${a.operator}` }) : null));
+  const side = (label, s) => {
+    const lv = TENNET_LV[s.tennet], queue = s.queue || s.requests;
+    return h('div', { class: 'gside' }, h('div', { class: 'gl', text: label }),
+      h('div', { class: 'gv ' + (queue ? 'bad' : 'ok'), text: queue ? t('Wachtrij') : t('Geen wachtrij') }),
+      queue ? h('div', { class: 'gs', text: [s.queue ? s.queue : null, s.requests ? t('{n} verzoeken', { n: s.requests }) : null].filter(Boolean).join(' · ') }) : null,
+      s.solved ? h('div', { class: 'gs', text: t('opgelost verwacht in {y}', { y: s.solved }) }) : null,
+      lv ? h('div', { class: 'gs' }, t('TenneT: '), h('span', { class: 'glv ' + lv[1], text: t(lv[0]) }), s.tennet_solved ? ` (${s.tennet_solved})` : '') : null);
+  };
+  out.push(h('div', { class: 'ggrid' }, side(t('Afname (stroom gebruiken)'), a.withdrawal), side(t('Invoeding (stroom leveren)'), a.injection)));
+  if (a.projects?.length) out.push(h('p', { class: 'm fnote' }, t('Gepland: '), a.projects.map((p, i) => [i ? ' · ' : '', h('span', { translate: 'no', text: p.name }), ` (${p.when})`])));
+  out.push(h('p', { class: 'pfoot' }, t('Geldt voor nieuwe of zwaardere zakelijke aansluitingen; een gewone huisaansluiting krijg je meestal gewoon. Bron: '),
+    extLink('https://capaciteitskaart.netbeheernederland.nl/', 'Netbeheer Nederland'), a.url ? [' · ', extLink(a.url, t('congestierapport'))] : null));
+  return out;
 }
 
 // ---------------------------------------------------------------- health (RIVM, alerts only)
@@ -7713,7 +8027,7 @@ async function init() {
   if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
   await Promise.allSettled([loadNews({ replace: true }), loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(),
     loadBreaches(), loadOutages(), loadHealthPanel(), loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadNLThreat(), loadExploits(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(), loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadTrending(), initPush(),
-    loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar(), loadWorld()]);
+    loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar(), loadWorld(), loadRecalls(), loadNotices()]);
   kioskFit(); // the header and top bar have their final height now
   panelFromHash(); // e.g. a push notification that opens #panel-waste
   awStart();
@@ -7756,6 +8070,9 @@ async function init() {
   every(R('sports', 30), loadSports);
   every(R('outages', 10), loadOutages);
   every(R('health', 30), loadHealthPanel);
+  every(R('recalls', 60), loadRecalls);
+  every(R('notices', 60), loadNotices);
+  every(R('energy', 30), () => { if (prefs.energyTab === 'grid' && panelData.grid) loadGrid(); });
   setInterval(tick, 15e3);
   setInterval(() => { if (!document.hidden) { updateClock(); updateRelTimes(); } }, 30e3);
 }

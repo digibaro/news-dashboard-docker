@@ -1001,12 +1001,19 @@ type normOpts struct {
 
 func normalizeItems(sourceID, feedURL string, raws []rawItem, o normOpts) []Item {
 	base, _ := url.Parse(feedURL)
+	gnews := base != nil && base.Host == "news.google.com" // titles end in " - <site>", the summary repeats the title
 	cutoff := o.now.Add(-o.maxAge)
 	seenURL, seenTitle := map[string]bool{}, map[string]bool{}
 	items := make([]Item, 0, len(raws))
 	for _, r := range raws {
 		link := safeURL(r.Link, base)
 		title := truncate(plainText(r.Title), 300)
+		if gnews {
+			if i := strings.LastIndex(title, " - "); i > 0 && len(title)-i <= 40 {
+				title = title[:i]
+			}
+			r.Summary = ""
+		}
 		if link == "" || title == "" {
 			continue
 		}

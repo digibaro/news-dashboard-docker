@@ -42,7 +42,7 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   }));
   if (w === 1440 && scheme === 'light') console.log(JSON.stringify(t, null, 1));
   ok(t.bar.join() === [t.knmiShown && 'ab-knmi', 'ab-p2k', t.nlActive && 'ab-nl', 'ab-nctv'].filter(Boolean).join() && !(t.knmiShown && /geen waarschuwingen/.test(t.knmiText)), `${w} ${scheme}: top bar KNMI → Alarmeringen → (NL-Alert only when active) → Dreigingsniveau (${t.bar})`);
-  ok(t.order.join() === 'weather,satellite,today,waste,air,pollen,sky,traffic,trains,alarms,nlalert,quakes,energy,fuel,economy,markets,sports,politics,threats,nlthreat,advisories,breaches,ransomware,utilities,outages,ap,health', `${w} ${scheme}: panel order ${t.order.join(',')}`);
+  ok(t.order.join() === 'weather,satellite,today,waste,notices,air,pollen,recalls,sky,traffic,trains,alarms,nlalert,quakes,energy,fuel,economy,markets,sports,politics,threats,nlthreat,advisories,breaches,ransomware,utilities,outages,ap,health', `${w} ${scheme}: panel order ${t.order.join(',')}`);
   ok(t.heads.energy === 'Energieprijzen' && t.heads.air === 'Luchtkwaliteit' && t.heads.trains === 'Treinstoringen' && t.heads.politics === 'Politiek vandaag', 'panel names');
   ok(/^€\s?-?\d+,\d\d$/.test(t.price) && t.bars >= 23 && t.bars <= 50 && t.nowBar === 1, `energy: now ${t.price}, ${t.bars} hourly bars, current hour marked`);
   ok(/Goedkoopste 3 uur: (morgen )?\d\d:\d\d–\d\d:\d\d/.test(t.cheap || ''), `energy: ${t.cheap}`);
@@ -155,11 +155,11 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   const [ctx, p] = await open(1440, 'light', { lang: 'en' });
   await ready(p); await p.waitForTimeout(800);
   const e = await p.evaluate(() => ({ heads: ['energy', 'air', 'trains', 'politics'].map(id => document.querySelector(`#panel-${id} h2`).textContent.trim()),
-    energy: document.querySelector('#panel-energy .pbody').innerText, air: document.querySelector('#panel-air .pbody').innerText,
+    energy: document.querySelector('#panel-energy .pbody').innerText, enow: document.querySelector('#panel-energy .enow').innerText, air: document.querySelector('#panel-air .pbody').innerText,
     pol: [...document.querySelectorAll('#panel-politics h3')].map(x => x.textContent), bar: document.querySelector('#alertbar').getAttribute('aria-label') }));
   ok(e.heads.join() === 'Energy prices,Air quality,Train disruptions,Politics today', `English panel names: ${e.heads}`);
   ok(/per kWh/.test(e.energy) && /Cheapest 3 hours/.test(e.energy) && /Good|Moderate|Poor|Bad/.test(e.air) && /Latest votes/.test(e.pol.join()), 'English panel texts');
-  ok(/^-?€\d/.test(e.energy.trim()), `English currency format: ${e.energy.trim().slice(0, 60)}`);
+  ok(/^-?€\d/.test(e.enow.trim()), `English currency format: ${e.enow.trim().slice(0, 60)}`);
   await p.keyboard.press('v'); await p.waitForSelector('#dgrid .dcard'); await p.waitForTimeout(500);
   const dh = await p.evaluate(() => ({ h: document.querySelector('#digest-h').textContent, cards: [...document.querySelectorAll('.dcard h3')].map(x => x.textContent) }));
   ok(dh.h === 'Today at a glance' && dh.cards.includes('Top news →') && dh.cards.includes('Energy prices →'), `English overview: ${dh.cards.join(', ')}`);

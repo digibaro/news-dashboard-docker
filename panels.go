@@ -1786,6 +1786,17 @@ func (a *App) threatJobs(cfg *Config) []Job {
 	if cfg.Energy.Enabled {
 		jobs = append(jobs, Job{Key: "energyzero", Sig: fmt.Sprint(cfg.Energy.URL, cfg.Energy.VAT, cfg.Energy.ElectricityExtra, cfg.Energy.GasExtra),
 			Interval: cfg.Energy.Interval.D(), Run: a.runEnergy})
+		if cfg.Energy.Mix {
+			jobs = append(jobs, Job{Key: "ec:mix", Sig: cfg.Energy.MixURL, Interval: 30 * time.Minute, Run: a.runEnergyMix})
+		}
+		if cfg.Energy.GasStorage && cfg.Keys.AGSIAPIKey != "" { // AGSI+ publishes once a day
+			jobs = append(jobs, Job{Key: "agsi:storage", Sig: cfg.Energy.GasStorageURL + "|" + cfg.Keys.AGSIAPIKey, Interval: 6 * time.Hour, Run: a.runGasStorage})
+		}
+	}
+	if cfg.Recalls.Enabled {
+		jobs = append(jobs, Job{Key: "nvwa:recalls", Sig: cfg.Recalls.URL, Interval: cfg.Recalls.Interval.D(),
+			Run: a.fetchJob("nvwa:recalls", func() string { return a.config().Recalls.URL }, "application/rss+xml, application/xml", nil,
+				func(b []byte) (any, error) { return parseRecalls(b, time.Now()) }, nil)})
 	}
 	if cfg.Air.Enabled {
 		jobs = append(jobs, Job{Key: "lml:stations", Sig: cfg.Air.StationsURL, Interval: 24 * time.Hour,
@@ -1810,7 +1821,7 @@ func (a *App) threatJobs(cfg *Config) []Job {
 		}
 	}
 	if cfg.Economy.Enabled {
-		jobs = append(jobs, Job{Key: "econ:figures", Sig: cfg.Economy.EurostatBase + "|" + cfg.Economy.ECBBase, Interval: cfg.Economy.Interval.D(), Run: a.runEconomy})
+		jobs = append(jobs, Job{Key: "econ:figures", Sig: cfg.Economy.EurostatBase + "|" + cfg.Economy.ECBBase + "|" + cfg.Economy.CBSBase, Interval: cfg.Economy.Interval.D(), Run: a.runEconomy})
 	}
 	if cfg.Markets.Enabled {
 		jobs = append(jobs, Job{Key: "yahoo:markets", Sig: fmt.Sprint(cfg.Markets.URL, cfg.Markets.Indices, cfg.Markets.Stocks), Interval: cfg.Markets.Interval.D(), Run: a.runMarkets})
@@ -1921,6 +1932,10 @@ func (a *App) threatJobs(cfg *Config) []Job {
 		jobs = append(jobs, Job{Key: "hibp:breaches", Sig: fmt.Sprint(cfg.Breaches.URL, sensitive), Interval: cfg.Breaches.Interval.D(),
 			Run: a.fetchJob("hibp:breaches", func() string { return a.config().Breaches.URL }, "application/json", nil,
 				func(b []byte) (any, error) { return parseBreaches(b, sensitive, time.Now()) }, nil)})
+		if cfg.Breaches.PhishingNL {
+			jobs = append(jobs, Job{Key: "phish:nl", Sig: fmt.Sprint(cfg.Breaches.PhishStatsURL, cfg.Breaches.OpenPhishURL, cfg.Breaches.Brands),
+				Interval: 2 * time.Hour, Run: a.runPhishNL})
+		}
 		if cfg.Breaches.Phishing {
 			jobs = append(jobs, Job{Key: "fhd:alerts", Sig: cfg.Breaches.PhishingURL, Interval: 2 * time.Hour,
 				Run: a.fetchJob("fhd:alerts", func() string { return a.config().Breaches.PhishingURL }, "application/rss+xml, application/xml", nil,
@@ -2880,6 +2895,13 @@ func (a *App) handleBreaches(w http.ResponseWriter, r *http.Request) {
 		ph["url"] = "https://www.fraudehelpdesk.nl/actueel/"
 		e["phishing"] = ph
 	}
+	if cfg.Breaches.PhishingNL {
+		pn := a.feedEntry("phish:nl")
+		if v, ok := a.threats.get("phish:nl").Data.(PhishNL); ok {
+			pn["sites"] = v.Sites
+		}
+		e["phishing_nl"] = pn
+	}
 	writeJSON(w, r, http.StatusOK, 300, e)
 }
 
@@ -3477,11 +3499,31 @@ func (a *App) handleEnergy(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, r, http.StatusOK, 60, map[string]any{"enabled": false})
 		return
 	}
+	cfg := a.config()
 	e := a.feedEntry("energyzero")
 	e["enabled"] = true
 	if v, ok := a.threats.get("energyzero").Data.(EnergyData); ok {
 		e["data"] = v
 	}
+	if cfg.Energy.Mix {
+		m := a.feedEntry("ec:mix")
+		if v, ok := a.threats.get("ec:mix").Data.(EnergyMix); ok {
+			m["data"] = v
+		}
+		e["mix"] = m
+	}
+	if cfg.Energy.GasStorage {
+		g := map[string]any{"key": cfg.Keys.AGSIAPIKey != ""}
+		if cfg.Keys.AGSIAPIKey != "" {
+			g = a.feedEntry("agsi:storage")
+			g["key"] = true
+			if v, ok := a.threats.get("agsi:storage").Data.(GasStorageData); ok {
+				g["data"] = v
+			}
+		}
+		e["gas_storage"] = g
+	}
+	e["grid"] = cfg.Energy.Grid
 	writeJSON(w, r, http.StatusOK, 60, e)
 }
 
@@ -5012,7 +5054,36 @@ type EconomyData struct {
 	Rate         *EconPoint  `json:"rate,omitempty"`         // ECB deposit facility rate
 	RateSince    string      `json:"rate_since,omitempty"`   // date of the last change
 	EURUSD       []EconPoint `json:"eurusd"`                 // last two reference rates
+	HousePrices  []EconPoint `json:"house_prices,omitempty"` // existing homes, price change on a year earlier (%), last 13 months (CBS)
+	HouseAvg     *EconPoint  `json:"house_avg,omitempty"`    // average sale price, latest month (CBS)
+	Bankruptcy   []EconPoint `json:"bankruptcies,omitempty"` // bankruptcies per month, corrected for court sitting days (CBS)
+	Mortgage     []EconPoint `json:"mortgage,omitempty"`     // NL mortgage rate on new loans, % per year, last 13 months (ECB MIR)
 	Errors       []string    `json:"errors,omitempty"`
+}
+
+// parseCBSMonths reads one measure per month from a CBS OData TypedDataSet answer
+// ("Perioden": "2026MM09" -> "2026-09"); quarters and years are skipped.
+func parseCBSMonths(body []byte, field string) ([]EconPoint, error) {
+	var r struct {
+		Value []map[string]any `json:"value"`
+	}
+	if err := json.Unmarshal(body, &r); err != nil {
+		return nil, fmt.Errorf("cbs: %w", err)
+	}
+	var out []EconPoint
+	for _, row := range r.Value {
+		per, _ := row["Perioden"].(string)
+		v, ok := row[field].(float64)
+		if !ok || len(per) != 8 || per[4:6] != "MM" {
+			continue
+		}
+		out = append(out, EconPoint{Period: per[:4] + "-" + per[6:], Value: v})
+	}
+	if len(out) == 0 {
+		return nil, errors.New("cbs: no values")
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Period < out[j].Period })
+	return out, nil
 }
 
 // parseEurostat reads a single-series JSON-stat response (all dimensions but time fixed).
@@ -5136,6 +5207,38 @@ func (a *App) runEconomy(ctx context.Context) error {
 		fail("wisselkoers", err)
 	} else {
 		d.EURUSD = p
+	}
+	if b, err := get(ecb+"/MIR/M.NL.B.A2C.AM.R.A.2250.EUR.N?format=csvdata&lastNObservations=13", "text/csv"); err != nil {
+		fail("hypotheekrente", err)
+	} else if p, err := parseECBCSV(b); err != nil {
+		fail("hypotheekrente", err)
+	} else {
+		d.Mortgage = p
+	}
+	if cbs := strings.TrimSuffix(cfg.CBSBase, "/"); cbs != "" {
+		since := time.Now().AddDate(-1, -6, 0).Format("2006") + "MM01" // enough for 13 months even when CBS is a few months behind
+		odata := func(table, filter, fields string) string {
+			q := url.Values{"$filter": {"Perioden ge '" + since + "'" + filter}, "$select": {"Perioden," + fields}}
+			return cbs + "/" + table + "/TypedDataSet?" + q.Encode()
+		}
+		last13 := func(p []EconPoint) []EconPoint { return p[max(0, len(p)-13):] }
+		if b, err := get(odata("85773NED", "", "OntwikkelingTOVEenJaarEerder_3,GemiddeldeVerkoopprijs_7"), "application/json"); err != nil {
+			fail("huizenprijzen", err)
+		} else if p, err := parseCBSMonths(b, "OntwikkelingTOVEenJaarEerder_3"); err != nil {
+			fail("huizenprijzen", err)
+		} else {
+			d.HousePrices = last13(p)
+			if avg, err := parseCBSMonths(b, "GemiddeldeVerkoopprijs_7"); err == nil {
+				d.HouseAvg = &avg[len(avg)-1]
+			}
+		}
+		if b, err := get(odata("83085NED", " and TypeGefailleerde eq 'T001243'", "FaillissementenZittingsdaggecorrigeerd_1"), "application/json"); err != nil {
+			fail("faillissementen", err)
+		} else if p, err := parseCBSMonths(b, "FaillissementenZittingsdaggecorrigeerd_1"); err != nil {
+			fail("faillissementen", err)
+		} else {
+			d.Bankruptcy = last13(p)
+		}
 	}
 	if len(d.Inflation) == 0 && len(d.Unemployment) == 0 && d.Rate == nil && len(d.EURUSD) == 0 {
 		err := fmt.Errorf("economie: no source reachable (%s)", strings.Join(d.Errors, "; "))

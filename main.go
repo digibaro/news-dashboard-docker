@@ -193,6 +193,7 @@ type Config struct {
 		AbusechAuthKey       string `yaml:"abusech_auth_key"`
 		NSAPIKey             string `yaml:"ns_api_key"`             // NS Disruptions API (Treinstoringen)
 		CloudflareRadarToken string `yaml:"cloudflare_radar_token"` // Dreigingsbeeld NL (Cloudflare API token, Radar read)
+		AGSIAPIKey           string `yaml:"agsi_api_key"`           // Gasvoorraad in Energieprijzen (GIE AGSI+, free key)
 		NVDAPIKey            string `yaml:"nvd_api_key"`            // no longer used (the Kwetsbaarheden panel was removed)
 	} `yaml:"keys"`
 	Weather struct {
@@ -271,6 +272,15 @@ type Config struct {
 		VAT              float64  `yaml:"vat"`               // 0.21
 		ElectricityExtra float64  `yaml:"electricity_extra"` // €/kWh added (energy tax, markup; incl. VAT), default 0
 		GasExtra         float64  `yaml:"gas_extra"`         // €/m³ added, default 0
+		// Stroommix: generation by source and the renewable share (Fraunhofer ISE energy-charts, CC BY 4.0, no key)
+		Mix    bool   `yaml:"mix"`
+		MixURL string `yaml:"mix_url"`
+		// Gasvoorraad: how full the gas storages in NL and the EU are (GIE AGSI+; needs keys.agsi_api_key)
+		GasStorage    bool   `yaml:"gas_storage"`
+		GasStorageURL string `yaml:"gas_storage_url"`
+		// Netcongestie: the capacity map of Netbeheer Nederland for the visitor's postcode (on request)
+		Grid    bool   `yaml:"grid"`
+		GridURL string `yaml:"grid_url"`
 	} `yaml:"energy"`
 	// Air: Luchtkwaliteit panel (Luchtmeetnet, nearest station to the visitor's location).
 	Air struct {
@@ -314,7 +324,26 @@ type Config struct {
 		IncludeSensitive bool     `yaml:"include_sensitive"` // e.g. adult sites; off by default
 		Phishing         bool     `yaml:"phishing"`          // Oplichting en phishing: Fraudehelpdesk warnings
 		PhishingURL      string   `yaml:"phishing_url"`
+		// Phishing op NL-merken: phishing sites posing as Dutch banks, government and brands (PhishStats and OpenPhish)
+		PhishingNL    bool     `yaml:"phishing_nl"`
+		PhishStatsURL string   `yaml:"phishstats_url"`
+		OpenPhishURL  string   `yaml:"openphish_url"`
+		Brands        []string `yaml:"brands"` // names to look for; default a list of Dutch banks, government services and shops
 	} `yaml:"breaches"`
+	// Recalls: the Productwaarschuwingen panel (NVWA safety warnings and recalls, RSS).
+	Recalls struct {
+		Enabled  bool     `yaml:"enabled"`
+		URL      string   `yaml:"url"`
+		Interval Duration `yaml:"interval"`
+	} `yaml:"recalls"`
+	// Notices: the Bekendmakingen panel (permits and decisions near the visitor's address, officielebekendmakingen.nl).
+	Notices struct {
+		Enabled bool     `yaml:"enabled"`
+		URL     string   `yaml:"url"`    // SRU endpoint of the KOOP repository
+		Days    int      `yaml:"days"`   // how far back, 1–42
+		Radius  int      `yaml:"radius"` // metres around the address, 100–2000
+		TTL     Duration `yaml:"ttl"`    // how long a municipality's list is kept
+	} `yaml:"notices"`
 	Outages struct {
 		Enabled   bool           `yaml:"enabled"`
 		Interval  Duration       `yaml:"interval"`
@@ -336,6 +365,7 @@ type Config struct {
 		Enabled      bool     `yaml:"enabled"`
 		EurostatBase string   `yaml:"eurostat_base"`
 		ECBBase      string   `yaml:"ecb_base"`
+		CBSBase      string   `yaml:"cbs_base"` // house prices and bankruptcies (CBS StatLine OData); empty = off
 		Interval     Duration `yaml:"interval"`
 	} `yaml:"economy"`
 	// Markets: Beurs panel (Yahoo Finance's unofficial spark endpoint; personal use).
@@ -539,6 +569,9 @@ func defaultConfig() *Config {
 		c.Refresh[k] = Duration(v)
 	}
 	c.Energy.Enabled, c.Energy.URL, c.Energy.Interval, c.Energy.VAT = true, "https://api.energyzero.nl/v1/energyprices", Duration(time.Hour), 0.21
+	c.Energy.Mix, c.Energy.MixURL = true, "https://api.energy-charts.info"
+	c.Energy.GasStorage, c.Energy.GasStorageURL = true, "https://agsi.gie.eu/api"
+	c.Energy.Grid, c.Energy.GridURL = true, "https://capaciteitskaart.netbeheernederland.nl/api/servicearea"
 	c.Air.Enabled, c.Air.Base, c.Air.Interval = true, "https://api.luchtmeetnet.nl/open_api", Duration(30*time.Minute)
 	c.Air.StationsURL = "https://data.rivm.nl/data/luchtmeetnet/Metadata/luchtmeetnet_meetlocaties.csv"
 	c.Trains.Enabled, c.Trains.URL, c.Trains.Interval = true, "https://gateway.apiportal.ns.nl/disruptions/v3?isActive=true", Duration(5*time.Minute)
@@ -546,6 +579,11 @@ func defaultConfig() *Config {
 	c.Today.Enabled, c.Today.SchoolURL = true, "https://opendata.rijksoverheid.nl/v1/infotypes/schoolholidays?output=json"
 	c.Today.OnThisDay, c.Today.WikiURL = true, "https://nl.wikipedia.org"
 	c.Breaches.Phishing, c.Breaches.PhishingURL = true, "https://www.fraudehelpdesk.nl/feed/?post_type=alert"
+	c.Breaches.PhishingNL, c.Breaches.PhishStatsURL = true, "https://api.phishstats.info/api/phishing"
+	c.Breaches.OpenPhishURL = "https://raw.githubusercontent.com/openphish/public_feed/refs/heads/main/feed.txt"
+	c.Recalls.Enabled, c.Recalls.Interval = true, Duration(time.Hour)
+	c.Recalls.URL = `https://www.nvwa.nl/api/rss?query={"filters":[{"field":"topic","values":["Veiligheidswaarschuwingen"],"type":"all"}],"resultSearchTerm":""}`
+	c.Notices.Enabled, c.Notices.URL, c.Notices.Days, c.Notices.Radius, c.Notices.TTL = true, "https://repository.overheid.nl/sru", 14, 500, Duration(2*time.Hour)
 	c.Weather.Sea, c.Weather.TidesURL = true, "https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenWaarnemingen"
 	c.Weather.MarineURL = "https://marine-api.open-meteo.com/v1/marine"
 	c.Ransomware.Enabled, c.Ransomware.Base, c.Ransomware.Countries, c.Ransomware.Interval = true, "https://api.ransomware.live/v2", []string{"NL"}, Duration(time.Hour)
@@ -568,6 +606,7 @@ func defaultConfig() *Config {
 	c.Economy.Enabled, c.Economy.Interval = true, Duration(6*time.Hour)
 	c.Economy.EurostatBase = "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data"
 	c.Economy.ECBBase = "https://data-api.ecb.europa.eu/service/data"
+	c.Economy.CBSBase = "https://opendata.cbs.nl/ODataApi/odata"
 	c.Markets.Enabled, c.Markets.URL, c.Markets.Interval = true, "https://query1.finance.yahoo.com/v8/finance/spark", Duration(15*time.Minute)
 	c.Markets.Indices = []MarketSymbol{{"^AEX", "AEX"}, {"^AMX", "AMX"}, {"^BFX", "BEL 20"}, {"^GDAXI", "DAX"}, {"^STOXX50E", "Euro Stoxx 50"},
 		{"^GSPC", "S&P 500"}, {"^IXIC", "Nasdaq"}, {"BZ=F", "Brent-olie ($)"}, {"GC=F", "Goud ($)"}, {"BTC-EUR", "Bitcoin (€)"}}
@@ -676,6 +715,7 @@ func (c *Config) applyEnv() {
 	set(&c.Keys.AbusechAuthKey, "ABUSECH_AUTH_KEY")
 	set(&c.Keys.NSAPIKey, "NS_API_KEY")
 	set(&c.Keys.CloudflareRadarToken, "CLOUDFLARE_RADAR_TOKEN")
+	set(&c.Keys.AGSIAPIKey, "AGSI_API_KEY")
 	set(&c.Waste.HomeAssistant.Token, "NDB_HA_TOKEN")
 	set(&c.Push.VAPIDPrivateKey, "NDB_VAPID_PRIVATE_KEY")
 	if v := os.Getenv("NDB_TRUSTED_PROXIES"); v != "" { // e.g. the Docker gateway range
@@ -706,7 +746,7 @@ var defaultRefresh = map[string]time.Duration{
 	"economy": 60 * time.Minute, "markets": 5 * time.Minute,
 	"nlalert": 2 * time.Minute, "fuel": 60 * time.Minute, "waste": 60 * time.Minute, "trending": 10 * time.Minute,
 	"insects": 60 * time.Minute, "sky": 30 * time.Minute, "sports": 30 * time.Minute, "amber": 5 * time.Minute, "satellite": 10 * time.Minute, "radiation": 30 * time.Minute, "solar": 60 * time.Minute, "world": 30 * time.Minute,
-	"health": 30 * time.Minute,
+	"health": 30 * time.Minute, "recalls": 60 * time.Minute, "notices": 60 * time.Minute,
 }
 
 func (c *Config) validate() error {
@@ -715,7 +755,7 @@ func (c *Config) validate() error {
 			continue // a removed panel: ignored, configWarnings mentions it
 		}
 		if _, ok := defaultRefresh[k]; !ok {
-			return fmt.Errorf("refresh.%s: unknown panel (known: news, weather, alerts, traffic, alarms, energy, air, trains, politics, today, ransomware, pollen, utilities, quakes, economy, markets, nlalert, fuel, waste, trending, insects, sky, sports, amber, satellite, radiation, solar, world, threats, advisories, breaches, outages, ap, health)", k)
+			return fmt.Errorf("refresh.%s: unknown panel (known: news, weather, alerts, traffic, alarms, energy, air, trains, politics, today, ransomware, pollen, utilities, quakes, economy, markets, nlalert, fuel, waste, trending, insects, sky, sports, amber, satellite, radiation, solar, world, threats, advisories, breaches, outages, ap, health, recalls, notices)", k)
 		}
 		if v.D() < time.Minute || v.D() > 24*time.Hour {
 			return fmt.Errorf("refresh.%s: %s is outside 1m..24h", k, v.D())
@@ -846,8 +886,34 @@ func (c *Config) validate() error {
 			}
 		}
 	}
-	if c.Economy.Enabled && (c.Economy.Interval.D() < time.Hour || !httpsURL(c.Economy.EurostatBase) || !httpsURL(c.Economy.ECBBase)) {
+	if c.Economy.Enabled && (c.Economy.Interval.D() < time.Hour || !httpsURL(c.Economy.EurostatBase) || !httpsURL(c.Economy.ECBBase) ||
+		(c.Economy.CBSBase != "" && !httpsURL(c.Economy.CBSBase))) {
 		fail("economy: interval must be at least 1h and the URLs https")
+	}
+	if c.Energy.Enabled && ((c.Energy.Mix && !httpsURL(c.Energy.MixURL)) || (c.Energy.GasStorage && !httpsURL(c.Energy.GasStorageURL)) ||
+		(c.Energy.Grid && !httpsURL(c.Energy.GridURL))) {
+		fail("energy: mix_url, gas_storage_url and grid_url must be https URLs")
+	}
+	if c.Breaches.Enabled && c.Breaches.PhishingNL {
+		if (c.Breaches.PhishStatsURL != "" && !httpsURL(c.Breaches.PhishStatsURL)) || (c.Breaches.OpenPhishURL != "" && !httpsURL(c.Breaches.OpenPhishURL)) ||
+			c.Breaches.PhishStatsURL+c.Breaches.OpenPhishURL == "" {
+			fail("breaches: phishstats_url and openphish_url must be https URLs (at least one)")
+		}
+		if len(c.Breaches.Brands) > 60 {
+			fail("breaches.brands: at most 60 names")
+		}
+		for _, b := range c.Breaches.Brands {
+			if n := len(strings.TrimSpace(b)); n < 3 || n > 40 {
+				fail("breaches.brands: %q must be 3 to 40 characters", b)
+			}
+		}
+	}
+	if c.Recalls.Enabled && (!httpsURL(c.Recalls.URL) || c.Recalls.Interval.D() < 15*time.Minute) {
+		fail("recalls: url must be an https URL and interval at least 15m")
+	}
+	if c.Notices.Enabled && (!httpsURL(c.Notices.URL) || c.Notices.Days < 1 || c.Notices.Days > 42 || c.Notices.Radius < 100 || c.Notices.Radius > 2000 ||
+		c.Notices.TTL.D() < 30*time.Minute) {
+		fail("notices: url must be an https URL, days 1–42, radius 100–2000 (metres), ttl at least 30m")
 	}
 	if m := &c.Markets; m.Enabled {
 		if m.Interval.D() < 5*time.Minute || !httpsURL(m.URL) || len(m.Indices)+len(m.Stocks) == 0 || len(m.Indices) > 20 || len(m.Stocks) > 60 {
@@ -1214,6 +1280,7 @@ type App struct {
 	sea       *ttlCache[SeaNow] // sea temperature and waves per coastal station
 	wasteIdx  wasteIndex        // address -> municipal calendar
 	push      *pushHub          // Web Push subscriptions and watcher state
+	home      *homeCaches       // Netcongestie and Bekendmakingen per visitor address
 }
 
 func (a *App) config() *Config {
@@ -1372,7 +1439,7 @@ func run(cfgPath string) error {
 	a := &App{cfgPath: cfgPath, level: level, started: time.Now(), news: newNewsCache(), sched: newScheduler(), wx: newWeatherCaches(),
 		threats: newStateStore(), geo: newGeoCache(10000), metrics: newHTTPMetrics(),
 		alarms: newTTLCache[[]Alarm](500), air: newTTLCache[[]AirComponent](200), pollen: newTTLCache[PollenData](300), p2k: newP2KCounters(), bridges: newBridgeStore(),
-		push: newPushHub(), waste: newTTLCache[WasteResult](1000), insects: newTTLCache[InsectData](300), wikiCache: newTTLCache[WikiSummary](200), solar: newTTLCache[[]SolarDay](500), icons: newIconCache(), skyClouds: newTTLCache[[]cloudPoint](300), tides: newTTLCache[[]Tide](50), sea: newTTLCache[SeaNow](50), asnNames: map[int]string{}}
+		push: newPushHub(), waste: newTTLCache[WasteResult](1000), insects: newTTLCache[InsectData](300), wikiCache: newTTLCache[WikiSummary](200), solar: newTTLCache[[]SolarDay](500), icons: newIconCache(), skyClouds: newTTLCache[[]cloudPoint](300), tides: newTTLCache[[]Tide](50), sea: newTTLCache[SeaNow](50), asnNames: map[int]string{}, home: newHomeCaches()}
 	if st, err := os.Stat(cfgPath); err == nil {
 		a.cfgMod = st.ModTime()
 	}
@@ -1612,6 +1679,9 @@ func (a *App) routes(basePath string) http.Handler {
 	handle("GET /api/alarmwatch", a.handleAlarmWatch)
 	handle("GET /api/bridges", a.handleBridges)
 	handle("GET /api/bridges/list", a.handleBridgeList)
+	handle("GET /api/recalls", a.handleRecalls)
+	handle("GET /api/notices", a.handleNotices)
+	handle("GET /api/grid", a.handleGrid)
 	handle("GET /api/nlthreat", a.handleNLThreat)
 	handle("GET /api/sports", a.handleSports)
 	handle("GET /api/push", a.handlePushInfo)
@@ -1847,6 +1917,9 @@ func (a *App) handleCatalog(w http.ResponseWriter, r *http.Request) {
 		"accent":           cfg.UI.Accent,
 		"alarms":           map[string]any{"enabled": cfg.Alarms.Enabled, "city": cfg.Alarms.City},
 		"bridges":          cfg.Bridges.Enabled,
+		"recalls":          cfg.Recalls.Enabled,
+		"notices":          map[string]any{"enabled": cfg.Notices.Enabled, "days": cfg.Notices.Days, "radius": cfg.Notices.Radius},
+		"grid":             cfg.Energy.Enabled && cfg.Energy.Grid,
 		"alerts":           map[string]bool{"nctv": cfg.Alerts.NCTV.Enabled, "knmi": cfg.Alerts.KNMI},
 		"presets":          cfg.Presets,
 		"advisories":       advisories,
@@ -2033,9 +2106,21 @@ func (a *App) otherFeeds(cfg *Config) []FeedStatus {
 		if cfg.Breaches.Phishing {
 			add("fhd:alerts", "Fraudehelpdesk · oplichting en phishing", "breach")
 		}
+		if cfg.Breaches.PhishingNL {
+			add("phish:nl", "PhishStats en OpenPhish · phishing op NL-merken", "breach")
+		}
 	}
 	if cfg.Energy.Enabled {
 		add("energyzero", "EnergyZero · energieprijzen", "daily")
+		if cfg.Energy.Mix {
+			add("ec:mix", "Fraunhofer ISE energy-charts · stroommix", "daily")
+		}
+		if cfg.Energy.GasStorage && cfg.Keys.AGSIAPIKey != "" {
+			add("agsi:storage", "GIE AGSI+ · gasvoorraad", "daily")
+		}
+	}
+	if cfg.Recalls.Enabled {
+		add("nvwa:recalls", "NVWA · veiligheidswaarschuwingen", "daily")
 	}
 	if cfg.Air.Enabled {
 		add("lml:stations", "RIVM · meetstations luchtkwaliteit", "daily")

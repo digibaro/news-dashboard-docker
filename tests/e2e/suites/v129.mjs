@@ -25,7 +25,7 @@ async function open(w, { scheme = 'light', lang = 'nl', mobile = false, sea = SE
   if (!live) {
     await p.route('**/api/sea*', r => r.fulfill({ json: sea }));
     await p.route('**/api/today', async r => { const res = await r.fetch(); const j = await res.json(); if (otd) j.on_this_day = otd; else delete j.on_this_day; return r.fulfill({ response: res, json: j }); });
-    await p.route('**/api/breaches', async r => { const res = await r.fetch(); const j = await res.json(); if (phish) j.phishing = phish; else delete j.phishing; return r.fulfill({ response: res, json: j }); });
+    await p.route('**/api/breaches', async r => { const res = await r.fetch(); const j = await res.json(); if (phish) j.phishing = phish; else { delete j.phishing; delete j.phishing_nl; } return r.fulfill({ response: res, json: j }); });
   }
   await p.goto(BASEURL); await p.waitForSelector('#stream .item'); await p.waitForTimeout(2500);
   return [ctx, p, errs];

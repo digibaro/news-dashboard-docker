@@ -231,7 +231,7 @@ for (const w of [1440, 360]) { // first visit: panel groups (all on); unchecked 
     await p.click('#welcome .pgrp:has-text("Security & privacy") input'); // switch one more group on
     await p.click('#welcome .btn.primary'); await p.waitForTimeout(800);
     const st = await p.evaluate(() => ({ hidden: JSON.parse(localStorage.getItem('ndb:prefs')).panels.hidden, shown: [...document.querySelectorAll('#side .panel')].map(x => x.id.replace('panel-', '')) }));
-    const on = ['weather', 'satellite', 'sky', 'quakes', 'today', 'waste', 'energy', 'fuel', 'traffic', 'trains', 'threats', 'nlthreat', 'advisories', 'breaches', 'ransomware', 'ap'];
+    const on = ['weather', 'satellite', 'sky', 'quakes', 'today', 'waste', 'notices', 'energy', 'fuel', 'traffic', 'trains', 'threats', 'nlthreat', 'advisories', 'breaches', 'ransomware', 'ap'];
     ok(st.shown.slice().sort().join() === on.slice().sort().join() && ['sports', 'economy', 'alarms', 'pollen', 'outages'].every(id => st.hidden[id]), `default groups plus Security & privacy shown (${st.shown.length} panels), the rest hidden`);
   }
   await c.close();

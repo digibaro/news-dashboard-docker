@@ -35,7 +35,7 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   }));
   if (w === 1440 && scheme === 'light') console.log(JSON.stringify({ ...t, order: t.order.join() }, null, 1).slice(0, 1800));
   const i = n => t.order.indexOf(n);
-  ok(i('sky') === i('pollen') + 1 && i('sports') === i('markets') + 1 && i('breaches') === i('advisories') + 1, `${w} ${scheme}: panel positions`);
+  ok(i('sky') === i('recalls') + 1 && i('recalls') === i('pollen') + 1 && i('sports') === i('markets') + 1 && i('breaches') === i('advisories') + 1, `${w} ${scheme}: panel positions`);
   ok(t.heads.join('|') === 'Gezondheid|Vanavond aan de hemel|Sportagenda', 'panel names (Teken en muggen is part of Gezondheid since 1.30)');
   ok(!t.vulnsPanel && vulnsAPI.status === 404 && !/lange broek|ramen dicht|Tip:/.test(t.tip), 'Kwetsbaarheden panel removed (404), no tips in Teken en muggen');
   ok(t.irows.length === 3 && t.irows.every(r => /^(geen|laag|matig|hoog)\/(geen|laag|matig|hoog)$/.test(r)) && /wijzigen/.test(t.iextra), `ticks/mosquitoes: ${t.irows.join(', ')} [${t.iextra}]`);
