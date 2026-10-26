@@ -24,19 +24,21 @@ function edit(src, pairs) {
 const noRansomware = ['ransomware:\n  enabled: true\n', 'ransomware:\n  enabled: false\n'];
 // Likewise adsb.lol (Luchtradar; ~500 requests a day per IP).
 const noAircraft = ['aircraft:\n  enabled: true\n', 'aircraft:\n  enabled: false\n'];
+// Luchtradar's map tiles come from the fixtures server, not from OpenStreetMap.
+const localMap = ['  tile_url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png"', `  tile_url: "http://127.0.0.1:${port}/tile/{z}/{x}/{y}.png"`];
 const push = [['push:\n  enabled: false\n', 'push:\n  enabled: true\n'],
   ['  subject: "mailto:you@example.nl"', '  subject: "mailto:e2e@example.nl"']];
 
 mkdirSync(out, { recursive: true });
 const files = {
-  'main.yaml': base,
-  'push.yaml': edit(base, [...push, noRansomware, noAircraft]),
-  'accent.yaml': edit(base, [...push, noRansomware, noAircraft,
+  'main.yaml': edit(base, [localMap]),
+  'push.yaml': edit(base, [...push, noRansomware, noAircraft, localMap]),
+  'accent.yaml': edit(base, [...push, noRansomware, noAircraft, localMap,
     ['  accent: ""  ', '  accent: "#00a4dc"'],
     ['  sports: [f1, road, mtb, athletics, football]', '  sports: [f1, mtb, athletics]']]),
-  'mock.yaml': edit(base, [noRansomware, noAircraft, ['    nl: "https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-netherlands"',
+  'mock.yaml': edit(base, [noRansomware, noAircraft, localMap, ['    nl: "https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-netherlands"',
     `    nl: "http://127.0.0.1:${port}/mock/nl.xml"`]]),
-  'evil.yaml': edit(base, [noRansomware, noAircraft, ['\nsources:\n', `\nsources:\n  - { id: evil, name: "Evil <b>feed</b>", category: nl, url: "http://127.0.0.1:${port}/evil/evil.xml", lang: nl }\n`]]),
+  'evil.yaml': edit(base, [noRansomware, noAircraft, localMap, ['\nsources:\n', `\nsources:\n  - { id: evil, name: "Evil <b>feed</b>", category: nl, url: "http://127.0.0.1:${port}/evil/evil.xml", lang: nl }\n`]]),
 };
 for (const [name, text] of Object.entries(files)) writeFileSync(`${out}/${name}`, text);
 console.log(`test configs written to ${out}: ${Object.keys(files).join(', ')}`);

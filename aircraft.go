@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"container/list"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"regexp"
 	"slices"
 	"sort"
 	"strconv"
@@ -21,8 +23,9 @@ import (
 // Luchtradar: Lifeliner trauma helicopters, police helicopters and military aircraft above
 // the Netherlands, from the ADS-B network of adsb.lol (open data, ODbL; the same API as ADS-B
 // Exchange's, so aircraft.url can point to that with keys.adsb_api_key). One point query
-// returns all traffic around the country; only the aircraft of the three groups are kept,
-// with a trail of their last 30 minutes.
+// returns all traffic around the country; only the aircraft of our groups are kept, with a trail of
+// their last 30 minutes. The page draws them on an OpenStreetMap map (Leaflet) whose tiles this
+// server fetches and caches (/api/tile), so the browser contacts nobody else.
 //
 // adsb.lol allows ~500 requests a day per IP, so the server does not poll continuously: every
 // active_interval while a visitor has the panel open, every push_interval while a device
@@ -31,7 +34,7 @@ import (
 
 type Aircraft struct {
 	Hex      string       `json:"hex"`
-	Group    string       `json:"group"` // lifeliner, police, military
+	Group    string       `json:"group"` // lifeliner, police, sar, military
 	Name     string       `json:"name,omitempty"`
 	Callsign string       `json:"callsign,omitempty"`
 	Reg      string       `json:"reg,omitempty"`
@@ -41,7 +44,7 @@ type Aircraft struct {
 	Lon      float32      `json:"lon"`
 	AltM     int          `json:"alt_m"` // barometric altitude in metres; 0 on the ground
 	Ground   bool         `json:"ground,omitempty"`
-	Heli     bool         `json:"heli,omitempty"` // a helicopter (ADS-B category A7)
+	Heli     bool         `json:"heli,omitempty"` // a helicopter (ADS-B category A7, or one of the emergency groups)
 	SpeedKmh int          `json:"speed_kmh"`
 	Track    int          `json:"track"`
 	Seen     time.Time    `json:"seen"` // time of the position
@@ -80,7 +83,9 @@ func newAirState() *airState {
 	return &airState{trails: map[string][]airPoint{}, notified: map[string]time.Time{}}
 }
 
-// The area shown: the Netherlands with a margin (also the map's bounds in the page).
+var icaoHexRe = regexp.MustCompile(`^[0-9a-fA-F]{6}$`)
+
+// The area kept: the Netherlands with a margin (also the map's bounds and the tiles served).
 const (
 	airMinLat, airMaxLat = 50.65, 53.65
 	airMinLon, airMaxLon = 3.2, 7.3
@@ -122,20 +127,23 @@ type adsbAircraft struct {
 // registrations come from the config; military = the database flag of the ADS-B network.
 func airGroup(cfg *Config, a *adsbAircraft, callsign string) string {
 	reg := strings.ToUpper(a.R)
-	match := func(prefixes, regs []string) bool {
+	match := func(prefixes, regs, hexes []string) bool {
 		for _, p := range prefixes {
 			if p != "" && strings.HasPrefix(callsign, strings.ToUpper(p)) {
 				return true
 			}
 		}
-		return reg != "" && slices.ContainsFunc(regs, func(r string) bool { return strings.EqualFold(r, reg) })
+		return reg != "" && slices.ContainsFunc(regs, func(r string) bool { return strings.EqualFold(r, reg) }) ||
+			slices.ContainsFunc(hexes, func(h string) bool { return strings.EqualFold(h, a.Hex) })
 	}
 	ac := cfg.Aircraft
 	switch {
-	case ac.Lifeliner && match(ac.LifelinerCallsigns, ac.LifelinerRegs):
+	case ac.Lifeliner && match(ac.LifelinerCallsigns, ac.LifelinerRegs, ac.LifelinerHex):
 		return "lifeliner"
-	case ac.Police && match(ac.PoliceCallsigns, ac.PoliceRegs):
+	case ac.Police && match(ac.PoliceCallsigns, ac.PoliceRegs, ac.PoliceHex):
 		return "police"
+	case ac.SAR && match(ac.SARCallsigns, ac.SARRegs, ac.SARHex):
+		return "sar"
 	case ac.Military && a.DBFlags&1 != 0:
 		return "military"
 	}
@@ -190,7 +198,7 @@ func parseAircraft(cfg *Config, body []byte, now time.Time) ([]Aircraft, error) 
 		x.Near = nearestPlace(x.Lat, x.Lon)
 		out = append(out, x)
 	}
-	order := map[string]int{"lifeliner": 0, "police": 1, "military": 2}
+	order := map[string]int{"lifeliner": 0, "police": 1, "sar": 2, "military": 3}
 	sort.SliceStable(out, func(i, j int) bool {
 		if order[out[i].Group] != order[out[j].Group] {
 			return order[out[i].Group] < order[out[j].Group]
@@ -348,10 +356,10 @@ func (a *App) handleAircraft(w http.ResponseWriter, r *http.Request) {
 	s.mu.Unlock()
 	e := a.feedEntry("adsb:radar")
 	e["enabled"] = true
-	e["groups"] = map[string]bool{"lifeliner": cfg.Aircraft.Lifeliner, "police": cfg.Aircraft.Police, "military": cfg.Aircraft.Military}
+	e["groups"] = map[string]bool{"lifeliner": cfg.Aircraft.Lifeliner, "police": cfg.Aircraft.Police, "sar": cfg.Aircraft.SAR, "military": cfg.Aircraft.Military}
+	e["bounds"] = [4]float64{airMinLat, airMinLon, airMaxLat, airMaxLon}
 	e["interval_s"] = int(cfg.Aircraft.ActiveInterval.D().Seconds())
 	e["budget"] = map[string]any{"used": used, "limit": cfg.Aircraft.DailyBudget, "exhausted": why == "budget"}
-	e["bounds"] = [4]float64{airMinLat, airMinLon, airMaxLat, airMaxLon}
 	if v, ok := a.threats.get("adsb:radar").Data.(AircraftData); ok {
 		e["aircraft"] = v.Aircraft
 	}
@@ -499,4 +507,111 @@ func nearestPlace(lat, lon float32) *NearPlace {
 	deg := math.Mod(math.Atan2(dx, dy)*180/math.Pi+360, 360)
 	dirs := []string{"N", "NE", "E", "SE", "S", "SW", "W", "NW"}
 	return &NearPlace{Name: p.name, KM: km, Dir: dirs[int(math.Round(deg/45))%8]}
+}
+
+// ---------------------------------------------------------------------------
+// Map tiles for Luchtradar: GET /api/tile/{z}/{x}/{y} fetches aircraft.tile_url (OpenStreetMap by
+// default) for zoom 7–12 inside the map's bounds only, so this is no open tile proxy. Tiles are kept
+// in a small LRU (tileCacheBytes) and browsers may cache them for a week, as the OSM tile policy asks.
+
+const (
+	tileMinZoom, tileMaxZoom = 7, 12
+	tileCacheBytes           = 4 << 20
+	tilePadLat, tilePadLon   = 1.5, 3.0 // a wide panel shows more than the bounds
+)
+
+type tileCache struct {
+	mu    sync.Mutex
+	max   int
+	bytes int
+	ll    *list.List
+	m     map[string]*list.Element
+}
+
+type tileEntry struct {
+	key  string
+	body []byte
+}
+
+func newTileCache(max int) *tileCache {
+	return &tileCache{max: max, ll: list.New(), m: map[string]*list.Element{}}
+}
+
+func (c *tileCache) get(key string) ([]byte, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if el, ok := c.m[key]; ok {
+		c.ll.MoveToFront(el)
+		return el.Value.(*tileEntry).body, true
+	}
+	return nil, false
+}
+
+func (c *tileCache) put(key string, body []byte) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if _, ok := c.m[key]; ok || len(body) > c.max/4 {
+		return
+	}
+	c.m[key] = c.ll.PushFront(&tileEntry{key, body})
+	c.bytes += len(body)
+	for c.bytes > c.max && c.ll.Len() > 1 {
+		last := c.ll.Back()
+		e := last.Value.(*tileEntry)
+		c.bytes -= len(e.body)
+		c.ll.Remove(last)
+		delete(c.m, e.key)
+	}
+}
+
+// tileRange: the tile columns and rows that cover the map's bounds plus the margin the page may pan
+// into (tilePadLat/Lon, as its maxBounds), with one tile to spare.
+func tileRange(z int) (x0, x1, y0, y1 int) {
+	n := float64(int(1) << z)
+	tx := func(lon float64) int { return int(math.Floor((lon + 180) / 360 * n)) }
+	ty := func(lat float64) int {
+		r := lat * math.Pi / 180
+		return int(math.Floor((1 - math.Log(math.Tan(r)+1/math.Cos(r))/math.Pi) / 2 * n))
+	}
+	return tx(airMinLon-tilePadLon) - 1, tx(airMaxLon+tilePadLon) + 1, ty(airMaxLat+tilePadLat) - 1, ty(airMinLat-tilePadLat) + 1
+}
+
+func (a *App) handleTile(w http.ResponseWriter, r *http.Request) {
+	cfg := a.config()
+	if !cfg.Aircraft.Enabled {
+		http.NotFound(w, r)
+		return
+	}
+	z, err1 := strconv.Atoi(r.PathValue("z"))
+	x, err2 := strconv.Atoi(r.PathValue("x"))
+	y, err3 := strconv.Atoi(strings.TrimSuffix(r.PathValue("y"), ".png"))
+	if err1 != nil || err2 != nil || err3 != nil || z < tileMinZoom || z > tileMaxZoom {
+		http.NotFound(w, r)
+		return
+	}
+	if x0, x1, y0, y1 := tileRange(z); x < x0 || x > x1 || y < y0 || y > y1 {
+		http.NotFound(w, r)
+		return
+	}
+	key := fmt.Sprintf("%d/%d/%d", z, x, y)
+	body, ok := a.tiles.get(key)
+	if !ok {
+		if !a.images.limiter.allow(a.clientIP(r)) {
+			writeError(w, r, http.StatusTooManyRequests, "te veel verzoeken")
+			return
+		}
+		u := strings.NewReplacer("{z}", strconv.Itoa(z), "{x}", strconv.Itoa(x), "{y}", strconv.Itoa(y)).Replace(cfg.Aircraft.TileURL)
+		resp, err := a.fetcher.Do(context.WithoutCancel(r.Context()), FetchReq{URL: u, Accept: "image/png,image/*", MaxBody: 512 << 10, Timeout: 15 * time.Second})
+		if err != nil || !bytes.HasPrefix(resp.Body, []byte("\x89PNG")) {
+			http.Error(w, "tile unavailable", http.StatusBadGateway)
+			return
+		}
+		body = resp.Body
+		a.tiles.put(key, body)
+	}
+	h := w.Header()
+	h.Set("Content-Type", "image/png")
+	h.Set("Cache-Control", "public, max-age=604800")
+	h.Set("Content-Length", strconv.Itoa(len(body)))
+	_, _ = w.Write(body)
 }

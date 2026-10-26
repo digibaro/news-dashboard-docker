@@ -21,7 +21,12 @@ function evilXml() {
     .replace(/<pubDate>[^<]*<\/pubDate>/g, () => `<pubDate>${new Date(Date.now() - (10 + 20 - i++) * 60e3).toUTCString()}</pubDate>`);
 }
 const routes = { '/mock/nl.xml': nlXml, '/evil/evil.xml': evilXml };
+const TILE = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4//8/AAX+Av4N70a4AAAAAElFTkSuQmCC', 'base64');
 createServer((req, res) => {
+  if (req.url.startsWith('/tile/')) { // Luchtradar's map tiles: a light grey 1×1 PNG
+    res.writeHead(200, { 'Content-Type': 'image/png' }).end(TILE);
+    return;
+  }
   const f = routes[req.url.split('?')[0]];
   if (!f) { res.writeHead(404).end(); return; }
   res.writeHead(200, { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'no-store' }).end(f());

@@ -145,16 +145,24 @@ breaches:
 aircraft:
   enabled: true
   url: "https://api.adsb.lol/v2/point/52.15/5.25/120"   # centre of the Netherlands, radius in nautical miles
+  tile_url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png"   # map tiles, fetched and cached by this server (4 MB),
+                                  # zoom 7-12 around the Netherlands only; browsers never contact the tile server
   active_interval: 1m             # min. 30s
   push_interval: 5m
   idle_interval: 10m              # max. 6h
   daily_budget: 450
-  lifeliner: true                 # ANWB MAA trauma helicopters, by callsign prefix or registration
+  lifeliner: true                 # trauma helicopters (ANWB MAA Lifeliners), by callsign prefix, registration or ICAO address
   lifeliner_callsigns: [LIFELN, MEDIC]
-  lifeliner_registrations: [PH-ELP, PH-TTR, PH-MAA, PH-DOC, PH-HOW, PH-ULP, PH-OOP]
+  lifeliner_registrations: [PH-HOW, PH-OOP, PH-DOC, PH-HIP, PH-HLP, PH-HVB, PH-LLN, PH-MAA, PH-TTR, PH-UMC, PH-ELP, PH-ULP]
+  # ICAO addresses (hex): the most reliable match, and the filter of the optional ADS-B Exchange map in the page
+  lifeliner_hex: ["4853f6", "4853e2", "485e49", "486a31", "486a30", "484b58", "48605b", "4844c2", "4857b3", "48605c"]
   police: true                    # Politie Dienst Luchtvaart
   police_callsigns: [ZXP]
   police_registrations: [PH-PXA, PH-PXB, PH-PXC, PH-PXD, PH-PXE, PH-PXF, PH-PXX, PH-PXY, PH-PXZ]
+  police_hex: ["484a91", "484a92", "484a93", "484a94", "484a95", "484a96", "485b2f", "484ac1", "484ac0"]
+  sar: true                       # Kustwacht search and rescue (AW189)
+  sar_registrations: [PH-NCG, PH-RSQ, PH-SAR]
+  sar_hex: ["48644b", "48644a", "486449"]
   military: true                  # aircraft with the military flag of the ADS-B database (many fighters send no ADS-B)
 
 # Productwaarschuwingen: the NVWA's safety warnings and recalls of food and products (RSS, last 90 days).

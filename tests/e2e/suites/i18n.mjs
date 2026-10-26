@@ -79,7 +79,7 @@ async function leftovers(p, root = 'body') {
     for (const s of l.slice(0, 20)) console.log('   - ' + s);
   }
   const ax = await new AxeBuilder({ page: p }).analyze();
-  ok(ax.violations.length === 0, `axe (English, settings open): ${ax.violations.length} violations`);
+  ok(ax.violations.length === 0, `axe (English, settings open): ${ax.violations.length} violations ${ax.violations.map(v => v.id + " " + v.nodes.map(n => n.target.join(" ")).join(",")).join("; ")}`);
   for (const v of ax.violations) console.log(`   - ${v.id}: ${v.nodes.slice(0, 3).map(n => n.target.join(' ')).join(' | ')}`);
   await p.screenshot({ path: `${OUT}/i18n-settings-en.png` });
   await Promise.all([p.waitForEvent('load'), p.click('#lang-seg2 label:has-text("Nederlands")')]);

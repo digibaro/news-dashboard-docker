@@ -31,6 +31,7 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -51,6 +52,14 @@ import (
 
 //go:embed web/index.html
 var indexHTML []byte
+
+// Leaflet 1.9.4 (BSD-2-Clause, web/vendor/LICENSE-leaflet.txt) for Luchtradar's map; the page loads it only when that panel opens.
+//
+//go:embed web/vendor/leaflet.js
+var leafletJS []byte
+
+//go:embed web/vendor/leaflet.css
+var leafletCSS []byte
 
 // pageID identifies this build's page. The page carries it in <meta name="ndb-page"> and every API answer
 // in the header X-NDB-Page, so a browser that still runs an older page notices and refreshes itself.
@@ -341,6 +350,7 @@ type Config struct {
 	Aircraft struct {
 		Enabled            bool     `yaml:"enabled"`
 		URL                string   `yaml:"url"`             // an ADS-B point query (readsb v2 format) around the Netherlands
+		TileURL            string   `yaml:"tile_url"`        // map tiles ({z}/{x}/{y}), fetched and cached by this server
 		ActiveInterval     Duration `yaml:"active_interval"` // while a visitor has the panel open
 		PushInterval       Duration `yaml:"push_interval"`   // otherwise, while a device subscribes to "Lifeliner in de buurt"
 		IdleInterval       Duration `yaml:"idle_interval"`   // otherwise
@@ -348,9 +358,15 @@ type Config struct {
 		Lifeliner          bool     `yaml:"lifeliner"`
 		LifelinerCallsigns []string `yaml:"lifeliner_callsigns"` // callsign prefixes
 		LifelinerRegs      []string `yaml:"lifeliner_registrations"`
+		LifelinerHex       []string `yaml:"lifeliner_hex"` // ICAO 24-bit addresses; also the ADS-B Exchange map's filter
 		Police             bool     `yaml:"police"`
 		PoliceCallsigns    []string `yaml:"police_callsigns"`
 		PoliceRegs         []string `yaml:"police_registrations"`
+		PoliceHex          []string `yaml:"police_hex"`
+		SAR                bool     `yaml:"sar"` // Kustwacht search and rescue
+		SARCallsigns       []string `yaml:"sar_callsigns"`
+		SARRegs            []string `yaml:"sar_registrations"`
+		SARHex             []string `yaml:"sar_hex"`
 		Military           bool     `yaml:"military"` // aircraft with the military flag of the ADS-B database
 	} `yaml:"aircraft"`
 	// Notices: the Bekendmakingen panel (permits and decisions near the visitor's address, officielebekendmakingen.nl).
@@ -660,13 +676,17 @@ func defaultConfig() *Config {
 	c.Sports.Enabled, c.Sports.Sports, c.Sports.F1URL, c.Sports.Interval = true, []string{"f1", "road", "mtb", "athletics", "football"}, "https://api.jolpi.ca/ergast/f1", Duration(time.Hour)
 	c.Push.MaxSubscriptions, c.Push.QuakeMinMag, c.Push.BreakingSources, c.Push.WasteHour = 50, 2.5, 6, 19
 	c.Push.LifelinerKM = 10
-	c.Aircraft.Enabled, c.Aircraft.URL = true, "https://api.adsb.lol/v2/point/52.15/5.25/120"
+	c.Aircraft.Enabled, c.Aircraft.URL, c.Aircraft.TileURL = true, "https://api.adsb.lol/v2/point/52.15/5.25/120", "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
 	c.Aircraft.ActiveInterval, c.Aircraft.PushInterval, c.Aircraft.IdleInterval = Duration(time.Minute), Duration(5*time.Minute), Duration(10*time.Minute)
 	c.Aircraft.DailyBudget, c.Aircraft.Lifeliner, c.Aircraft.Police, c.Aircraft.Military = 450, true, true, true
 	c.Aircraft.LifelinerCallsigns = []string{"LIFELN", "MEDIC"}
-	c.Aircraft.LifelinerRegs = []string{"PH-ELP", "PH-TTR", "PH-MAA", "PH-DOC", "PH-HOW", "PH-ULP", "PH-OOP"}
+	c.Aircraft.LifelinerRegs = []string{"PH-HOW", "PH-OOP", "PH-DOC", "PH-HIP", "PH-HLP", "PH-HVB", "PH-LLN", "PH-MAA", "PH-TTR", "PH-UMC", "PH-ELP", "PH-ULP"}
+	c.Aircraft.LifelinerHex = []string{"4853f6", "4853e2", "485e49", "486a31", "486a30", "484b58", "48605b", "4844c2", "4857b3", "48605c"}
 	c.Aircraft.PoliceCallsigns = []string{"ZXP"}
 	c.Aircraft.PoliceRegs = []string{"PH-PXA", "PH-PXB", "PH-PXC", "PH-PXD", "PH-PXE", "PH-PXF", "PH-PXX", "PH-PXY", "PH-PXZ"}
+	c.Aircraft.PoliceHex = []string{"484a91", "484a92", "484a93", "484a94", "484a95", "484a96", "485b2f", "484ac1", "484ac0"}
+	c.Aircraft.SAR, c.Aircraft.SARRegs = true, []string{"PH-NCG", "PH-RSQ", "PH-SAR"}
+	c.Aircraft.SARHex = []string{"48644b", "48644a", "486449"}
 	c.Threats.Enabled = true
 	c.Threats.Interval = Duration(15 * time.Minute)
 	c.Threats.DailyInterval = Duration(time.Hour)
@@ -938,6 +958,14 @@ func (c *Config) validate() error {
 	if ac := c.Aircraft; ac.Enabled && (!httpsURL(ac.URL) || ac.ActiveInterval.D() < 30*time.Second || ac.PushInterval.D() < ac.ActiveInterval.D() ||
 		ac.IdleInterval.D() < ac.ActiveInterval.D() || ac.IdleInterval.D() > 6*time.Hour || ac.DailyBudget < 24 || ac.DailyBudget > 100000) {
 		fail("aircraft: url must be an https URL, active_interval at least 30s, push_interval and idle_interval (at most 6h) not shorter than active_interval, daily_budget 24–100000")
+	}
+	if t := c.Aircraft.TileURL; c.Aircraft.Enabled && (!tileURLOK(t) || !strings.Contains(t, "{z}") || !strings.Contains(t, "{x}") || !strings.Contains(t, "{y}")) {
+		fail("aircraft.tile_url must be an https URL with {z}, {x} and {y} (http only for localhost)")
+	}
+	for _, h := range slices.Concat(c.Aircraft.LifelinerHex, c.Aircraft.PoliceHex, c.Aircraft.SARHex) {
+		if !icaoHexRe.MatchString(h) {
+			fail("aircraft: %q is not an ICAO address (6 hex digits)", h)
+		}
 	}
 	if c.Recalls.Enabled && (!httpsURL(c.Recalls.URL) || c.Recalls.Interval.D() < 15*time.Minute) {
 		fail("recalls: url must be an https URL and interval at least 15m")
@@ -1313,6 +1341,7 @@ type App struct {
 	push      *pushHub          // Web Push subscriptions and watcher state
 	home      *homeCaches       // Netcongestie and Bekendmakingen per visitor address
 	radar     *airState         // Luchtradar: trails, request budget, sent Lifeliner messages
+	tiles     *tileCache        // Luchtradar: map tiles
 }
 
 func (a *App) config() *Config {
@@ -1471,7 +1500,7 @@ func run(cfgPath string) error {
 	a := &App{cfgPath: cfgPath, level: level, started: time.Now(), news: newNewsCache(), sched: newScheduler(), wx: newWeatherCaches(),
 		threats: newStateStore(), geo: newGeoCache(10000), metrics: newHTTPMetrics(),
 		alarms: newTTLCache[[]Alarm](500), air: newTTLCache[[]AirComponent](200), pollen: newTTLCache[PollenData](300), p2k: newP2KCounters(), bridges: newBridgeStore(),
-		push: newPushHub(), waste: newTTLCache[WasteResult](1000), insects: newTTLCache[InsectData](300), wikiCache: newTTLCache[WikiSummary](200), solar: newTTLCache[[]SolarDay](500), icons: newIconCache(), skyClouds: newTTLCache[[]cloudPoint](300), tides: newTTLCache[[]Tide](50), sea: newTTLCache[SeaNow](50), asnNames: map[int]string{}, home: newHomeCaches(), radar: newAirState()}
+		push: newPushHub(), waste: newTTLCache[WasteResult](1000), insects: newTTLCache[InsectData](300), wikiCache: newTTLCache[WikiSummary](200), solar: newTTLCache[[]SolarDay](500), icons: newIconCache(), skyClouds: newTTLCache[[]cloudPoint](300), tides: newTTLCache[[]Tide](50), sea: newTTLCache[SeaNow](50), asnNames: map[int]string{}, home: newHomeCaches(), radar: newAirState(), tiles: newTileCache(tileCacheBytes)}
 	if st, err := os.Stat(cfgPath); err == nil {
 		a.cfgMod = st.ModTime()
 	}
@@ -1626,6 +1655,15 @@ func buildCSP(page []byte) string {
 		"frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'"
 }
 
+// tileURLOK: a tile URL template is https (or http on localhost, for tests).
+func tileURLOK(raw string) bool {
+	u, err := url.Parse(strings.NewReplacer("{z}", "0", "{x}", "0", "{y}", "0").Replace(raw))
+	if err != nil || u.Host == "" || u.User != nil {
+		return false
+	}
+	return u.Scheme == "https" || u.Scheme == "http" && (u.Hostname() == "127.0.0.1" || u.Hostname() == "localhost")
+}
+
 func securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()
@@ -1668,6 +1706,8 @@ func (a *App) routes(basePath string) http.Handler {
 	for name, asset := range pwaAssets(idx.etag) {
 		handle("GET /"+name, asset.serve)
 	}
+	handle("GET /vendor/leaflet.js", newStaticAsset(leafletJS, "text/javascript; charset=utf-8").serve)
+	handle("GET /vendor/leaflet.css", newStaticAsset(leafletCSS, "text/css; charset=utf-8").serve)
 	handle("GET /api/img", a.handleImage)
 	handle("GET /api/catalog", a.handleCatalog)
 	handle("GET /api/news", a.handleNews)
@@ -1713,6 +1753,7 @@ func (a *App) routes(basePath string) http.Handler {
 	handle("GET /api/bridges/list", a.handleBridgeList)
 	handle("GET /api/recalls", a.handleRecalls)
 	handle("GET /api/aircraft", a.handleAircraft)
+	handle("GET /api/tile/{z}/{x}/{y}", a.handleTile)
 	handle("GET /api/notices", a.handleNotices)
 	handle("GET /api/grid", a.handleGrid)
 	handle("GET /api/nlthreat", a.handleNLThreat)

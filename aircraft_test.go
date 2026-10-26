@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -11,7 +14,7 @@ const adsbSample = `{"ac":[
 {"hex":"484d8a","flight":"MEDIC01 ","r":"PH-HOW","t":"EC45","alt_baro":"ground","gs":0,"track":0,"lat":52.33,"lon":4.86,"seen_pos":10},
 {"hex":"485111","flight":"ZXP02   ","r":"PH-PXB","t":"EC35","alt_baro":900,"gs":95,"track":180,"lat":52.2,"lon":5.95,"seen_pos":1},
 {"hex":"485222","flight":"","r":"PH-PXZ","t":"A139","alt_baro":1200,"gs":130,"track":10,"lat":52.0,"lon":4.4,"seen_pos":1},
-{"hex":"ae1234","category":"A5","flight":"RCH123  ","r":"07-7180","t":"C17","desc":"BOEING C-17 Globemaster","dbFlags":1,"alt_baro":28000,"gs":450,"track":95,"lat":52.5,"lon":5.0,"seen_pos":0.4},
+{"hex":"ae1234","flight":"RCH123  ","r":"07-7180","t":"C17","desc":"BOEING C-17 Globemaster","dbFlags":1,"alt_baro":28000,"gs":450,"track":95,"lat":52.5,"lon":5.0,"seen_pos":0.4},
 {"hex":"ae9999","flight":"RCH999  ","t":"C17","dbFlags":1,"alt_baro":30000,"gs":450,"track":95,"lat":49.9,"lon":5.0,"seen_pos":0.4},
 {"hex":"4ca123","flight":"KLM1234 ","r":"PH-BXA","t":"B738","dbFlags":0,"alt_baro":12000,"gs":300,"track":90,"lat":52.3,"lon":4.8,"seen_pos":1},
 {"hex":"3c4567","flight":"MEDIC99 ","t":"EC45","alt_baro":800,"gs":100,"track":90,"seen_pos":1},
@@ -106,22 +109,6 @@ func TestAirStateDue(t *testing.T) {
 	}
 }
 
-func TestAirTrails(t *testing.T) {
-	s := newAirState()
-	t0 := time.Now()
-	for i := range 3 {
-		l := []Aircraft{{Hex: "a", Lat: 52 + float32(i)/10, Lon: 5, Seen: t0.Add(time.Duration(i) * time.Minute)}}
-		s.addTrails(l, t0.Add(time.Duration(i)*time.Minute))
-		if len(l[0].Trail) != i {
-			t.Fatalf("step %d: trail %v", i, l[0].Trail)
-		}
-	}
-	s.addTrails([]Aircraft{{Hex: "b", Lat: 51, Lon: 4, Seen: t0}}, t0.Add(time.Hour))
-	if _, ok := s.trails["a"]; ok || len(s.trails) != 1 {
-		t.Errorf("an aircraft gone for 30 minutes is forgotten: %v", s.trails)
-	}
-}
-
 func TestLifelinerPushAndHandler(t *testing.T) {
 	a := newTestApp(t, validConfig)
 	cfg := a.config()
@@ -170,5 +157,92 @@ func TestLifelinerPushAndHandler(t *testing.T) {
 		if _, err := parseConfig([]byte(validConfig + tc)); err == nil {
 			t.Errorf("%q accepted", tc)
 		}
+	}
+}
+
+func TestAircraftHexAndSAR(t *testing.T) {
+	cfg, err := parseConfig([]byte(validConfig))
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := `{"ac":[
+{"hex":"486449","flight":"","r":"","t":"A189","alt_baro":500,"gs":120,"track":10,"lat":52.9,"lon":4.7,"seen_pos":1},
+{"hex":"486A31","flight":"","t":"EC35","alt_baro":800,"gs":110,"track":10,"lat":52.1,"lon":5.1,"seen_pos":1}],"now":1761500000000}`
+	list, err := parseAircraft(cfg, []byte(body), time.Now())
+	if err != nil || len(list) != 2 || list[0].Group != "lifeliner" || list[0].Hex != "486a31" || list[1].Group != "sar" || !list[1].Heli {
+		t.Fatalf("by hex: %+v %v", list, err)
+	}
+	if _, err := parseConfig([]byte(validConfig + "aircraft: { sar_hex: [\"48644\"] }\n")); err == nil {
+		t.Error("a 5-digit ICAO address was accepted")
+	}
+}
+
+func TestAirTrails(t *testing.T) {
+	s := newAirState()
+	t0 := time.Now()
+	for i := range 3 {
+		l := []Aircraft{{Hex: "a", Lat: 52 + float32(i)/10, Lon: 5, Seen: t0.Add(time.Duration(i) * time.Minute)}}
+		s.addTrails(l, t0.Add(time.Duration(i)*time.Minute))
+		if len(l[0].Trail) != i {
+			t.Fatalf("step %d: trail %v", i, l[0].Trail)
+		}
+	}
+	s.addTrails([]Aircraft{{Hex: "b", Lat: 51, Lon: 4, Seen: t0}}, t0.Add(time.Hour))
+	if _, ok := s.trails["a"]; ok || len(s.trails) != 1 {
+		t.Errorf("an aircraft gone for 30 minutes is forgotten: %v", s.trails)
+	}
+}
+
+func TestTiles(t *testing.T) {
+	png := append([]byte("\x89PNG\r\n\x1a\n"), make([]byte, 100)...)
+	var hits int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits++
+		if r.URL.Path == "/7/65/42.png" {
+			_, _ = w.Write(png)
+			return
+		}
+		_, _ = w.Write([]byte("<html>not a tile</html>"))
+	}))
+	defer srv.Close()
+	a := newTestApp(t, validConfig+"aircraft: { tile_url: \""+srv.URL+"/{z}/{x}/{y}.png\" }\n")
+	h := a.routes("/")
+	for i := range 2 {
+		r := get(h, "GET", "/api/tile/7/65/42.png", nil)
+		if r.Code != 200 || r.Header().Get("Content-Type") != "image/png" || !strings.Contains(r.Header().Get("Cache-Control"), "max-age=604800") || r.Body.Len() != len(png) {
+			t.Fatalf("tile %d: %d %v", i, r.Code, r.Header())
+		}
+	}
+	if hits != 1 {
+		t.Errorf("the second request comes from the cache (%d fetches)", hits)
+	}
+	for _, u := range []string{"/api/tile/7/10/10.png", "/api/tile/3/4/2.png", "/api/tile/6/32/21.png", "/api/tile/13/4200/2700.png", "/api/tile/7/x/42.png"} {
+		if r := get(h, "GET", u, nil); r.Code != 404 {
+			t.Errorf("%s outside the map: %d", u, r.Code)
+		}
+	}
+	if r := get(h, "GET", "/api/tile/7/66/42.png", nil); r.Code != 502 {
+		t.Errorf("not a PNG: %d", r.Code)
+	}
+	if x0, x1, y0, y1 := tileRange(7); x0 > 65 || x1 < 66 || y0 > 41 || y1 < 43 {
+		t.Errorf("tile range z7: %d-%d %d-%d", x0, x1, y0, y1)
+	}
+	c := newTileCache(1000)
+	for i := range 6 {
+		c.put(fmt.Sprint(i), make([]byte, 200))
+	}
+	if _, ok := c.get("0"); ok || c.bytes > 1000 {
+		t.Errorf("LRU: %d bytes", c.bytes)
+	}
+	if r := get(h, "GET", "/vendor/leaflet.js", nil); r.Code != 200 || !strings.Contains(r.Body.String(), "Leaflet") {
+		t.Errorf("leaflet.js: %d", r.Code)
+	}
+	for _, tc := range []string{"aircraft: { tile_url: \"http://example.com/{z}/{x}/{y}.png\" }\n", "aircraft: { tile_url: \"https://x.nl/tiles.png\" }\n"} {
+		if _, err := parseConfig([]byte(validConfig + tc)); err == nil {
+			t.Errorf("%q accepted", tc)
+		}
+	}
+	if strings.Contains(csp, "frame-src") {
+		t.Error("the page frames nothing")
 	}
 }
