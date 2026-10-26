@@ -194,6 +194,7 @@ type Config struct {
 		NSAPIKey             string `yaml:"ns_api_key"`             // NS Disruptions API (Treinstoringen)
 		CloudflareRadarToken string `yaml:"cloudflare_radar_token"` // Dreigingsbeeld NL (Cloudflare API token, Radar read)
 		AGSIAPIKey           string `yaml:"agsi_api_key"`           // Gasvoorraad in Energieprijzen (GIE AGSI+, free key)
+		ADSBAPIKey           string `yaml:"adsb_api_key"`           // Luchtradar via ADS-B Exchange (RapidAPI); adsb.lol needs none
 		NVDAPIKey            string `yaml:"nvd_api_key"`            // no longer used (the Kwetsbaarheden panel was removed)
 	} `yaml:"keys"`
 	Weather struct {
@@ -336,6 +337,22 @@ type Config struct {
 		URL      string   `yaml:"url"`
 		Interval Duration `yaml:"interval"`
 	} `yaml:"recalls"`
+	// Aircraft: the Luchtradar panel (Lifeliners, police helicopters and military aircraft, ADS-B via adsb.lol).
+	Aircraft struct {
+		Enabled            bool     `yaml:"enabled"`
+		URL                string   `yaml:"url"`             // an ADS-B point query (readsb v2 format) around the Netherlands
+		ActiveInterval     Duration `yaml:"active_interval"` // while a visitor has the panel open
+		PushInterval       Duration `yaml:"push_interval"`   // otherwise, while a device subscribes to "Lifeliner in de buurt"
+		IdleInterval       Duration `yaml:"idle_interval"`   // otherwise
+		DailyBudget        int      `yaml:"daily_budget"`    // requests per 24 hours (adsb.lol allows ~500 per IP)
+		Lifeliner          bool     `yaml:"lifeliner"`
+		LifelinerCallsigns []string `yaml:"lifeliner_callsigns"` // callsign prefixes
+		LifelinerRegs      []string `yaml:"lifeliner_registrations"`
+		Police             bool     `yaml:"police"`
+		PoliceCallsigns    []string `yaml:"police_callsigns"`
+		PoliceRegs         []string `yaml:"police_registrations"`
+		Military           bool     `yaml:"military"` // aircraft with the military flag of the ADS-B database
+	} `yaml:"aircraft"`
 	// Notices: the Bekendmakingen panel (permits and decisions near the visitor's address, officielebekendmakingen.nl).
 	Notices struct {
 		Enabled bool     `yaml:"enabled"`
@@ -443,6 +460,7 @@ type Config struct {
 		QuakeMinMag      float64 `yaml:"quake_min_mag"`
 		BreakingSources  int     `yaml:"breaking_sources"` // 0 = no breaking-news messages
 		WasteHour        int     `yaml:"waste_hour"`       // local hour of the evening reminder; -1 = off
+		LifelinerKM      int     `yaml:"lifeliner_km"`     // "Lifeliner in de buurt": distance to the device's weather location
 	} `yaml:"push"`
 	// Amber: AMBER Alert and Vermist Kind Alert (Burgernet open API, no key).
 	Amber struct {
@@ -641,6 +659,14 @@ func defaultConfig() *Config {
 	c.Air.HeatSmog = true
 	c.Sports.Enabled, c.Sports.Sports, c.Sports.F1URL, c.Sports.Interval = true, []string{"f1", "road", "mtb", "athletics", "football"}, "https://api.jolpi.ca/ergast/f1", Duration(time.Hour)
 	c.Push.MaxSubscriptions, c.Push.QuakeMinMag, c.Push.BreakingSources, c.Push.WasteHour = 50, 2.5, 6, 19
+	c.Push.LifelinerKM = 10
+	c.Aircraft.Enabled, c.Aircraft.URL = true, "https://api.adsb.lol/v2/point/52.15/5.25/120"
+	c.Aircraft.ActiveInterval, c.Aircraft.PushInterval, c.Aircraft.IdleInterval = Duration(time.Minute), Duration(5*time.Minute), Duration(10*time.Minute)
+	c.Aircraft.DailyBudget, c.Aircraft.Lifeliner, c.Aircraft.Police, c.Aircraft.Military = 450, true, true, true
+	c.Aircraft.LifelinerCallsigns = []string{"LIFELN", "MEDIC"}
+	c.Aircraft.LifelinerRegs = []string{"PH-ELP", "PH-TTR", "PH-MAA", "PH-DOC", "PH-HOW", "PH-ULP", "PH-OOP"}
+	c.Aircraft.PoliceCallsigns = []string{"ZXP"}
+	c.Aircraft.PoliceRegs = []string{"PH-PXA", "PH-PXB", "PH-PXC", "PH-PXD", "PH-PXE", "PH-PXF", "PH-PXX", "PH-PXY", "PH-PXZ"}
 	c.Threats.Enabled = true
 	c.Threats.Interval = Duration(15 * time.Minute)
 	c.Threats.DailyInterval = Duration(time.Hour)
@@ -716,6 +742,7 @@ func (c *Config) applyEnv() {
 	set(&c.Keys.NSAPIKey, "NS_API_KEY")
 	set(&c.Keys.CloudflareRadarToken, "CLOUDFLARE_RADAR_TOKEN")
 	set(&c.Keys.AGSIAPIKey, "AGSI_API_KEY")
+	set(&c.Keys.ADSBAPIKey, "ADSB_API_KEY")
 	set(&c.Waste.HomeAssistant.Token, "NDB_HA_TOKEN")
 	set(&c.Push.VAPIDPrivateKey, "NDB_VAPID_PRIVATE_KEY")
 	if v := os.Getenv("NDB_TRUSTED_PROXIES"); v != "" { // e.g. the Docker gateway range
@@ -908,6 +935,10 @@ func (c *Config) validate() error {
 			}
 		}
 	}
+	if ac := c.Aircraft; ac.Enabled && (!httpsURL(ac.URL) || ac.ActiveInterval.D() < 30*time.Second || ac.PushInterval.D() < ac.ActiveInterval.D() ||
+		ac.IdleInterval.D() < ac.ActiveInterval.D() || ac.IdleInterval.D() > 6*time.Hour || ac.DailyBudget < 24 || ac.DailyBudget > 100000) {
+		fail("aircraft: url must be an https URL, active_interval at least 30s, push_interval and idle_interval (at most 6h) not shorter than active_interval, daily_budget 24–100000")
+	}
 	if c.Recalls.Enabled && (!httpsURL(c.Recalls.URL) || c.Recalls.Interval.D() < 15*time.Minute) {
 		fail("recalls: url must be an https URL and interval at least 15m")
 	}
@@ -1051,7 +1082,7 @@ func (c *Config) validate() error {
 			fail("push.subject must be a mailto: address or https URL (the push services contact you there)")
 		}
 		if p.MaxSubscriptions < 1 || p.MaxSubscriptions > 1000 || p.QuakeMinMag < 0 || p.QuakeMinMag > 9 ||
-			p.BreakingSources < 0 || p.BreakingSources > 9 || p.WasteHour < -1 || p.WasteHour > 23 {
+			p.BreakingSources < 0 || p.BreakingSources > 9 || p.WasteHour < -1 || p.WasteHour > 23 || p.LifelinerKM < 1 || p.LifelinerKM > 100 {
 			fail("push: max_subscriptions 1–1000, quake_min_mag 0–9, breaking_sources 0–9 (0 = off), waste_hour -1–23")
 		}
 	}
@@ -1281,6 +1312,7 @@ type App struct {
 	wasteIdx  wasteIndex        // address -> municipal calendar
 	push      *pushHub          // Web Push subscriptions and watcher state
 	home      *homeCaches       // Netcongestie and Bekendmakingen per visitor address
+	radar     *airState         // Luchtradar: trails, request budget, sent Lifeliner messages
 }
 
 func (a *App) config() *Config {
@@ -1439,7 +1471,7 @@ func run(cfgPath string) error {
 	a := &App{cfgPath: cfgPath, level: level, started: time.Now(), news: newNewsCache(), sched: newScheduler(), wx: newWeatherCaches(),
 		threats: newStateStore(), geo: newGeoCache(10000), metrics: newHTTPMetrics(),
 		alarms: newTTLCache[[]Alarm](500), air: newTTLCache[[]AirComponent](200), pollen: newTTLCache[PollenData](300), p2k: newP2KCounters(), bridges: newBridgeStore(),
-		push: newPushHub(), waste: newTTLCache[WasteResult](1000), insects: newTTLCache[InsectData](300), wikiCache: newTTLCache[WikiSummary](200), solar: newTTLCache[[]SolarDay](500), icons: newIconCache(), skyClouds: newTTLCache[[]cloudPoint](300), tides: newTTLCache[[]Tide](50), sea: newTTLCache[SeaNow](50), asnNames: map[int]string{}, home: newHomeCaches()}
+		push: newPushHub(), waste: newTTLCache[WasteResult](1000), insects: newTTLCache[InsectData](300), wikiCache: newTTLCache[WikiSummary](200), solar: newTTLCache[[]SolarDay](500), icons: newIconCache(), skyClouds: newTTLCache[[]cloudPoint](300), tides: newTTLCache[[]Tide](50), sea: newTTLCache[SeaNow](50), asnNames: map[int]string{}, home: newHomeCaches(), radar: newAirState()}
 	if st, err := os.Stat(cfgPath); err == nil {
 		a.cfgMod = st.ModTime()
 	}
@@ -1680,6 +1712,7 @@ func (a *App) routes(basePath string) http.Handler {
 	handle("GET /api/bridges", a.handleBridges)
 	handle("GET /api/bridges/list", a.handleBridgeList)
 	handle("GET /api/recalls", a.handleRecalls)
+	handle("GET /api/aircraft", a.handleAircraft)
 	handle("GET /api/notices", a.handleNotices)
 	handle("GET /api/grid", a.handleGrid)
 	handle("GET /api/nlthreat", a.handleNLThreat)
@@ -1928,6 +1961,7 @@ func (a *App) handleCatalog(w http.ResponseWriter, r *http.Request) {
 		"alarms":           map[string]any{"enabled": cfg.Alarms.Enabled, "city": cfg.Alarms.City},
 		"bridges":          cfg.Bridges.Enabled,
 		"recalls":          cfg.Recalls.Enabled,
+		"aircraft":         cfg.Aircraft.Enabled,
 		"notices":          map[string]any{"enabled": cfg.Notices.Enabled, "days": cfg.Notices.Days, "radius": cfg.Notices.Radius},
 		"grid":             cfg.Energy.Enabled && cfg.Energy.Grid,
 		"alerts":           map[string]bool{"nctv": cfg.Alerts.NCTV.Enabled, "knmi": cfg.Alerts.KNMI},
@@ -2128,6 +2162,9 @@ func (a *App) otherFeeds(cfg *Config) []FeedStatus {
 		if cfg.Energy.GasStorage && cfg.Keys.AGSIAPIKey != "" {
 			add("agsi:storage", "GIE AGSI+ · gasvoorraad", "daily")
 		}
+	}
+	if cfg.Aircraft.Enabled {
+		add("adsb:radar", "adsb.lol · ADS-B luchtverkeer", "daily")
 	}
 	if cfg.Recalls.Enabled {
 		add("nvwa:recalls", "NVWA · veiligheidswaarschuwingen", "daily")

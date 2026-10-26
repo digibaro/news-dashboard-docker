@@ -267,6 +267,24 @@ svg.i { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor;
 .gside .gv.bad { color: var(--sev-high); } .gside .gv.ok { color: var(--sev-low); }
 .gside .gs { font-size: 12px; color: var(--text-2); }
 .glv.bad { color: var(--sev-crit); font-weight: 600; } .glv.warn { color: var(--sev-high); font-weight: 600; }
+.airmap { display: block; width: 100%; max-height: 380px; margin: 0 auto 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--accent-bg); }
+.am-sea { fill: var(--accent-bg); }
+.am-land { fill: var(--surface-2); stroke: var(--line-strong); stroke-width: .8; }
+.am-land2 { fill: var(--surface); stroke: var(--line); stroke-width: .6; }
+.am-me { fill: var(--text); stroke: var(--bg); stroke-width: 1.5; }
+.am-trail { fill: none; stroke-width: 1.6; stroke-dasharray: 3 2; opacity: .8; }
+.am-ac { cursor: pointer; }
+.am-mark { stroke: var(--bg); stroke-width: 1.2; }
+.am-ac.gnd .am-mark { fill-opacity: .25; stroke-width: 1.6; }
+.am-ac.sel .am-mark { stroke: var(--text); stroke-width: 2; }
+.am-lbl { font-size: 10px; fill: var(--text); paint-order: stroke; stroke: var(--bg); stroke-width: 2.5px; pointer-events: none; }
+.g-lifeliner { --g: var(--sev-med); } .g-police { --g: var(--accent); } .g-military { --g: var(--sev-low); }
+.am-ac .am-mark, .am-dot { fill: var(--g); background: var(--g); } .am-trail { stroke: var(--g); }
+.am-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.airrow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.airrow .linkbtn { font-weight: 600; }
+.airtype { color: var(--text-2); font-size: 12px; }
+.airlist li.sel { background: var(--accent-bg); border-radius: 6px; }
 .phgrp .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; overflow-wrap: anywhere; }
 .rtag { font-size: 11px; padding: 0 5px; border-radius: 4px; background: var(--chip, var(--line)); color: var(--text-2); }
 .brstar { border: 0; background: none; padding: 0; font-size: 17px; line-height: 1; cursor: pointer; color: var(--text-3); min-width: 24px; min-height: 24px; }
@@ -1207,6 +1225,11 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.35.0</h3>
+    <ul>
+      <li>Nieuw paneel Luchtradar: Lifeliners, politiehelikopters en militaire toestellen boven Nederland op een kaart, met hoogte, snelheid, de dichtstbijzijnde plaats en het spoor van het laatste half uur (van adsb.lol). Zolang het paneel open is, wordt het elke minuut bijgewerkt.</li>
+      <li>Nieuwe pushmelding: een Lifeliner in de lucht binnen 10 km van je weerlocatie (kies hem onder Instellingen → Meldingen).</li>
+    </ul>
     <h3>Versie 1.34.1</h3>
     <ul>
       <li>Sneller en zuiniger: de server gebruikt minder geheugen en rekentijd (verkeersinformatie, plaatjes, EPSS en het inpakken van antwoorden), en houdt maximaal 20 MB aan plaatjes in het geheugen.</li>
@@ -1492,6 +1515,11 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.35.0</h3>
+    <ul>
+      <li>New panel Air radar: Lifeliners, police helicopters and military aircraft above the Netherlands on a map, with altitude, speed, the nearest town and the trail of the last half hour (from adsb.lol). While the panel is open it updates every minute.</li>
+      <li>New push notification: a Lifeliner in the air within 10 km of your weather location (choose it under Settings → Notifications).</li>
+    </ul>
     <h3>Version 1.34.1</h3>
     <ul>
       <li>Faster and leaner: the server uses less memory and CPU (traffic information, images, EPSS and compressing responses), and keeps at most 20 MB of images in memory.</li>
@@ -2017,6 +2045,7 @@ const PANELS = {
   sky: 'Vanavond aan de hemel',
   traffic: 'Verkeer',
   trains: 'Treinstoringen',
+  aircraft: 'Luchtradar',
   alarms: 'Alarmeringen',
   nlalert: 'NL-Alert',
   quakes: 'Aardbevingen en natuurrampen',
@@ -2042,7 +2071,7 @@ const MIN = 60e3;
 const DEFAULTS = {
   v: 2, theme: 'auto', sources: null, known: [], pageSize: 60, summaries: true,
   density: 'compact', category: 'all', weather: null, threatTab: 'ips', advTab: 'adv', advFilter: 'all',
-  lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, trending: true, pushTopics: null, waste: null, sports: null, sportsSeen: null, solar: null, saver: 'auto', hazardTab: 'nl', watch: [], mute: [], alarmWatch: [], alarmSound: true, bridges: [], bridgeTab: 'fav', energyTab: 'prices',
+  lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, trending: true, pushTopics: null, waste: null, sports: null, sportsSeen: null, solar: null, saver: 'auto', hazardTab: 'nl', watch: [], mute: [], alarmWatch: [], alarmSound: true, bridges: [], bridgeTab: 'fav', energyTab: 'prices', airTab: 'help',
   panels: { order: PANEL_IDS.slice(), collapsed: {}, hidden: {}, page: {} },
 };
 
@@ -3259,6 +3288,23 @@ const EN = {
   "Geen phishingsites op Nederlandse merken in de openbare lijsten van de afgelopen 90 dagen.": "No phishing sites aimed at Dutch brands in the public lists of the last 90 days.",
   "Alleen de domeinnaam, onschadelijk gemaakt ([.]) en nooit als link. Bron: PhishStats en OpenPhish.": "Only the domain name, defanged ([.]) and never as a link. Source: PhishStats and OpenPhish.",
   "Ook gebruikt voor Bekendmakingen in je buurt en Netcongestie (in Energieprijzen).": "Also used for Official notices near you and Grid congestion (in Energy prices).",
+  // Luchtradar
+  'Luchtradar': 'Air radar', 'Hulpdiensten': 'Emergency services', 'Militair': 'Military', 'Soort toestellen': 'Kind of aircraft',
+  'Kaart van Nederland met {n} toestellen': 'Map of the Netherlands with {n} aircraft', 'aan de grond': 'on the ground', '{m} m hoog': '{m} m up', '{v} km/u': '{v} km/h',
+  '{km} km van je': '{km} km from you', 'boven {place}': 'above {place}', '{km} km {dir} {place}': '{km} km {dir} {place}',
+  'ten noorden van': 'north of', 'ten noordoosten van': 'northeast of', 'ten oosten van': 'east of', 'ten zuidoosten van': 'southeast of',
+  'ten zuiden van': 'south of', 'ten zuidwesten van': 'southwest of', 'ten westen van': 'west of', 'ten noordwesten van': 'northwest of',
+  'Volg op ADS-B Exchange': 'Follow on ADS-B Exchange',
+  'De luchtradar kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.': 'The air radar could not be loaded ({err}). Retrying automatically.',
+  'adsb.lol is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.': 'adsb.lol cannot be reached ({err}); retrying automatically.',
+  'De posities worden voor het eerst opgehaald.': 'The positions are being fetched for the first time.',
+  'Nu geen militaire toestellen boven Nederland die hun positie uitzenden. Veel gevechtsvliegtuigen zenden geen ADS-B uit.': 'No military aircraft over the Netherlands broadcasting their position right now. Many fighter jets do not transmit ADS-B.',
+  'Er vliegt nu geen Lifeliner of politiehelikopter die zijn positie uitzendt.': 'No Lifeliner or police helicopter broadcasting its position is flying right now.',
+  'De daglimiet van {n} verzoeken aan adsb.lol is bereikt; de posities worden later weer bijgewerkt.': 'The daily limit of {n} requests to adsb.lol has been reached; positions will be updated again later.',
+  'Verouderd: adsb.lol is nu niet bereikbaar ({err}).': 'Outdated: adsb.lol cannot be reached right now ({err}).',
+  ' (ADS-B, ODbL) · elke minuut bijgewerkt zolang dit paneel open is · veel militaire toestellen zenden geen positie uit': ' (ADS-B, ODbL) · updated every minute while this panel is open · many military aircraft do not broadcast a position',
+  '{name} in de lucht': '{name} in the air', '{n} hulpdiensten in de lucht': '{n} emergency aircraft in the air', 'geen hulpdiensten in de lucht': 'no emergency aircraft in the air', '{n} militair': '{n} military',
+  'Lifeliner in de lucht binnen {km} km van je weerlocatie': 'Lifeliner in the air within {km} km of your weather location',
 };
 
 // Sentences the server composes from parts (rain summary, directions, source names).
@@ -3407,6 +3453,7 @@ function sanitize(p) {
     .slice(0, 20).map(b => ({ id: b.id, name: b.name.slice(0, 80), city: typeof b.city === 'string' ? b.city.slice(0, 60) : '' }));
   if (['fav', 'plan'].includes(p.bridgeTab)) d.bridgeTab = p.bridgeTab;
   if (['prices', 'mix', 'grid'].includes(p.energyTab)) d.energyTab = p.energyTab;
+  if (['help', 'mil'].includes(p.airTab)) d.airTab = p.airTab;
   if (Array.isArray(p.alarmWatch)) d.alarmWatch = p.alarmWatch.filter(r => r && typeof r === 'object' && /^[a-z0-9][a-z0-9-]{1,48}$/.test(r.city) && typeof r.street === 'string' && r.street.trim().length >= 3)
     .slice(0, 10).map(r => ({ city: r.city, cityName: typeof r.cityName === 'string' ? r.cityName.slice(0, 60) : null, street: r.street.trim().slice(0, 60), spoed: r.spoed === true }));
   if (p.waste && typeof p.waste === 'object') {
@@ -3422,7 +3469,7 @@ function sanitize(p) {
     const kwp = Number(p.solar.kwp), tilt = Number(p.solar.tilt), az = Number(p.solar.az);
     if (kwp > 0 && kwp <= 1000 && Number.isInteger(tilt) && tilt >= 0 && tilt <= 90 && [0, -45, 45, -90, 90, -135, 135, 180].includes(az)) d.solar = { kwp: Math.round(kwp * 10) / 10, tilt, az };
   }
-  if (Array.isArray(p.pushTopics)) d.pushTopics = p.pushTopics.filter(x => typeof x === 'string' && /^[a-z]{2,12}$/.test(x)).slice(0, 10);
+  if (Array.isArray(p.pushTopics)) d.pushTopics = p.pushTopics.filter(x => typeof x === 'string' && /^[a-z]{2,12}$/.test(x)).slice(0, 16);
   const terms = a => Array.isArray(a) ? [...new Set(a.filter(t => typeof t === 'string').map(t => t.trim().slice(0, 60)).filter(Boolean))].slice(0, 50) : [];
   d.watch = terms(p.watch);
   d.mute = terms(p.mute);
@@ -3606,7 +3653,7 @@ const PANEL_GROUPS = [
   ['Weer & natuur', ['weather', 'satellite', 'sky', 'quakes']],
   ['Gezondheid', ['air', 'pollen', 'recalls', 'health']],
   ['Thuis & vandaag', ['today', 'waste', 'notices', 'energy', 'fuel']],
-  ['Verkeer & reizen', ['traffic', 'trains']],
+  ['Verkeer & reizen', ['traffic', 'trains', 'aircraft']],
   ['Alarmeringen', ['alarms', 'nlalert']],
   ['Storingen', ['utilities', 'outages']],
   ['Economie & politiek', ['economy', 'markets', 'politics']],
@@ -3977,6 +4024,7 @@ function setCollapsed(id, c) {
 function togglePanel(id) {
   setCollapsed(id, !prefs.panels.collapsed[id]);
   savePrefs(); updateAllBtn();
+  if (id === 'aircraft' && !prefs.panels.collapsed[id]) { loadAircraft(); setTimeout(loadAircraft, 8000); } // the server fetches fresh positions for an open panel
 }
 
 // The bar above the panels: jump to a panel, collapse or expand them all. It sticks below the header.
@@ -4114,6 +4162,10 @@ const summaryOf = {
     return bad.length ? bad.map(p => `${p.name}: ${t(OUT_NL[p.data.status])}`).slice(0, 2).join(' · ') : t('alles werkt normaal'); },
   ap: () => { const a = panelData.ap?.items; if (!a) return null; const n = a.filter(isRecent).length;
     return n ? t(n === 1 ? '1 bericht (14 dagen)' : '{n} berichten (14 dagen)', { n }) : t('geen berichten (14 dagen)'); },
+  aircraft: () => { const a = panelData.aircraft?.data?.aircraft; if (!a) return null;
+    const up = a.filter(x => x.group !== 'military' && !x.ground), mil = a.filter(x => x.group === 'military').length;
+    return [up.length === 1 ? t('{name} in de lucht', { name: airName(up[0]) }) : up.length ? t('{n} hulpdiensten in de lucht', { n: up.length }) : t('geen hulpdiensten in de lucht'),
+      mil ? t('{n} militair', { n: mil }) : null].filter(Boolean).join(' · '); },
   recalls: () => { const a = panelData.recalls?.data?.items; if (!a) return null; const n = a.filter(x => Date.now() - new Date(x.published) <= 7 * 864e5).length;
     return n ? t(n === 1 ? '1 waarschuwing (7 dagen)' : '{n} waarschuwingen (7 dagen)', { n }) : t('geen nieuwe (7 dagen)'); },
   notices: () => { const d = panelData.notices?.data; if (d?.needs_address) return t('adres instellen'); const a = d?.items; if (!a) return null;
@@ -4153,6 +4205,7 @@ const freshOf = {
   outages: () => { const d = panelData.outages?.data; return d?.enabled && { ts: oldest(d.providers), max: 25, stale: d.providers?.some(p => p.error) }; },
   health: () => { const s = panelData.health?.status; return s && { ts: s.fetched_at, max: 65, stale: !!s.error }; },
   recalls: () => { const d = panelData.recalls?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 130, stale: !!d.error }; },
+  aircraft: () => { const d = panelData.aircraft?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 25, stale: !!d.error }; },
   notices: () => { const d = panelData.notices?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 250, stale: !!d.error }; },
 };
 const soon = text => body => body.replaceChildren(h('p', { class: 'pnote', text }));
@@ -4185,6 +4238,7 @@ const panelRenderers = {
   health: renderHealth,
   ap: renderAP,
   recalls: renderRecalls,
+  aircraft: renderAircraft,
   notices: renderBekendmakingen,
 };
 
@@ -6422,6 +6476,7 @@ const PUSH_LABELS = {
   breaking: () => t('Groot nieuws: {n} of meer bronnen binnen een uur', { n: pushInfo?.breaking_sources ?? 6 }),
   waste: () => t('Afval: de avond vóór de ophaaldag ({h}:00), voor je adres', { h: pushInfo?.waste_hour ?? 19 }),
   alarmwatch: () => t('Alarmeringen-wachter: een alarmering in een straat die je volgt'),
+  lifeliner: () => t('Lifeliner in de lucht binnen {km} km van je weerlocatie', { km: pushInfo?.lifeliner_km ?? 10 }),
 };
 const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && window.isSecureContext;
 const b64ToBytes = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0));
@@ -6438,7 +6493,7 @@ async function pushSub() {
 }
 function pushTopicsChosen() {
   const avail = pushInfo?.topics || [];
-  return Array.isArray(prefs.pushTopics) ? prefs.pushTopics.filter(x => avail.includes(x)) : avail.filter(x => x !== 'breaking');
+  return Array.isArray(prefs.pushTopics) ? prefs.pushTopics.filter(x => avail.includes(x)) : avail.filter(x => x !== 'breaking' && x !== 'lifeliner');
 }
 async function pushRegister(sub) {
   const j = sub.toJSON(), l = prefs.weather || catalog?.weather_location;
@@ -7049,6 +7104,7 @@ function setMobileView(v, { animate = true, restore = true } = {}) {
   updatePageEmpty();
   if (!phone) return;
   if (v === 'overview') renderDigest();
+  if (v === (pageOf('aircraft') === 'b' ? 'panels2' : 'panels')) loadAircraft(); // live positions while the radar is in view
   const el = v === 'panels' || v === 'panels2' ? $('#side') : v === 'overview' ? $('#digest') : $('#news');
   if (animate) { el.classList.remove('mv-in-l', 'mv-in-r'); void el.offsetWidth; el.classList.add(dir); }
   if (restore) scrollTo({ top: mvScroll[v], behavior: 'instant' });
@@ -7140,7 +7196,7 @@ function wireMobileViews() {
 function refreshView(v) {
   const panels = () => [loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(), loadBreaches(), loadOutages(), loadHealthPanel(),
     loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadNLThreat(), loadExploits(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(),
-    loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar(), loadWorld(), loadRecalls(), loadNotices()];
+    loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar(), loadWorld(), loadRecalls(), loadNotices(), loadAircraft(true)];
   const jobs = v === 'news' ? [loadNews({ replace: true }), loadTrending()] : v === 'panels' || v === 'panels2' ? panels() : [loadNews({ replace: true }), ...panels()];
   return Promise.allSettled(jobs);
 }
@@ -7348,6 +7404,94 @@ function renderRecalls(body) {
       : h('p', { class: 'pnote', text: t('Geen veiligheidswaarschuwingen van de NVWA in de afgelopen 30 dagen.') }));
   }
   out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://www.nvwa.nl/actueel/veiligheidswaarschuwingen', 'NVWA'), t(' · terugroepacties en waarschuwingen voor voedsel en producten')));
+  body.replaceChildren(...out);
+}
+
+// ---------------------------------------------------------------- luchtradar (ADS-B via adsb.lol)
+// The map is an outline of the Netherlands (Natural Earth, public domain) in the server's bounds,
+// equirectangular at 52.15° N: no map tiles, so the browser contacts nobody else.
+const NL_MAP = {"w":400,"h":477,"nl":"M389.7 64.4L389.8 73.9L387.5 81.5L388.8 86.6L389.5 103.7L386.5 114.1L378.5 126.5L376.8 131.3L374.3 159.4L372.5 162.8L367.6 161.1L362.8 161.8L357.6 160.3L348.3 160.4L345.1 161.4L341.6 163.9L342.5 165.6L341.8 169.6L345.7 173.4L338.7 176.2L341 186.7L342.9 189L361 193.7L366 192.8L368.1 190.6L374.1 200.2L375.4 204.3L374.6 210.1L371.9 217L373.3 225.7L369 228.3L363.7 235L359.5 236.9L354.2 244.4L346.3 246L342.6 251.6L339.5 252.7L338.8 254.4L339 256.8L349.1 262.1L352.1 265.6L352.3 268.6L345.7 276.9L343.1 278.4L334.5 278.6L324.7 282L318.3 286.5L310.1 284.6L310.5 289.8L306.8 290.8L306.5 288.3L301.2 286.8L299 283.6L295.1 284.2L285.6 278.8L282.2 280.6L288.4 287.5L281.4 285.6L266.5 291.7L266.2 293.1L268.4 294.8L269.7 297.9L269.5 301.1L267.3 303.3L267.2 305L271.1 305.3L274.3 307.5L275.3 308.5L274 313L276.2 315.9L282.8 318.9L281.2 324.7L281.6 326.7L292 340.4L293.2 348.5L292 357.9L293.4 359.7L292.1 366.6L287.6 370.8L279.5 384.5L278.7 387.7L279.1 394.2L281.4 395.5L286.3 392.1L288.5 392.8L285.5 395.2L287.5 397.1L271.5 409.5L267.1 416.4L265.3 416.6L261.5 413.1L258.8 414.5L260.9 426.9L266.1 424.9L270 426L273.5 425.5L273.2 432.6L279.4 436L278.7 444.8L277.6 446.1L274.1 446.7L273 453L271.6 454.4L270.1 454L272.9 459L272.7 461.1L253 460.8L249 457.4L246.6 460.4L244.5 460.4L242.8 459.4L243.9 453.9L238.1 450.8L236.5 448.3L236.3 444.8L243.4 436.7L246.1 435.4L250.1 427.8L246.1 427.8L251.5 417.6L250.1 415.8L250.9 412.1L252.8 412.6L253.5 411.6L254.8 408.3L254.1 406L258.1 404.9L255.9 402.5L257.6 399.3L256.5 396.5L251.8 397.1L246.9 392.1L239.9 392.9L236.6 390L231.1 388.3L228.8 386.4L227.8 379.7L223.7 375.8L221.6 375.5L213.6 380.2L202 379.7L196.6 380.2L196.6 374.5L194.9 372.3L189.3 372.5L187.6 371.5L185.6 365.6L181.6 360.3L183.4 351.6L181.5 347.9L178.3 345.5L176.8 345.9L171.4 356L166.9 359L161.3 356.8L152.4 355.6L153 353.7L154.1 353.5L158.3 355.6L157.6 352.8L158.4 345.7L154 342.6L149.4 344.1L141.8 353.6L139.5 354.9L130.8 354.6L128.9 353.2L130.1 347L129.3 345.7L125.2 345.9L114.8 350.9L116 352.2L115.1 356.2L118.7 361.9L118.2 364.6L116.3 365.6L111.8 365.3L106.4 362.7L103.5 362.6L101.9 355.4L100.9 354.7L97.7 356.9L88.9 356.6L77.9 349.3L73.9 348.9L68.5 357L61.2 359.2L57.5 355.8L51.6 352.8L47.8 349.1L40 350.6L32.7 348.3L28.8 341.7L24.5 337.1L24.1 334.5L25.1 333.1L35.2 326.8L63.5 324.2L66.6 326.6L68.9 330.8L65.5 333L65.5 334L74.9 335L79.6 336.9L83.6 340.5L88.3 350.5L90.6 351.2L95.7 350.5L97.6 351.5L105.7 350.2L107 346.5L106.2 343.1L104.2 340.5L93 336.3L87 336.3L76.9 327.5L84.7 324.3L93.4 324.7L98.3 327.5L96.6 323.3L91.3 322.7L89.1 319.7L89 314.7L92 312.6L95.3 312.3L91.8 309.4L85 307.3L81.4 296.7L76.2 292.6L74.4 294L65.5 296L64.6 291.6L74.4 286.6L79.6 287.2L82.7 288.8L85.6 287.2L81.2 281.1L82.3 276.9L79 265.5L79.6 264.3L80.2 263.2L84.8 264.3L88.6 263.6L91.9 261.5L105.8 244.4L117.7 226.8L127.6 208.9L136.3 181.8L140.4 150.9L143.4 135.7L147.5 125.1L149.6 109.9L150.8 108.5L156.8 109.4L157.7 108.5L158.5 109.7L157 114.5L159.3 117.4L163.3 118.6L167.1 118.4L173.5 113.6L183.2 110.7L206.1 90.2L212.6 87.9L219.3 68.2L224.8 62.5L228.4 61L233.3 55.2L240 53.7L243.4 50.9L271.3 38.8L299.9 37.7L303.6 39.9L306.9 37.7L321.4 33.6L344.4 30.1L354.1 31.7L357.7 34.3L361 47.4L365.7 51.5L372.7 54.7L374.4 54.1L376.4 55.3L379.1 54.1L377.9 56.3L378.6 60.9L381.6 62.6ZM14.6 361.7L33.3 355.1L39.5 359.2L49 361.9L54.2 365.7L61.9 366.8L73.7 362.2L76.5 356.1L78.6 356.2L82.3 358L84.9 362.4L89.9 364.2L93.3 364.5L95.6 361.3L99.7 362.8L98.3 368.8L94.5 374.1L89.7 378L77.6 384.3L73.1 387.8L59.4 388.7L56.7 386.4L56.2 380.9L40 375.2L30.7 376.7L29.6 377.8L29.4 383.1L24.8 383.9L18.7 382.1L16.3 379.5L14.9 375.5ZM81.6 312.3L87.5 314.8L86.7 318.9L83.4 320.8L74.2 322.2L68.4 319.3L66.9 315.1L65.3 313.8L58.1 310L55.2 313.5L48.8 313.1L47.5 311.2L47.8 306.1L51.3 303.7L59.9 302.4L72.2 303.5L75.9 305.2ZM165.1 85.7L165.1 86.7L167.1 86.7L162.5 95.4L157.9 99.1L155.7 103.3L152.4 104.3L149 102.9L147.1 98.8L147.7 94.7L152 86.1L156.7 82.2L161.4 73.5L164.5 73.7L164.9 74.6L164.5 76.9L166.8 81.9L166.8 84.5ZM163.8 68.2L174.3 57.2L180.9 53.5L185.8 54.1L185.8 55.2L183.2 55.2L179.2 57L166.8 69.6ZM216.9 34.9L232.7 31.2L230.4 34.3L222 35.5L222.6 37.7L212.9 40.6L195.9 47.3L193.2 47.2L192 44.8L193.1 42.1L200 38.7L215.3 36.2ZM241.4 29L264.8 28L268.7 30L259.1 32.2L249.1 32.2L241.9 35L239.4 34.4L237.7 32L238.2 29.7L239.9 28.3ZM293.8 22.4L303.5 21.6L306.2 22.4L306.2 23.5L288.1 28.8L286.2 31.2L285.6 30.2L286.2 29L285.2 26.8L287.6 24.7ZM316.2 14.8L322.9 16.9L321.8 17.5L318.1 17Z","other":"M-2 479L-2 464.3L-0.3 467.6L2.4 468.2L4.3 473.5L2.9 476.1L3.4 479ZM402 -2L402 479L287.7 479L288.9 478.2L281.1 466.9L274.3 467.7L274.2 463.2L272.5 462L272.9 459L270.1 454L271.6 454.4L273 453L274.1 446.7L277.6 446.1L278.7 444.8L279.4 436L273.2 432.6L273.5 425.5L270 426L266.1 424.9L260.9 426.9L258.8 414.5L261.5 413.1L265.3 416.6L267.1 416.4L271.5 409.5L287.5 397.1L285.5 395.2L288.5 392.8L286.3 392.1L281.4 395.5L279.1 394.2L278.7 387.7L279.5 384.5L287.6 370.8L292.1 366.6L293.4 359.7L292 357.9L293.2 348.5L292 340.4L281.6 326.7L281.2 324.7L282.8 318.9L276.2 315.9L274 313L275.3 308.5L274.3 307.5L271.1 305.3L267.2 305L267.3 303.3L269.5 301.1L269.7 297.9L268.4 294.8L266.2 293.1L268.1 290.5L272.1 289.8L281.4 285.6L288.4 287.5L282.2 280.6L285.6 278.8L295.1 284.2L299 283.6L301.2 286.8L306.5 288.3L306.8 290.8L310.5 289.8L310.1 284.6L316.3 286.5L318.3 286.5L324.7 282L334.5 278.6L343.1 278.4L345.7 276.9L352.3 268.6L352.1 265.6L349.1 262.1L339 256.8L339.5 252.7L342.6 251.6L346.3 246L354.2 244.4L359.5 236.9L363.7 235L369 228.3L373.6 224.9L371.9 217L374.6 210.1L375.4 204.3L374.1 200.2L368.1 190.6L366 192.8L361 193.7L342.9 189L341 186.7L338.7 176.2L345.7 173.4L341.8 169.6L342.5 165.6L341.6 163.9L345.1 161.4L348.3 160.4L357.6 160.3L362.8 161.8L367.6 161.1L372.5 162.8L374.3 159.4L376.8 131.3L378.5 126.5L386.5 114.1L389.5 103.7L388.8 86.6L387.5 81.5L389.8 73.9L389.7 64.4L393.5 59.8L393.1 56.2L395.6 52.5L399.2 51.8L402 52.8L402 51.1L378.1 49.7L374.5 47.9L373 43.5L373.4 29L376.6 20.4L382.4 21.3L384.6 17.9L383.5 14.8L379.4 12.1L379.2 10L380.6 8.3L392.2 -2ZM351 7.2L343.7 9.4L347 13.8L344 11.6L341 12.7L339.2 11.8L337.5 8.1L338.6 7.2L349.7 4.8ZM-2 367.2L14.6 361.7L14.9 375.5L16.3 379.5L18.7 382.1L24.8 383.9L29.4 383.1L29.6 377.8L30.7 376.7L40 375.2L56.2 380.9L56.7 386.4L59.4 388.7L70.9 388.6L89.7 378L94.5 374.1L98.3 368.8L99.7 362.8L101.6 364.6L103 369.1L107.6 374.3L108.1 376.2L107 378.8L108.1 378.2L110.3 374.3L106.3 372.2L105.7 365.7L103.5 362.6L106.4 362.7L111.8 365.3L116.3 365.6L118.2 364.6L118.7 361.9L115.1 356.2L116 352.2L114.8 350.9L125.2 345.9L129.3 345.7L130.1 347L128.9 353.2L130.8 354.6L139.5 354.9L141.8 353.6L149.4 344.1L154 342.6L158.4 345.7L157.6 352.8L158.3 355.6L154.1 353.5L153 353.7L152.4 355.6L161.3 356.8L166.9 359L171.4 356L176.8 345.9L178.3 345.5L181.5 347.9L183.4 351.6L183.1 354.3L182 356.8L182.3 361.8L185.6 365.6L187.6 371.5L189.3 372.5L194.9 372.3L196.6 374.5L196.6 380.2L213.6 380.2L221.6 375.5L223.7 375.8L227.8 379.7L228.8 386.4L231.1 388.3L236.6 390L239.9 392.9L246.9 392.1L251.8 397.1L256.5 396.5L257.6 399.3L255.9 402.5L258.1 404.9L254.1 406L254.8 408.3L253.5 411.6L252.8 412.6L250.9 412.1L250.1 415.8L251.5 417.6L246.1 427.8L250.1 427.8L246.1 435.4L243.4 436.7L236.3 444.8L236.5 448.3L238.1 450.8L243.9 453.9L242.8 459.4L244.5 460.4L246.6 460.4L249 457.4L253 460.8L272.7 461.1L272.6 462.3L274.2 463.2L274.3 467.7L281.1 466.9L288.9 478.2L287.7 479L3.4 479L2.9 476.1L4.3 473.5L3.2 469.7L2.4 468.2L-0.3 467.6L-2 464.3Z","water":"M294.5 45.5L297.3 46L298.8 47.4L297.7 49L288.1 48.6L287.5 46.9L289.5 39.5L291.2 38.7L295.5 40.9L293.8 42.2L292.2 40.9L292.3 44.4ZM260.5 176.5L260.8 182.6L259.6 186.3L253.7 195.1L248.5 199.8L239.4 203.3L236.5 205.7L232 211L227.6 219.7L219.3 221.8L215.1 221.4L201.8 212.8L193.3 212.8L186.6 208.6L178.6 207.1L172.5 203.4L173.9 201.1L176.5 202.2L176.5 201.1L178 202.2L179.7 198.1L183 195.5L184.6 192.5L180.5 188.1L183.2 187.1L182.5 184.8L184.5 182.7L179.2 167L179 163L180.5 160.3L183.9 159.7L188.9 163L190.3 162.7L197.8 158.5L200.6 152.9L205.3 150L203.6 143.4L197.1 141.1L192.2 143.7L188.9 141.2L187.6 139L186.8 125.4L182 115.6L179.9 113.9L188.2 109.7L203.7 96.3L211.9 91.1L215.5 98.2L215.3 104.1L216.6 108.5L216.2 111.1L214.6 112.8L215.9 115.4L211.3 120L211.6 122.7L215.7 126L225 127.1L230 129.2L237.8 126.4L246 129.2L242.5 130L239.6 132L235.3 139.1L233.9 155.9L240 165.1L254.5 164.9L257.6 166.3Z"};
+const AIR_LABEL = { lifeliner: 'Lifeliner', police: 'Politie', military: 'Militair' };
+let airSel = null, airLastQuiet = 0;
+async function loadAircraft(force) {
+  if (!catalog?.aircraft) { panelData.aircraft = { data: { enabled: false } }; renderPanel('aircraft'); return; }
+  const live = panelOn('aircraft') && !prefs.panels.collapsed.aircraft && !document.hidden // on a phone: only on the panel's own page
+    && !(isPhone() && viewMode === 'normal' && mobileView !== (pageOf('aircraft') === 'b' ? 'panels2' : 'panels'));
+  if (!live && !force && panelData.aircraft?.data && Date.now() - airLastQuiet < 5 * MIN) return; // closed panel: every 5 minutes is enough
+  if (!live) airLastQuiet = Date.now();
+  try { panelData.aircraft = { data: await api('api/aircraft' + (live ? '?live=1' : '')) }; }
+  catch (e) { panelData.aircraft = { ...(panelData.aircraft || {}), error: e }; }
+  renderPanel('aircraft');
+}
+const airName = a => a.name || (a.group === 'lifeliner' ? 'Lifeliner ' + (a.callsign || a.reg) : a.group === 'police' ? t('Politie') + ' ' + (a.callsign || a.reg) : a.callsign || a.reg || a.hex);
+const airXY = (b, lat, lon) => [(lon - b[1]) / (b[3] - b[1]) * NL_MAP.w, (b[2] - lat) / (b[2] - b[0]) * NL_MAP.h];
+const AIR_DIR = { N: 'ten noorden van', NE: 'ten noordoosten van', E: 'ten oosten van', SE: 'ten zuidoosten van', S: 'ten zuiden van', SW: 'ten zuidwesten van', W: 'ten westen van', NW: 'ten noordwesten van' };
+const airNear = n => !n ? '' : n.km ? t('{km} km {dir} {place}', { km: n.km, dir: t(AIR_DIR[n.dir] || ''), place: n.name }) : t('boven {place}', { place: n.name });
+function airDistance(a) {
+  const l = prefs.weather || catalog?.weather_location;
+  if (!l || !Number.isFinite(l.lat)) return null;
+  const dy = (a.lat - l.lat) * 111.32, dx = (a.lon - l.lon) * 111.32 * Math.cos(l.lat * Math.PI / 180);
+  return Math.round(Math.hypot(dx, dy));
+}
+function airMap(r, list) {
+  const b = r.bounds || [50.65, 3.2, 53.65, 7.3];
+  const svg = svgEl('svg', { viewBox: `0 0 ${NL_MAP.w} ${NL_MAP.h}`, class: 'airmap', role: 'img', 'aria-label': t('Kaart van Nederland met {n} toestellen', { n: list.length }) });
+  svg.append(svgEl('rect', { x: 0, y: 0, width: NL_MAP.w, height: NL_MAP.h, class: 'am-sea' }), svgEl('path', { d: NL_MAP.other, class: 'am-land2' }),
+    svgEl('path', { d: NL_MAP.nl, class: 'am-land' }), svgEl('path', { d: NL_MAP.water, class: 'am-sea' }));
+  const l = prefs.weather || catalog?.weather_location;
+  if (l && Number.isFinite(l.lat)) { const [x, y] = airXY(b, l.lat, l.lon); svg.append(svgEl('circle', { cx: x.toFixed(1), cy: y.toFixed(1), r: 3.5, class: 'am-me' })); }
+  for (const a of list) {
+    const pts = [...(a.trail || []), [a.lat, a.lon]].map(([la, lo]) => airXY(b, la, lo).map(v => v.toFixed(1)).join(','));
+    if (pts.length > 1) svg.append(svgEl('polyline', { points: pts.join(' '), class: 'am-trail g-' + a.group }));
+  }
+  for (const a of list) {
+    const [x, y] = airXY(b, a.lat, a.lon);
+    const g = svgEl('g', { class: `am-ac g-${a.group}${a.ground ? ' gnd' : ''}${airSel === a.hex ? ' sel' : ''}`, transform: `translate(${x.toFixed(1)} ${y.toFixed(1)})`, 'data-hex': a.hex });
+    g.append(a.heli ? svgEl('circle', { r: 5.5, class: 'am-mark' }) : svgEl('path', { d: 'M0 -8 L5.5 6 L0 3 L-5.5 6 Z', class: 'am-mark', transform: `rotate(${a.track || 0})` }));
+    const label = svgEl('text', { x: 8, y: 4, class: 'am-lbl' }); label.textContent = a.name || a.callsign || a.reg || '';
+    g.append(label);
+    const title = svgEl('title', {}); title.textContent = airName(a); g.append(title);
+    g.addEventListener('click', () => { airSel = airSel === a.hex ? null : a.hex; renderPanel('aircraft'); });
+    svg.append(g);
+  }
+  return svg;
+}
+function renderAircraft(body) {
+  const st = panelData.aircraft;
+  if (!st) { body.replaceChildren(h('div', { class: 'tsk', style: 'height:320px', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:280px' }))); return; }
+  const r = st.data;
+  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('De luchtradar kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
+  if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (aircraft.enabled).' })); return; }
+  const gr = r.groups || {};
+  const tabs = [(gr.lifeliner || gr.police) && ['help', t('Hulpdiensten')], gr.military && ['mil', t('Militair')]].filter(Boolean);
+  const tab = tabs.some(([id]) => id === prefs.airTab) ? prefs.airTab : tabs[0]?.[0];
+  const all = r.aircraft || [];
+  const count = id => all.filter(a => (a.group === 'military') === (id === 'mil')).length;
+  const tabRow = tabs.length > 1 ? h('div', { class: 'sectabs', role: 'group', 'aria-label': t('Soort toestellen') }, tabs.map(([id, label]) =>
+    h('button', { class: 'chip', type: 'button', 'aria-pressed': String(tab === id), text: `${label} (${count(id)})`,
+      onclick: () => { prefs.airTab = id; airSel = null; savePrefs(); renderPanel('aircraft'); $('#panel-aircraft .sectabs [aria-pressed="true"]')?.focus(); } }))) : null;
+  const list = all.filter(a => (a.group === 'military') === (tab === 'mil'));
+  const out = tabRow ? [tabRow] : [];
+  if (!r.aircraft) out.push(h('p', { class: 'pnote', text: r.error ? t('adsb.lol is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: tr(r.error) }) : t('De posities worden voor het eerst opgehaald.') }));
+  else {
+    out.push(airMap(r, list));
+    if (!list.length) out.push(h('p', { class: 'pnote', text: tab === 'mil' ? t('Nu geen militaire toestellen boven Nederland die hun positie uitzenden. Veel gevechtsvliegtuigen zenden geen ADS-B uit.')
+      : t('Er vliegt nu geen Lifeliner of politiehelikopter die zijn positie uitzendt.') }));
+    else out.push(h('ul', { class: 'plist airlist' }, list.map(a => {
+      const km = airDistance(a);
+      const meta = [a.ground ? t('aan de grond') : t('{m} m hoog', { m: a.alt_m.toLocaleString(locale()) }), !a.ground && a.speed_kmh ? t('{v} km/u', { v: a.speed_kmh }) : null,
+        airNear(a.near), km != null ? t('{km} km van je', { km }) : null].filter(Boolean).join(' · ');
+      return h('li', { class: airSel === a.hex ? 'sel' : null },
+        h('div', { class: 'airrow' }, h('span', { class: 'am-dot g-' + a.group, 'aria-hidden': 'true' }),
+          h('button', { class: 'linkbtn', type: 'button', translate: 'no', text: airName(a), 'aria-pressed': String(airSel === a.hex), onclick: () => { airSel = airSel === a.hex ? null : a.hex; renderPanel('aircraft'); } }),
+          h('span', { class: 'rtag', text: t(AIR_LABEL[a.group]) }), h('span', { class: 'airtype', translate: 'no', text: [a.reg && a.reg !== airName(a) ? a.reg : null, a.desc || a.type].filter(Boolean).join(' · ') })),
+        h('div', { class: 'm' }, h('span', null, meta, ' · ', timeEl(new Date(a.seen)))),
+        airSel === a.hex ? h('div', { class: 'm' }, extLink('https://globe.adsbexchange.com/?icao=' + encodeURIComponent(a.hex), t('Volg op ADS-B Exchange'))) : null);
+    })));
+    if (r.budget?.exhausted) out.push(h('p', { class: 'pnote', text: t('De daglimiet van {n} verzoeken aan adsb.lol is bereikt; de posities worden later weer bijgewerkt.', { n: r.budget.limit }) }));
+    else if (r.error) out.push(h('p', { class: 'pnote', text: t('Verouderd: adsb.lol is nu niet bereikbaar ({err}).', { err: tr(r.error) }) }));
+  }
+  out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://adsb.lol/', 'adsb.lol'), t(' (ADS-B, ODbL) · elke minuut bijgewerkt zolang dit paneel open is · veel militaire toestellen zenden geen positie uit')));
   body.replaceChildren(...out);
 }
 
@@ -8035,7 +8179,7 @@ async function init() {
   if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
   await Promise.allSettled([loadNews({ replace: true }), loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(),
     loadBreaches(), loadOutages(), loadHealthPanel(), loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadNLThreat(), loadExploits(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(), loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadTrending(), initPush(),
-    loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar(), loadWorld(), loadRecalls(), loadNotices()]);
+    loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar(), loadWorld(), loadRecalls(), loadNotices(), loadAircraft(true)]);
   kioskFit(); // the header and top bar have their final height now
   panelFromHash(); // e.g. a push notification that opens #panel-waste
   awStart();
@@ -8079,6 +8223,7 @@ async function init() {
   every(R('outages', 10), loadOutages);
   every(R('health', 30), loadHealthPanel);
   every(R('recalls', 60), loadRecalls);
+  every(MIN, () => loadAircraft());
   every(R('notices', 60), loadNotices);
   every(R('energy', 30), () => { if (prefs.energyTab === 'grid' && panelData.grid) loadGrid(); });
   setInterval(tick, 15e3);

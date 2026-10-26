@@ -37,7 +37,7 @@ import (
 // visit, so after a restart without snapshot notifications resume once a device
 // opens the dashboard again.
 
-var pushTopics = []string{"amber", "nctv", "knmi", "nlalert", "alarmwatch", "radiation", "quakes", "water", "breaking", "waste"}
+var pushTopics = []string{"amber", "nctv", "knmi", "nlalert", "alarmwatch", "radiation", "quakes", "water", "breaking", "waste", "lifeliner"}
 
 // pushHosts are the push services of the major browsers; subscriptions to any
 // other host are refused, so the server never posts to arbitrary URLs.
@@ -450,6 +450,7 @@ func (a *App) runPushWatch(ctx context.Context) error {
 	p.mu.Unlock()
 
 	msgs = append(msgs, a.alarmWatchPush(ctx, cfg, now, first)...)
+	msgs = append(msgs, a.lifelinerPush(cfg, now)...)
 	knmiMsg, knmiLevel, knmiOK := a.knmiPush(ctx, cfg, now)
 	breaking := a.breakingPush(cfg, now, first)
 
@@ -694,7 +695,8 @@ func (a *App) pushTopicsAvailable(cfg *Config) []string {
 	var out []string
 	for _, t := range pushTopics {
 		ok := map[string]bool{"amber": cfg.Amber.Enabled, "nctv": cfg.Alerts.NCTV.Enabled, "knmi": cfg.Alerts.KNMI, "nlalert": cfg.NLAlert.Enabled,
-			"quakes": cfg.Quakes.Enabled, "water": cfg.World.Enabled && cfg.World.Water, "alarmwatch": cfg.Alarms.Enabled, "breaking": cfg.Push.BreakingSources >= 2, "waste": cfg.Waste.Enabled, "radiation": cfg.Radiation.Enabled}[t]
+			"quakes": cfg.Quakes.Enabled, "water": cfg.World.Enabled && cfg.World.Water, "alarmwatch": cfg.Alarms.Enabled, "breaking": cfg.Push.BreakingSources >= 2, "waste": cfg.Waste.Enabled, "radiation": cfg.Radiation.Enabled,
+			"lifeliner": cfg.Aircraft.Enabled && cfg.Aircraft.Lifeliner}[t]
 		if ok {
 			out = append(out, t)
 		}
@@ -713,7 +715,8 @@ func (a *App) handlePushInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, r, http.StatusOK, 60, map[string]any{"enabled": true, "key": b64url(pub), "topics": a.pushTopicsAvailable(cfg),
-		"quake_min_mag": cfg.Push.QuakeMinMag, "breaking_sources": cfg.Push.BreakingSources, "waste_hour": cfg.Push.WasteHour})
+		"quake_min_mag": cfg.Push.QuakeMinMag, "breaking_sources": cfg.Push.BreakingSources, "waste_hour": cfg.Push.WasteHour,
+		"lifeliner_km": cfg.Push.LifelinerKM})
 }
 
 // pushRequest checks a POST: same origin, JSON, small body, rate limit.

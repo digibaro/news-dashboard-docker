@@ -41,6 +41,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Alarmeringen:** the latest P2000 alerts for your city from Zwaailicht.nl, grouped as Brandweer, Ambulance, Politie and Lifeliner (at most 2 each). The city is chosen per visitor under Instellingen.
 - **Alarmeringen-wachter:** watch up to 10 specific streets (street + place, optionally only urgent alerts). A new alert in such a street gives a banner, a two-tone sound and a desktop notification while the dashboard is open (also in a background tab), and a push notification that stays on screen when it is closed (topic *Alarmeringen-wachter*). Set under *Instellingen → Alarmeringen-wachter*, with a test button.
 - **Datalekken:** the latest 3 Dutch and 3 other data breaches at organisations, from Have I Been Pwned: number of accounts, leak date, and what data leaked. Below them **Oplichting en phishing**: the latest scam warnings of the Fraudehelpdesk, and **Phishing op Nederlandse merken**: phishing sites posing as a Dutch bank, government service or shop in PhishStats and OpenPhish (domain name only, defanged, never a link; the public lists contain few Dutch targets).
+- **Luchtradar:** Lifeliner trauma helicopters, police helicopters and military aircraft above the Netherlands on a map of the country (no map tiles), with altitude, speed, the nearest town, the distance to you and a 30-minute trail, from the ADS-B network of adsb.lol. Tabs *Hulpdiensten* and *Militair*; a click on an aircraft opens it on ADS-B Exchange. Positions update every minute while the panel is open; a push notification can tell you when a Lifeliner is in the air near your weather location.
 - **Productwaarschuwingen:** the NVWA's recalls and safety warnings of food and products (last 30 days), with a label for allergy warnings.
 - **Bekendmakingen:** permits, traffic decisions and other official notices within 500 m of the visitor's address (the one set for the Afvalkalender), last 14 days, from officielebekendmakingen.nl.
 - **Ransomware:** organisations claimed by ransomware groups on their leak sites (ransomware.live), with counts, the most active groups and the latest claims. No links to leak sites and no descriptions.
@@ -175,7 +176,7 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 | `cache` | `max_items_per_source`, `max_age`, `snapshot_path` (empty = no disk writes, see below), `icon_cache_path` (only the site icons; ~85 KB, written about weekly) |
 | `features` | `show_images` (keep feed images), `proxy_images` (serve them through `/api/img`, see below), `source_icons` (the news sites' own icons, default on), `icon_services` (fallback to DuckDuckGo's and Google's favicon services for sites that block the server, default on), `geolocation` (ip-api lookups), `allow_custom_feeds` (reserved, see below) |
 | `refresh` | how often an open browser tab asks the server for new data, per panel: `news`, `alerts`, `weather`, `today`, `air`, `pollen`, `traffic`, `trains`, `alarms`, `quakes`, `nlalert`, `energy`, `fuel`, `economy`, `markets`, `waste`, `trending`, `amber`, `insects`, `sky`, `sports`, `satellite`, `radiation`, `solar`, `world`, `politics`, `threats`, `advisories`, `breaches`, `ransomware`, `utilities`, `outages`, `ap`, `health`, `recalls`, `notices` (1m–24h, see below) |
-| `keys` | `abusech_auth_key` (optional; also ThreatFox), `ns_api_key` (Treinstoringen), `cloudflare_radar_token` (Dreigingsbeeld NL; or `CLOUDFLARE_RADAR_TOKEN`), `agsi_api_key` (Gasvoorraad; or `AGSI_API_KEY`) |
+| `keys` | `abusech_auth_key` (optional; also ThreatFox), `ns_api_key` (Treinstoringen), `cloudflare_radar_token` (Dreigingsbeeld NL; or `CLOUDFLARE_RADAR_TOKEN`), `agsi_api_key` (Gasvoorraad; or `AGSI_API_KEY`), `adsb_api_key` (Luchtradar via ADS-B Exchange only; or `ADSB_API_KEY`) |
 | `energy` | Energieprijzen: `enabled`, `url`, `interval` (min. 15m), `vat` (0.21), `electricity_extra` / `gas_extra` (€ added per kWh / m³, e.g. energy tax and markup; default 0); `mix` + `mix_url` (Stroommix, every 30 min), `gas_storage` + `gas_storage_url` (Gasvoorraad, every 6 hours, needs `keys.agsi_api_key`), `grid` + `grid_url` (Netcongestie, on request) |
 | `air` | Luchtkwaliteit: `enabled`, `base` (Luchtmeetnet API), `stations_url` (RIVM station list, CSV), `interval` (min. 15m), `heat_smog` (Hitte en smog, default true; the ozone forecast comes with the pollen request) |
 | `trains` | Treinstoringen: `enabled`, `url` (NS Disruptions API v3), `interval` (min. 2m). Needs `keys.ns_api_key` |
@@ -196,7 +197,7 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 | `sky` | Vanavond aan de hemel: `enabled`, `kp_url` (NOAA SWPC), `clouds_url` (Open-Meteo), `launches` (default true), `launches_url` (Launch Library 2; free tier 15 requests per hour, fetched hourly) and `launches_hours` (only launches in the coming hours, default 24), `space_weather` (default true) and `space_weather_url` (NOAA SWPC, read every 30 minutes) |
 | `sports` | Sportagenda: `enabled`, `sports` (`f1`, `road`, `mtb`, `athletics`, `football`; visitors choose among these), `f1_url` (Jolpica), `interval` (default 1h, min. 15m), `events` (races and tournaments: `sport` road/mtb/athletics/football, `name`, `start`, `end`, `place`, `url`, `note` (an extra line), `tentative` (dates not yet confirmed), `keywords` for matching headlines) |
 | `ui` | `accent`: accent colour for all visitors, e.g. `"#00a4dc"` (empty = the default blue); adjusted automatically to a readable shade in light and dark mode |
-| `push` | Push notifications (off by default): `enabled`, `subject` (`mailto:` or https contact), `vapid_private_key` (or `NDB_VAPID_PRIVATE_KEY`), `max_subscriptions` (default 50), `quake_min_mag` (2.5), `breaking_sources` (6; 0 = off), `waste_hour` (19; -1 = off). See [Push notifications](#push-notifications). |
+| `push` | Push notifications (off by default): `enabled`, `subject` (`mailto:` or https contact), `vapid_private_key` (or `NDB_VAPID_PRIVATE_KEY`), `max_subscriptions` (default 50), `quake_min_mag` (2.5), `breaking_sources` (6; 0 = off), `waste_hour` (19; -1 = off), `lifeliner_km` (10: distance for "Lifeliner in de buurt"). See [Push notifications](#push-notifications). |
 | `markets` | Beurs: `enabled`, `url` (Yahoo spark), `interval` (default 15m, min. 5m), `indices` (1–20, shown in order) and `stocks` (max. 60, the source of the top 3 risers and fallers), each `{ symbol, name }`. The default stocks are the AEX constituents; Euronext reviews them every quarter. |
 | `today` | Vandaag: `enabled`, `school_url` (Rijksoverheid school holidays), `on_this_day` (default true) and `wiki_url` (Dutch Wikipedia, read hourly) |
 | `ransomware` | Ransomware: `enabled`, `base` (ransomware.live API v2), `countries` (ISO codes, default `[NL]`, max. 5), `interval` (min. 10m) |
@@ -210,6 +211,7 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 | `bridges` | Bruggen in Verkeer: `enabled`, `interval` (open now, default 2m, min. 1m; the `traffic.url` download then runs this often), `planned_url` (NDW planning feed), `planned_interval` (default 15m, min. 5m), `names_url` (Rijkswaterstaat FIS WFS: every movable bridge; empty = only bridges NDW reports, named by ISRS code) |
 | `alarms` | `enabled`, `city` (default city slug, e.g. `den-haag`), `base` (feed URL prefix), `interval` (cache per city, min. 1m); `counts` for the top bar: `label`, `cities` (one or more slugs, e.g. a whole safety region), `interval` (1m–10m) |
 | `breaches` | Datalekken panel: `enabled`, `url` (HIBP breach list), `interval` (min. 1h, default 3h), `include_sensitive` (default `false`), `phishing` (default true) and `phishing_url` (Fraudehelpdesk alerts RSS, read every 2 hours), `phishing_nl` (default true), `phishstats_url`, `openphish_url` (every 2 hours; at least one) and `brands` (names to look for, max. 60; default ~30 Dutch banks, services and shops) |
+| `aircraft` | Luchtradar: `enabled`, `url` (ADS-B point query, default adsb.lol around the centre of the Netherlands, 120 NM), `active_interval` (1m while a visitor has the panel open; min. 30s), `push_interval` (5m while devices subscribe to "Lifeliner in de buurt"), `idle_interval` (10m otherwise), `daily_budget` (450 requests per 24 h; adsb.lol allows ~500 per IP), `lifeliner` / `police` (+ `_callsigns` prefixes and `_registrations`), `military` (the ADS-B database's military flag) |
 | `recalls` | Productwaarschuwingen: `enabled`, `url` (NVWA RSS of the topic Veiligheidswaarschuwingen), `interval` (default 1h, min. 15m) |
 | `notices` | Bekendmakingen: `enabled`, `url` (KOOP SRU endpoint), `days` (1–42, default 14), `radius` (metres, 100–2000, default 500), `ttl` (how long a municipality's notices are kept, default 2h, min. 30m) |
 | `outages` | `enabled`, `interval` (min. 5m), `internet` (`enabled`, `base`, `country`, `networks`: `asn` + `name`, max. 10, `interval` min. 10m), `providers`: `id`, `name`, `url`, `homepage`, `format` (`statuspage` for any Atlassian Statuspage `summary.json` / `rss` / `m365` / `gcp` for Google Cloud's `incidents.json`) |
@@ -232,6 +234,7 @@ Environment variables override the file, so Docker users rarely need to edit it:
 | `NS_API_KEY` | `keys.ns_api_key` |
 | `CLOUDFLARE_RADAR_TOKEN` | `keys.cloudflare_radar_token` |
 | `AGSI_API_KEY` | `keys.agsi_api_key` |
+| `ADSB_API_KEY` | `keys.adsb_api_key` |
 | `NDB_TRUSTED_PROXIES` | `server.trusted_proxies` (comma-separated IPs/CIDRs) |
 | `NDB_METRICS` | `server.metrics` (`true`/`false`) |
 
@@ -277,6 +280,7 @@ There are two separate rates:
 | Dreigingsbeeld NL | 15m | Cloudflare Radar 30m; incidents from the news in the page |
 | Security advisories | 30m | 15m (vendor feeds 1–2h); Exploit-DB 1h, EPSS 6h |
 | Datalekken | 30m | 3h (≈ 1 MB list), Fraudehelpdesk 2h, phishing on Dutch brands 2h |
+| Luchtradar | 1m while open, 5m otherwise | 1m while a visitor has it open, 5m with Lifeliner subscribers, otherwise 10m; at most 450 requests a day |
 | Productwaarschuwingen | 60m | 1h |
 | Bekendmakingen | 60m | on request, per municipality for 2h |
 | Internetstoringen | 10m | status pages 10m, internet (IODA) 30m |
@@ -551,6 +555,7 @@ Visitors can get notifications on their phone or computer, also when the dashboa
 - earthquakes from `push.quake_min_mag`
 - big news: a story that `push.breaking_sources` sources reported within an hour
 - waste: the evening before collection, at `push.waste_hour`, for the address set on that device (or the default address)
+- Lifeliner in de buurt (off until chosen): a Lifeliner in the air within `push.lifeliner_km` of their weather location, once per aircraft per 90 minutes
 - Alarmeringen-wachter: a P2000 alert (from the last 30 minutes) in one of the streets watched on that device; the notification stays on screen until clicked and vibrates on Android
 
 **Setup** (once):
@@ -632,6 +637,7 @@ The server fetches everything; browsers only talk to the dashboard itself.
 | [Have I Been Pwned](https://haveibeenpwned.com/) | Datalekken | The public breach list (`/api/v3/breaches`): no API key, and no visitor data is sent. Licensed **CC BY 4.0** (attribution shown in the panel). Fetched every 3 h. Left out: unverified, fabricated, retired, spam lists, malware and stealer logs, entries without a domain, and (unless `include_sensitive: true`) sensitive breaches. HIBP has no country field, so "Dutch" means a `.nl` domain or a description mentioning Dutch/the Netherlands. |
 | [Fraudehelpdesk](https://www.fraudehelpdesk.nl/actueel/) | Datalekken: oplichting en phishing | The public RSS feed of warnings (`/feed/?post_type=alert`), read every 2 hours. |
 | [PhishStats](https://phishstats.info/) and [OpenPhish](https://openphish.com/) | Datalekken: phishing op Nederlandse merken | PhishStats' public API (one search by page title and address, every 2 hours) and OpenPhish's free community feed (~300 URLs, via its GitHub mirror). Only the host name is kept, defanged, for 90 days. |
+| [adsb.lol](https://adsb.lol/) | Luchtradar | ADS-B positions from volunteer receivers (ODbL), one point query around the Netherlands; the same API as ADS-B Exchange's. Many military aircraft do not broadcast ADS-B. The map is drawn from [Natural Earth](https://www.naturalearthdata.com/) (public domain). |
 | [NVWA](https://www.nvwa.nl/actueel/veiligheidswaarschuwingen) | Productwaarschuwingen | The RSS behind the NVWA's list of safety warnings (`/api/rss` with the topic filter), hourly. |
 | [officielebekendmakingen.nl](https://www.officielebekendmakingen.nl/) (KOOP) | Bekendmakingen | The open SRU repository (`repository.overheid.nl/sru`), no key. It has no distance search, so the server asks for the notices of the address's municipality (last 14 days, pages of 250, ~5 KB per record; a big city ≈ 10 MB and ~10 s the first time) and keeps only located ones compactly (≈ 1 MB for Amsterdam, at most 4 municipalities, 2 h). The address goes to [PDOK Locatieserver](https://www.pdok.nl/) to find the municipality and position. |
 | [Fraunhofer ISE energy-charts](https://www.energy-charts.info/) | Energieprijzen: stroommix | `public_power` and `ren_share_forecast` for NL, every 30 minutes, no key. CC BY 4.0. Based on ENTSO-E transparency data, so generation behind the meter (most rooftop solar) is missing and values are about 3 hours behind. |
@@ -751,6 +757,7 @@ All JSON responses:
 | `GET /api/energy` | Energieprijzen: hourly `electricity` (today, tomorrow from ~13:00) and `gas` prices in € incl. VAT (+ configured extras); `mix` (`share`, `sources`, `total_mw`, `load_mw`, `forecast` per hour), `gas_storage` (`key`; `nl`, `eu`: `full`, `trend`, `twh`, `year_ago`), `grid` (whether Netcongestie is on) |
 | `GET /api/grid?pc=` | Netcongestie for a postcode (`2311EZ`): `area` (`name`, `operator`, `withdrawal`/`injection`: `queue`, `requests`, `solved`, `tennet` 0–3, `tennet_solved`; `projects`, `url`) or `not_found` |
 | `GET /api/notices?postcode=&number=` | Bekendmakingen within `radius` m of the address: `gemeente`, `items` (`title`, `type`, `date`, `url`, `m` = distance) |
+| `GET /api/aircraft[?live=1]` | Luchtradar: `aircraft` (`group` lifeliner/police/military, `name`, `callsign`, `reg`, `type`, `desc`, `lat`, `lon`, `alt_m`, `ground`, `heli`, `speed_kmh`, `track`, `seen`, `near` {`name`, `km`, `dir`}, `trail`), `budget` (`used`, `limit`, `exhausted`), `bounds`; `live=1` = the panel is open, so the server fetches every `active_interval` for the next 2 minutes |
 | `GET /api/recalls` | Productwaarschuwingen: `items` (`title`, `url`, `published`, `allergen`) |
 | `GET /api/air?lat=&lon=` | Luchtkwaliteit: nearest station (`name`, `distance_km`, `url`), `lki` (`value` 1–11, `at`) and `components` (NO2, PM25, PM10, O3 in µg/m³) |
 | `GET /api/trains` | Treinstoringen: `key` (false without an NS key), `calamities`, `disruptions`, `maintenance` (active now, max 5) and `maintenance_total` |
@@ -840,6 +847,9 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.35.0
+- **New panel Luchtradar** (Verkeer & reizen): Lifeliners, police helicopters and military aircraft above the Netherlands from adsb.lol (ADS-B, ODbL; the same API as ADS-B Exchange, which needs a paid RapidAPI key: `keys.adsb_api_key`). One point query around the country; the server keeps only the three groups (Lifeliners and police by callsign prefix or registration, military by the database flag) with a 30-minute trail and the nearest town. It fetches every minute only while a visitor has the panel open (`?live=1`), every 5 minutes while devices subscribe to the new push topic **Lifeliner in de buurt** (`push.lifeliner_km`, default 10 km), otherwise every 10 minutes, within a budget of 450 requests per 24 hours. The map is an embedded outline of the Netherlands (Natural Earth), so the browser contacts no map service. New config section `aircraft`, endpoint `GET /api/aircraft`.
 
 ### 1.34.1
 - **Performance** (measured with pprof against a full config):

@@ -1795,6 +1795,9 @@ func (a *App) threatJobs(cfg *Config) []Job {
 			jobs = append(jobs, Job{Key: "agsi:storage", Sig: cfg.Energy.GasStorageURL + "|" + cfg.Keys.AGSIAPIKey, Interval: 6 * time.Hour, Run: a.runGasStorage})
 		}
 	}
+	if cfg.Aircraft.Enabled { // ticks every 15 s; fetches only when due (see airState.due)
+		jobs = append(jobs, Job{Key: "adsb:radar", Sig: cfg.Aircraft.URL, Interval: 15 * time.Second, Run: a.runAircraft})
+	}
 	if cfg.Recalls.Enabled {
 		jobs = append(jobs, Job{Key: "nvwa:recalls", Sig: cfg.Recalls.URL, Interval: cfg.Recalls.Interval.D(),
 			Run: a.fetchJob("nvwa:recalls", func() string { return a.config().Recalls.URL }, "application/rss+xml, application/xml", nil,
