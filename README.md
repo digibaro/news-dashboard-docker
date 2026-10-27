@@ -844,6 +844,9 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 
 ## Changelog
 
+### 1.38.1
+- **ADSB:** when switching views, ADS-B Exchange briefly showed its own buttons while its page loaded (before it applies `hideButtons`); the frame now stays hidden until shortly after it has loaded and then fades in. (Aircraft photos come from Planespotters inside ADS-B Exchange's page; when they do not load, that is between ADS-B Exchange, Planespotters and the browser or its ad blocker.)
+
 ### 1.38.0
 - **New panel ADSB** (Verkeer & reizen): ADS-B Exchange's live map in a frame with three views, *Hulpdiensten* (the 22 trauma, police and coastguard helicopters by ICAO address), *Militair* (`filterDbFlag=military`) and *Burgerluchtvaart* (all traffic); the choice is remembered per browser. The frame is only loaded while the panel is open and is kept across refreshes. A note explains ADS-B Exchange's ad-blocker message. New config section `adsb` (`enabled`, `url`); the CSP allows that origin as the only frame. The server fetches nothing for this panel.
 - Instellingen: the section heading *Sportagenda* is now *Sporten*, so it no longer has the same name as the panel (accessibility).
