@@ -39,7 +39,6 @@ services:
       NS_API_KEY: "${NS_API_KEY:-}"             # free key from apiportal.ns.nl (Treinstoringen)
       CLOUDFLARE_RADAR_TOKEN: "${CLOUDFLARE_RADAR_TOKEN:-}"   # free Cloudflare API token, Radar: Read (Dreigingsbeeld NL)
       AGSI_API_KEY: "${AGSI_API_KEY:-}"         # free key from agsi.gie.eu (Gasvoorraad in Energieprijzen)
-      ADSB_API_KEY: "${ADSB_API_KEY:-}"         # only for ADS-B Exchange (RapidAPI) in Luchtradar; adsb.lol needs none
       NDB_LOG_LEVEL: "${NDB_LOG_LEVEL:-info}"
       # Requests via a reverse proxy on the host arrive from the Docker gateway (172.16.0.0/12):
       # trust its X-Forwarded-For so rate limits apply per visitor, not to everyone at once.

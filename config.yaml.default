@@ -47,7 +47,6 @@ features:
 keys:                             # all optional; env vars override
   abusech_auth_key: ""            # optional, free key from https://auth.abuse.ch/ (or ABUSECH_AUTH_KEY)
   ns_api_key: ""                  # NS Disruptions API for Treinstoringen (or NS_API_KEY)
-  adsb_api_key: ""                # only for ADS-B Exchange via RapidAPI in aircraft.url (or ADSB_API_KEY); adsb.lol needs none
   cloudflare_radar_token: ""      # Dreigingsbeeld NL: Cloudflare API token with "Radar: Read" (or CLOUDFLARE_RADAR_TOKEN)
 
 weather:
@@ -133,37 +132,6 @@ breaches:
   phishstats_url: "https://api.phishstats.info/api/phishing"
   openphish_url: "https://raw.githubusercontent.com/openphish/public_feed/refs/heads/main/feed.txt"
   # brands: [Rabobank, ING, "ABN AMRO", DigiD, Belastingdienst, PostNL, ...]   # default: ~30 Dutch banks, services and shops
-
-# Luchtradar: Lifeliner trauma helicopters, police helicopters and military aircraft above the Netherlands,
-# from the ADS-B network of adsb.lol (open data, ODbL, no key). One point query returns all traffic around
-# the country (~15 KB gzipped at night, ~80 KB by day); only the three groups are kept, with a 30-minute trail.
-# adsb.lol allows ~500 requests a day per IP, so the server fetches every active_interval only while a visitor
-# has the panel open, every push_interval while a device has the push topic "Lifeliner in de buurt", otherwise
-# every idle_interval, and never more than daily_budget requests per 24 hours (the last fifth at half speed).
-# ADS-B Exchange (paid RapidAPI key, same data format): url "https://adsbexchange-com1.p.rapidapi.com/v2/lat/52.15/lon/5.25/dist/120/"
-# with keys.adsb_api_key (or ADSB_API_KEY); mind its monthly request limit when choosing daily_budget.
-aircraft:
-  enabled: true
-  url: "https://api.adsb.lol/v2/point/52.15/5.25/120"   # centre of the Netherlands, radius in nautical miles
-  tile_url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png"   # map tiles, fetched and cached by this server (4 MB),
-                                  # zoom 7-12 around the Netherlands only; browsers never contact the tile server
-  active_interval: 1m             # min. 30s
-  push_interval: 5m
-  idle_interval: 10m              # max. 6h
-  daily_budget: 450
-  lifeliner: true                 # trauma helicopters (ANWB MAA Lifeliners), by callsign prefix, registration or ICAO address
-  lifeliner_callsigns: [LIFELN, MEDIC]
-  lifeliner_registrations: [PH-HOW, PH-OOP, PH-DOC, PH-HIP, PH-HLP, PH-HVB, PH-LLN, PH-MAA, PH-TTR, PH-UMC, PH-ELP, PH-ULP]
-  # ICAO addresses (hex): the most reliable match, and the filter of the optional ADS-B Exchange map in the page
-  lifeliner_hex: ["4853f6", "4853e2", "485e49", "486a31", "486a30", "484b58", "48605b", "4844c2", "4857b3", "48605c"]
-  police: true                    # Politie Dienst Luchtvaart
-  police_callsigns: [ZXP]
-  police_registrations: [PH-PXA, PH-PXB, PH-PXC, PH-PXD, PH-PXE, PH-PXF, PH-PXX, PH-PXY, PH-PXZ]
-  police_hex: ["484a91", "484a92", "484a93", "484a94", "484a95", "484a96", "485b2f", "484ac1", "484ac0"]
-  sar: true                       # Kustwacht search and rescue (AW189)
-  sar_registrations: [PH-NCG, PH-RSQ, PH-SAR]
-  sar_hex: ["48644b", "48644a", "486449"]
-  military: true                  # aircraft with the military flag of the ADS-B database (many fighters send no ADS-B)
 
 # Productwaarschuwingen: the NVWA's safety warnings and recalls of food and products (RSS, last 90 days).
 recalls:
@@ -516,7 +484,6 @@ push:
   quake_min_mag: 2.5              # earthquakes from this magnitude
   breaking_sources: 6             # "widely reported": this many sources within an hour; 0 = off
   waste_hour: 19                  # evening reminder for tomorrow's collection; -1 = off
-  lifeliner_km: 10                # "Lifeliner in de buurt": an airborne Lifeliner within this distance of the device's weather location
 
 alerts:
   nctv: { enabled: true, url: "https://www.nctv.nl/onderwerpen/d/dtn", interval: 6h }

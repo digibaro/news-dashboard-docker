@@ -22,7 +22,7 @@ const state = p => p.evaluate(() => ({
   const ctx = await ctxFor(); const p = await ctx.newPage();
   await p.goto(URL); await p.waitForSelector('#panel-alarms .agroup');
   const order = await p.$$eval('.panel', ps => ps.map(x => x.id.replace('panel-', '')));
-  ok(order.indexOf('alarms') === order.indexOf('aircraft') + 1 && order.indexOf('aircraft') === order.indexOf('trains') + 1 && order.indexOf('trains') === order.indexOf('traffic') + 1, `Alarmeringen follows Verkeer, Treinstoringen and Luchtradar (${order.join(', ')})`);
+  ok(order.indexOf('alarms') === order.indexOf('trains') + 1 && order.indexOf('trains') === order.indexOf('traffic') + 1, `Alarmeringen follows Verkeer and Treinstoringen (${order.join(', ')})`);
   const s = await state(p);
   ok(s.groups.map(g => g.h.replace(/^\W+/, '').split('·')[0].trim()).join(',') === 'Brandweer,Ambulance,Politie,Lifeliner', `four services: ${s.groups.map(g => g.h).join(' | ')}`);
   ok(s.groups.every(g => g.n <= 2), `at most 2 per service (${s.groups.map(g => g.n).join('/')})`);
@@ -80,7 +80,7 @@ const state = p => p.evaluate(() => ({
   const ctx = await ctxFor({ v: 2, onboarded: true, panels: { order: ['weather', 'traffic', 'threats', 'advisories', 'outages', 'ap', 'health'], collapsed: {}, hidden: {} } });
   const p = await ctx.newPage(); await p.goto(URL); await p.waitForSelector('#panel-alarms');
   const order = await p.$$eval('.panel', ps => ps.map(x => x.id.replace('panel-', '')));
-  ok(order.join(',') === 'weather,satellite,today,waste,notices,air,pollen,recalls,sky,traffic,trains,aircraft,alarms,nlalert,quakes,energy,fuel,economy,markets,sports,politics,threats,nlthreat,advisories,breaches,ransomware,utilities,outages,ap,health', `saved 1.2.1 order gets Alarmeringen after Verkeer (${order.join(', ')})`);
+  ok(order.join(',') === 'weather,satellite,today,waste,notices,air,pollen,recalls,sky,traffic,trains,alarms,nlalert,quakes,energy,fuel,economy,markets,sports,politics,threats,nlthreat,advisories,breaches,ransomware,utilities,outages,ap,health', `saved 1.2.1 order gets Alarmeringen after Verkeer (${order.join(', ')})`);
   await ctx.close();
 }
 {

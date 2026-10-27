@@ -267,29 +267,6 @@ svg.i { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor;
 .gside .gv.bad { color: var(--sev-high); } .gside .gv.ok { color: var(--sev-low); }
 .gside .gs { font-size: 12px; color: var(--text-2); }
 .glv.bad { color: var(--sev-crit); font-weight: 600; } .glv.warn { color: var(--sev-high); font-weight: 600; }
-.g-lifeliner { --g: var(--sev-med); } .g-police { --g: var(--accent); } .g-sar { --g: var(--sev-high); } .g-military { --g: var(--sev-low); }
-.airleaf { position: relative; z-index: 0; isolation: isolate; height: 420px; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 8px; background: var(--surface-2); font: inherit; }
-.airleaf .leaflet-control-attribution { font-size: 10px; background: rgb(255 255 255 / .75); }
-.airleaf .leaflet-bar a { background: var(--surface); color: var(--text); border-color: var(--line); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .airleaf .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9); } :root:not([data-theme="light"]) .airleaf .leaflet-control-attribution { background: rgb(0 0 0 / .6); color: var(--text-2); } }
-:root[data-theme="dark"] .airleaf .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9); }
-:root[data-theme="dark"] .airleaf .leaflet-control-attribution { background: rgb(0 0 0 / .6); color: var(--text-2); }
-.am-pin { background: none; border: 0; }
-.am-ic { position: relative; display: block; cursor: pointer; }
-.am-ic svg { position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; overflow: visible; }
-.am-ic b { position: absolute; left: 11px; top: -8px; white-space: nowrap; font-size: 11px; line-height: 16px; font-weight: 600; color: #111; text-shadow: 0 0 2px #fff, 0 0 2px #fff, 0 0 3px #fff; }
-.am-mark { fill: var(--g); stroke: #fff; stroke-width: 1.6; }
-.am-ic.gnd .am-mark { fill-opacity: .35; stroke: var(--g); }
-.am-ic.sel .am-mark { stroke: #111; stroke-width: 2.6; }
-.am-trail { stroke: var(--g); stroke-width: 2.5; stroke-dasharray: 5 4; opacity: .85; fill: none; }
-.am-trail.sel { stroke-width: 4; stroke-dasharray: none; opacity: 1; }
-.am-me { fill: #111; fill-opacity: 1; stroke: #fff; stroke-width: 2; }
-.am-dot { background: var(--g); }
-.am-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; flex: none; }
-.airrow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.airrow .linkbtn { font-weight: 600; }
-.airtype { color: var(--text-2); font-size: 12px; }
-.airlist li.sel { background: var(--accent-bg); border-radius: 6px; }
 .phgrp .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; overflow-wrap: anywhere; }
 .rtag { font-size: 11px; padding: 0 5px; border-radius: 4px; background: var(--chip, var(--line)); color: var(--text-2); }
 .brstar { border: 0; background: none; padding: 0; font-size: 17px; line-height: 1; cursor: pointer; color: var(--text-3); min-width: 24px; min-height: 24px; }
@@ -1230,15 +1207,10 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
-    <h3>Versie 1.36.0</h3>
+    <h3>Versie 1.37.0</h3>
     <ul>
-      <li>Luchtradar heeft nu een echte kaart (OpenStreetMap) met de toestellen, hun vliegrichting en het spoor van het laatste half uur. Klik op een toestel op de kaart of in de lijst om het te volgen. De kaart komt via deze server, dus je browser maakt nog steeds geen verbinding met anderen.</li>
-      <li>Luchtradar toont nu ook de kustwachthelikopters (SAR) en herkent meer traumahelikopters.</li>
-    </ul>
-    <h3>Versie 1.35.0</h3>
-    <ul>
-      <li>Nieuw paneel Luchtradar: Lifeliners, politiehelikopters en militaire toestellen boven Nederland op een kaart, met hoogte, snelheid, de dichtstbijzijnde plaats en het spoor van het laatste half uur (van adsb.lol). Zolang het paneel open is, wordt het elke minuut bijgewerkt.</li>
-      <li>Nieuwe pushmelding: een Lifeliner in de lucht binnen 10 km van je weerlocatie (kies hem onder Instellingen → Meldingen).</li>
+      <li>Het paneel Luchtradar (1.35 en 1.36) is weer verwijderd; het dashboard is terug op 1.34.1.</li>
+      <li>Energieprijzen: 's avonds laat kan de groenste periode morgen vallen; dat staat er nu ook (“Groenste 3 uur morgen”).</li>
     </ul>
     <h3>Versie 1.34.1</h3>
     <ul>
@@ -1525,15 +1497,10 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
-    <h3>Version 1.36.0</h3>
+    <h3>Version 1.37.0</h3>
     <ul>
-      <li>Air radar now has a real map (OpenStreetMap) with the aircraft, their direction and the trail of the last half hour. Click an aircraft on the map or in the list to follow it. The map comes through this server, so your browser still connects to nobody else.</li>
-      <li>Air radar now also shows the coastguard helicopters (SAR) and recognises more trauma helicopters.</li>
-    </ul>
-    <h3>Version 1.35.0</h3>
-    <ul>
-      <li>New panel Air radar: Lifeliners, police helicopters and military aircraft above the Netherlands on a map, with altitude, speed, the nearest town and the trail of the last half hour (from adsb.lol). While the panel is open it updates every minute.</li>
-      <li>New push notification: a Lifeliner in the air within 10 km of your weather location (choose it under Settings → Notifications).</li>
+      <li>The Air radar panel (1.35 and 1.36) has been removed again; the dashboard is back at 1.34.1.</li>
+      <li>Energy prices: late in the evening the greenest period can be tomorrow; it now says so (“Greenest 3 hours tomorrow”).</li>
     </ul>
     <h3>Version 1.34.1</h3>
     <ul>
@@ -1940,7 +1907,7 @@ textarea.json {
       <p class="msg" id="waste-msg" role="status"></p>
     </section>
     <section aria-labelledby="set-sports-h" id="set-sports" hidden>
-      <h3 id="set-sports-h">Sporten</h3>
+      <h3 id="set-sports-h">Sportagenda</h3>
       <p class="hint">Kies welke sporten je in de sportagenda ziet.</p>
       <div id="sports-opts" role="group" aria-labelledby="set-sports-h"></div>
     </section>
@@ -2060,7 +2027,6 @@ const PANELS = {
   sky: 'Vanavond aan de hemel',
   traffic: 'Verkeer',
   trains: 'Treinstoringen',
-  aircraft: 'Luchtradar',
   alarms: 'Alarmeringen',
   nlalert: 'NL-Alert',
   quakes: 'Aardbevingen en natuurrampen',
@@ -2086,7 +2052,7 @@ const MIN = 60e3;
 const DEFAULTS = {
   v: 2, theme: 'auto', sources: null, known: [], pageSize: 60, summaries: true,
   density: 'compact', category: 'all', weather: null, threatTab: 'ips', advTab: 'adv', advFilter: 'all',
-  lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, trending: true, pushTopics: null, waste: null, sports: null, sportsSeen: null, solar: null, saver: 'auto', hazardTab: 'nl', watch: [], mute: [], alarmWatch: [], alarmSound: true, bridges: [], bridgeTab: 'fav', energyTab: 'prices', airTab: 'help',
+  lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, trending: true, pushTopics: null, waste: null, sports: null, sportsSeen: null, solar: null, saver: 'auto', hazardTab: 'nl', watch: [], mute: [], alarmWatch: [], alarmSound: true, bridges: [], bridgeTab: 'fav', energyTab: 'prices',
   panels: { order: PANEL_IDS.slice(), collapsed: {}, hidden: {}, page: {} },
 };
 
@@ -3251,6 +3217,7 @@ const EN = {
   "gemeten om {t}": "measured at {t}",
   "Opwekking {g} · verbruik {l}": "Generation {g} · consumption {l}",
   "Groenste 3 uur vandaag: ": "Greenest 3 hours today: ",
+  "Groenste 3 uur morgen: ": "Greenest 3 hours tomorrow: ",
   " (~{p}% duurzaam)": " (~{p}% renewable)",
   "Gasvoorraad": "Gas storage",
   "Voor de gasvoorraad is een gratis sleutel van GIE AGSI+ nodig (keys.agsi_api_key of AGSI_API_KEY in de serverinstellingen).": "Gas storage needs a free GIE AGSI+ key (keys.agsi_api_key or AGSI_API_KEY in the server settings).",
@@ -3303,25 +3270,6 @@ const EN = {
   "Geen phishingsites op Nederlandse merken in de openbare lijsten van de afgelopen 90 dagen.": "No phishing sites aimed at Dutch brands in the public lists of the last 90 days.",
   "Alleen de domeinnaam, onschadelijk gemaakt ([.]) en nooit als link. Bron: PhishStats en OpenPhish.": "Only the domain name, defanged ([.]) and never as a link. Source: PhishStats and OpenPhish.",
   "Ook gebruikt voor Bekendmakingen in je buurt en Netcongestie (in Energieprijzen).": "Also used for Official notices near you and Grid congestion (in Energy prices).",
-  // Luchtradar
-  'Luchtradar': 'Air radar', 'Hulpdiensten': 'Emergency services', 'Militair': 'Military', 'Soort toestellen': 'Kind of aircraft',
-  'aan de grond': 'on the ground', '{m} m hoog': '{m} m up', '{v} km/u': '{v} km/h',
-  '{km} km van je': '{km} km from you', 'boven {place}': 'above {place}', '{km} km {dir} {place}': '{km} km {dir} {place}',
-  'ten noorden van': 'north of', 'ten noordoosten van': 'northeast of', 'ten oosten van': 'east of', 'ten zuidoosten van': 'southeast of',
-  'ten zuiden van': 'south of', 'ten zuidwesten van': 'southwest of', 'ten westen van': 'west of', 'ten noordwesten van': 'northwest of',
-  'Volg op ADS-B Exchange': 'Follow on ADS-B Exchange',
-  'De luchtradar kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.': 'The air radar could not be loaded ({err}). Retrying automatically.',
-  'adsb.lol is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.': 'adsb.lol cannot be reached ({err}); retrying automatically.',
-  'De posities worden voor het eerst opgehaald.': 'The positions are being fetched for the first time.',
-  'Nu geen militaire toestellen boven Nederland die hun positie uitzenden. Veel gevechtsvliegtuigen zenden geen ADS-B uit.': 'No military aircraft over the Netherlands broadcasting their position right now. Many fighter jets do not transmit ADS-B.',
-  'Er vliegt nu geen traumahelikopter, politie- of kustwachthelikopter die zijn positie uitzendt.': 'No trauma, police or coastguard helicopter broadcasting its position is flying right now.',
-  'Kustwacht': 'Coastguard', ' (ADS-B, ODbL) · kaart: ': ' (ADS-B, ODbL) · map: ', 'Sporten': 'Sports',
-   'Klik op een vlucht om hem op de kaart te zien, met zijn spoor van het laatste half uur.': 'Click a flight to see it on the map, with its trail of the last half hour.', 'Kaart met de toestellen': 'Map with the aircraft',
-  'De daglimiet van {n} verzoeken aan adsb.lol is bereikt; de posities worden later weer bijgewerkt.': 'The daily limit of {n} requests to adsb.lol has been reached; positions will be updated again later.',
-  'Verouderd: adsb.lol is nu niet bereikbaar ({err}).': 'Outdated: adsb.lol cannot be reached right now ({err}).',
-  ' · elke minuut bijgewerkt zolang dit paneel open is · veel militaire toestellen zenden geen positie uit': ' · updated every minute while this panel is open · many military aircraft do not broadcast a position',
-  '{name} in de lucht': '{name} in the air', '{n} hulpdiensten in de lucht': '{n} emergency aircraft in the air', 'geen hulpdiensten in de lucht': 'no emergency aircraft in the air', '{n} militair': '{n} military',
-  'Lifeliner in de lucht binnen {km} km van je weerlocatie': 'Lifeliner in the air within {km} km of your weather location',
 };
 
 // Sentences the server composes from parts (rain summary, directions, source names).
@@ -3470,7 +3418,6 @@ function sanitize(p) {
     .slice(0, 20).map(b => ({ id: b.id, name: b.name.slice(0, 80), city: typeof b.city === 'string' ? b.city.slice(0, 60) : '' }));
   if (['fav', 'plan'].includes(p.bridgeTab)) d.bridgeTab = p.bridgeTab;
   if (['prices', 'mix', 'grid'].includes(p.energyTab)) d.energyTab = p.energyTab;
-  if (['help', 'mil'].includes(p.airTab)) d.airTab = p.airTab;
   if (Array.isArray(p.alarmWatch)) d.alarmWatch = p.alarmWatch.filter(r => r && typeof r === 'object' && /^[a-z0-9][a-z0-9-]{1,48}$/.test(r.city) && typeof r.street === 'string' && r.street.trim().length >= 3)
     .slice(0, 10).map(r => ({ city: r.city, cityName: typeof r.cityName === 'string' ? r.cityName.slice(0, 60) : null, street: r.street.trim().slice(0, 60), spoed: r.spoed === true }));
   if (p.waste && typeof p.waste === 'object') {
@@ -3486,7 +3433,7 @@ function sanitize(p) {
     const kwp = Number(p.solar.kwp), tilt = Number(p.solar.tilt), az = Number(p.solar.az);
     if (kwp > 0 && kwp <= 1000 && Number.isInteger(tilt) && tilt >= 0 && tilt <= 90 && [0, -45, 45, -90, 90, -135, 135, 180].includes(az)) d.solar = { kwp: Math.round(kwp * 10) / 10, tilt, az };
   }
-  if (Array.isArray(p.pushTopics)) d.pushTopics = p.pushTopics.filter(x => typeof x === 'string' && /^[a-z]{2,12}$/.test(x)).slice(0, 16);
+  if (Array.isArray(p.pushTopics)) d.pushTopics = p.pushTopics.filter(x => typeof x === 'string' && /^[a-z]{2,12}$/.test(x)).slice(0, 10);
   const terms = a => Array.isArray(a) ? [...new Set(a.filter(t => typeof t === 'string').map(t => t.trim().slice(0, 60)).filter(Boolean))].slice(0, 50) : [];
   d.watch = terms(p.watch);
   d.mute = terms(p.mute);
@@ -3670,7 +3617,7 @@ const PANEL_GROUPS = [
   ['Weer & natuur', ['weather', 'satellite', 'sky', 'quakes']],
   ['Gezondheid', ['air', 'pollen', 'recalls', 'health']],
   ['Thuis & vandaag', ['today', 'waste', 'notices', 'energy', 'fuel']],
-  ['Verkeer & reizen', ['traffic', 'trains', 'aircraft']],
+  ['Verkeer & reizen', ['traffic', 'trains']],
   ['Alarmeringen', ['alarms', 'nlalert']],
   ['Storingen', ['utilities', 'outages']],
   ['Economie & politiek', ['economy', 'markets', 'politics']],
@@ -4041,7 +3988,6 @@ function setCollapsed(id, c) {
 function togglePanel(id) {
   setCollapsed(id, !prefs.panels.collapsed[id]);
   savePrefs(); updateAllBtn();
-  if (id === 'aircraft') { renderPanel('aircraft'); if (!prefs.panels.collapsed[id]) { loadAircraft(); setTimeout(loadAircraft, 8000); } } // the map frame only while open; fresh positions
 }
 
 // The bar above the panels: jump to a panel, collapse or expand them all. It sticks below the header.
@@ -4179,10 +4125,6 @@ const summaryOf = {
     return bad.length ? bad.map(p => `${p.name}: ${t(OUT_NL[p.data.status])}`).slice(0, 2).join(' · ') : t('alles werkt normaal'); },
   ap: () => { const a = panelData.ap?.items; if (!a) return null; const n = a.filter(isRecent).length;
     return n ? t(n === 1 ? '1 bericht (14 dagen)' : '{n} berichten (14 dagen)', { n }) : t('geen berichten (14 dagen)'); },
-  aircraft: () => { const a = panelData.aircraft?.data?.aircraft; if (!a) return null;
-    const up = a.filter(x => x.group !== 'military' && !x.ground), mil = a.filter(x => x.group === 'military').length;
-    return [up.length === 1 ? t('{name} in de lucht', { name: airName(up[0]) }) : up.length ? t('{n} hulpdiensten in de lucht', { n: up.length }) : t('geen hulpdiensten in de lucht'),
-      mil ? t('{n} militair', { n: mil }) : null].filter(Boolean).join(' · '); },
   recalls: () => { const a = panelData.recalls?.data?.items; if (!a) return null; const n = a.filter(x => Date.now() - new Date(x.published) <= 7 * 864e5).length;
     return n ? t(n === 1 ? '1 waarschuwing (7 dagen)' : '{n} waarschuwingen (7 dagen)', { n }) : t('geen nieuwe (7 dagen)'); },
   notices: () => { const d = panelData.notices?.data; if (d?.needs_address) return t('adres instellen'); const a = d?.items; if (!a) return null;
@@ -4222,7 +4164,6 @@ const freshOf = {
   outages: () => { const d = panelData.outages?.data; return d?.enabled && { ts: oldest(d.providers), max: 25, stale: d.providers?.some(p => p.error) }; },
   health: () => { const s = panelData.health?.status; return s && { ts: s.fetched_at, max: 65, stale: !!s.error }; },
   recalls: () => { const d = panelData.recalls?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 130, stale: !!d.error }; },
-  aircraft: () => { const d = panelData.aircraft?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 25, stale: !!d.error }; },
   notices: () => { const d = panelData.notices?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 250, stale: !!d.error }; },
 };
 const soon = text => body => body.replaceChildren(h('p', { class: 'pnote', text }));
@@ -4255,7 +4196,6 @@ const panelRenderers = {
   health: renderHealth,
   ap: renderAP,
   recalls: renderRecalls,
-  aircraft: renderAircraft,
   notices: renderBekendmakingen,
 };
 
@@ -6493,7 +6433,6 @@ const PUSH_LABELS = {
   breaking: () => t('Groot nieuws: {n} of meer bronnen binnen een uur', { n: pushInfo?.breaking_sources ?? 6 }),
   waste: () => t('Afval: de avond vóór de ophaaldag ({h}:00), voor je adres', { h: pushInfo?.waste_hour ?? 19 }),
   alarmwatch: () => t('Alarmeringen-wachter: een alarmering in een straat die je volgt'),
-  lifeliner: () => t('Lifeliner in de lucht binnen {km} km van je weerlocatie', { km: pushInfo?.lifeliner_km ?? 10 }),
 };
 const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && window.isSecureContext;
 const b64ToBytes = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0));
@@ -6510,7 +6449,7 @@ async function pushSub() {
 }
 function pushTopicsChosen() {
   const avail = pushInfo?.topics || [];
-  return Array.isArray(prefs.pushTopics) ? prefs.pushTopics.filter(x => avail.includes(x)) : avail.filter(x => x !== 'breaking' && x !== 'lifeliner');
+  return Array.isArray(prefs.pushTopics) ? prefs.pushTopics.filter(x => avail.includes(x)) : avail.filter(x => x !== 'breaking');
 }
 async function pushRegister(sub) {
   const j = sub.toJSON(), l = prefs.weather || catalog?.weather_location;
@@ -7121,7 +7060,6 @@ function setMobileView(v, { animate = true, restore = true } = {}) {
   updatePageEmpty();
   if (!phone) return;
   if (v === 'overview') renderDigest();
-  if (v === (pageOf('aircraft') === 'b' ? 'panels2' : 'panels')) loadAircraft(); // live positions while the radar is in view
   const el = v === 'panels' || v === 'panels2' ? $('#side') : v === 'overview' ? $('#digest') : $('#news');
   if (animate) { el.classList.remove('mv-in-l', 'mv-in-r'); void el.offsetWidth; el.classList.add(dir); }
   if (restore) scrollTo({ top: mvScroll[v], behavior: 'instant' });
@@ -7213,7 +7151,7 @@ function wireMobileViews() {
 function refreshView(v) {
   const panels = () => [loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(), loadBreaches(), loadOutages(), loadHealthPanel(),
     loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadNLThreat(), loadExploits(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(),
-    loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar(), loadWorld(), loadRecalls(), loadNotices(), loadAircraft(true)];
+    loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar(), loadWorld(), loadRecalls(), loadNotices()];
   const jobs = v === 'news' ? [loadNews({ replace: true }), loadTrending()] : v === 'panels' || v === 'panels2' ? panels() : [loadNews({ replace: true }), ...panels()];
   return Promise.allSettled(jobs);
 }
@@ -7424,116 +7362,6 @@ function renderRecalls(body) {
   body.replaceChildren(...out);
 }
 
-// ---------------------------------------------------------------- luchtradar (ADS-B via adsb.lol)
-// The aircraft come from the server (adsb.lol); the map is Leaflet with OpenStreetMap tiles that the server fetches
-// and caches (api/tile), so the browser contacts nobody else. Leaflet is loaded only when the panel is first open;
-// the map is kept across refreshes (only the aircraft are drawn again) and removed while the panel is collapsed.
-const AIR_LABEL = { lifeliner: 'Lifeliner', police: 'Politie', sar: 'Kustwacht', military: 'Militair' };
-let airSel = null, airFocus = false, airLastQuiet = 0, airLeaflet = null, airMapObj = null, airLayer = null;
-function loadLeaflet() {
-  if (window.L) return Promise.resolve(window.L);
-  return airLeaflet ||= new Promise((resolve, reject) => {
-    document.head.append(h('link', { rel: 'stylesheet', href: 'vendor/leaflet.css' }));
-    const sc = h('script', { src: 'vendor/leaflet.js' });
-    sc.addEventListener('load', () => resolve(window.L));
-    sc.addEventListener('error', () => { airLeaflet = null; sc.remove(); reject(new Error('Leaflet')); });
-    document.head.append(sc);
-  });
-}
-function airMapDraw(box, r, list) {
-  if (!window.L) { loadLeaflet().then(() => renderPanel('aircraft'), () => {}); return; }
-  const L = window.L, b = r.bounds || [50.65, 3.2, 53.65, 7.3];
-  if (!airMapObj || !box.contains(airMapObj.getContainer())) {
-    const el = h('div', { class: 'airleaf', role: 'region', 'aria-label': t('Kaart met de toestellen') });
-    box.replaceChildren(el);
-    const pad = [[b[0] - 0.5, b[1] - 1], [b[2] + 0.5, b[3] + 1]], tiles = [[b[0] - 1.5, b[1] - 3], [b[2] + 1.5, b[3] + 3]]; // tiles: as the server's range
-    airMapObj = L.map(el, { minZoom: 7, maxZoom: 12, maxBounds: pad, maxBoundsViscosity: 0.8 });
-    airMapObj.attributionControl.setPrefix(false);
-    L.tileLayer('api/tile/{z}/{x}/{y}.png', { minZoom: 7, maxZoom: 12, bounds: tiles,
-      attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>' }).addTo(airMapObj);
-    airMapObj.setView([52.15, 5.3], 7);
-    airLayer = L.layerGroup().addTo(airMapObj);
-  } else airMapObj.invalidateSize();
-  airLayer.clearLayers();
-  const me = prefs.weather || catalog?.weather_location;
-  if (me && Number.isFinite(me.lat)) L.circleMarker([me.lat, me.lon], { radius: 4, className: 'am-me', interactive: false }).addTo(airLayer);
-  for (const a of list) if (a.trail?.length) L.polyline([...a.trail, [a.lat, a.lon]], { className: `am-trail g-${a.group}${airSel === a.hex ? ' sel' : ''}`, interactive: false }).addTo(airLayer);
-  for (const a of list) {
-    const svg = svgEl('svg', { viewBox: '-10 -10 20 20', 'aria-hidden': 'true' });
-    svg.append(a.heli ? svgEl('circle', { r: 6, class: 'am-mark' }) : svgEl('path', { d: 'M0 -9 L6.5 7 L0 3.5 L-6.5 7 Z', class: 'am-mark', transform: `rotate(${a.track || 0})` }));
-    const icon = h('span', { class: `am-ic g-${a.group}${a.ground ? ' gnd' : ''}${airSel === a.hex ? ' sel' : ''}`, 'data-hex': a.hex }, svg, h('b', { text: a.name || a.callsign || a.reg || '' }));
-    L.marker([a.lat, a.lon], { icon: L.divIcon({ className: 'am-pin', html: icon, iconSize: [0, 0] }), title: airName(a), alt: airName(a), zIndexOffset: airSel === a.hex ? 1000 : 0 })
-      .on('click', () => { airSel = airSel === a.hex ? null : a.hex; renderPanel('aircraft'); }).addTo(airLayer);
-  }
-  const sel = list.find(a => a.hex === airSel);
-  if (airFocus && sel) airMapObj.panTo([sel.lat, sel.lon]);
-  airFocus = false;
-}
-async function loadAircraft(force) {
-  if (!catalog?.aircraft) { panelData.aircraft = { data: { enabled: false } }; renderPanel('aircraft'); return; }
-  const live = panelOn('aircraft') && !prefs.panels.collapsed.aircraft && !document.hidden // on a phone: only on the panel's own page
-    && !(isPhone() && viewMode === 'normal' && mobileView !== (pageOf('aircraft') === 'b' ? 'panels2' : 'panels'));
-  if (!live && !force && panelData.aircraft?.data && Date.now() - airLastQuiet < 5 * MIN) return; // closed panel: every 5 minutes is enough
-  if (!live) airLastQuiet = Date.now();
-  try { panelData.aircraft = { data: await api('api/aircraft' + (live ? '?live=1' : '')) }; }
-  catch (e) { panelData.aircraft = { ...(panelData.aircraft || {}), error: e }; }
-  renderPanel('aircraft');
-}
-const airName = a => a.name || (a.group === 'lifeliner' ? 'Lifeliner ' + (a.callsign || a.reg) : a.group === 'police' || a.group === 'sar' ? t(AIR_LABEL[a.group]) + ' ' + (a.callsign || a.reg) : a.callsign || a.reg || a.hex);
-const AIR_DIR = { N: 'ten noorden van', NE: 'ten noordoosten van', E: 'ten oosten van', SE: 'ten zuidoosten van', S: 'ten zuiden van', SW: 'ten zuidwesten van', W: 'ten westen van', NW: 'ten noordwesten van' };
-const airNear = n => !n ? '' : n.km ? t('{km} km {dir} {place}', { km: n.km, dir: t(AIR_DIR[n.dir] || ''), place: n.name }) : t('boven {place}', { place: n.name });
-function airDistance(a) {
-  const l = prefs.weather || catalog?.weather_location;
-  if (!l || !Number.isFinite(l.lat)) return null;
-  const dy = (a.lat - l.lat) * 111.32, dx = (a.lon - l.lon) * 111.32 * Math.cos(l.lat * Math.PI / 180);
-  return Math.round(Math.hypot(dx, dy));
-}
-function renderAircraft(body) {
-  const st = panelData.aircraft;
-  if (!st) { body.replaceChildren(h('div', { class: 'tsk', style: 'height:320px', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:280px' }))); return; }
-  const r = st.data;
-  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('De luchtradar kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
-  if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (aircraft.enabled).' })); return; }
-  const gr = r.groups || {};
-  const tabs = [(gr.lifeliner || gr.police || gr.sar) && ['help', t('Hulpdiensten')], gr.military && ['mil', t('Militair')]].filter(Boolean);
-  const tab = tabs.some(([id]) => id === prefs.airTab) ? prefs.airTab : tabs[0]?.[0];
-  const all = r.aircraft || [];
-  const count = id => all.filter(a => (a.group === 'military') === (id === 'mil')).length;
-  const tabRow = tabs.length > 1 ? h('div', { class: 'sectabs', role: 'group', 'aria-label': t('Soort toestellen') }, tabs.map(([id, label]) =>
-    h('button', { class: 'chip', type: 'button', 'aria-pressed': String(tab === id), text: `${label} (${count(id)})`,
-      onclick: () => { prefs.airTab = id; airSel = null; savePrefs(); renderPanel('aircraft'); $('#panel-aircraft .sectabs [aria-pressed="true"]')?.focus(); } }))) : null;
-  const list = all.filter(a => (a.group === 'military') === (tab === 'mil'));
-  let wrap = body.querySelector(':scope > .airwrap');
-  if (!wrap) { wrap = h('div', { class: 'airwrap' }, h('div', { class: 'airhead' }), h('div', { class: 'airframe' }), h('div', { class: 'airrest' })); body.replaceChildren(wrap); }
-  const [headBox, frameBox, restBox] = wrap.children;
-  if (!prefs.panels.collapsed.aircraft) airMapDraw(frameBox, r, list);
-  else { airMapObj?.remove(); airMapObj = null; frameBox.replaceChildren(); }
-  const out = [];
-  if (!r.aircraft) out.push(h('p', { class: 'pnote', text: r.error ? t('adsb.lol is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: tr(r.error) }) : t('De posities worden voor het eerst opgehaald.') }));
-  else {
-    if (!list.length) out.push(h('p', { class: 'pnote', text: tab === 'mil' ? t('Nu geen militaire toestellen boven Nederland die hun positie uitzenden. Veel gevechtsvliegtuigen zenden geen ADS-B uit.')
-      : t('Er vliegt nu geen traumahelikopter, politie- of kustwachthelikopter die zijn positie uitzendt.') }));
-    else out.push(h('ul', { class: 'plist airlist' }, list.map(a => {
-      const km = airDistance(a);
-      const meta = [a.ground ? t('aan de grond') : t('{m} m hoog', { m: a.alt_m.toLocaleString(locale()) }), !a.ground && a.speed_kmh ? t('{v} km/u', { v: a.speed_kmh }) : null,
-        airNear(a.near), km != null ? t('{km} km van je', { km }) : null].filter(Boolean).join(' · ');
-      return h('li', { class: airSel === a.hex ? 'sel' : null },
-        h('div', { class: 'airrow' }, h('span', { class: 'am-dot g-' + a.group, 'aria-hidden': 'true' }),
-          h('button', { class: 'linkbtn', type: 'button', translate: 'no', text: airName(a), 'aria-pressed': String(airSel === a.hex), onclick: () => { airSel = airSel === a.hex ? null : a.hex; airFocus = true; renderPanel('aircraft'); } }),
-          h('span', { class: 'rtag', text: t(AIR_LABEL[a.group]) }), h('span', { class: 'airtype', translate: 'no', text: [a.reg && a.reg !== airName(a) ? a.reg : null, a.desc || a.type].filter(Boolean).join(' · ') })),
-        h('div', { class: 'm' }, h('span', null, meta, ' · ', timeEl(new Date(a.seen)))),
-        airSel === a.hex ? h('div', { class: 'm' }, extLink('https://globe.adsbexchange.com/?icao=' + encodeURIComponent(a.hex), t('Volg op ADS-B Exchange'))) : null);
-    })));
-    if (list.length) out.push(h('p', { class: 'pnote', text: t('Klik op een vlucht om hem op de kaart te zien, met zijn spoor van het laatste half uur.') }));
-    if (r.budget?.exhausted) out.push(h('p', { class: 'pnote', text: t('De daglimiet van {n} verzoeken aan adsb.lol is bereikt; de posities worden later weer bijgewerkt.', { n: r.budget.limit }) }));
-    else if (r.error) out.push(h('p', { class: 'pnote', text: t('Verouderd: adsb.lol is nu niet bereikbaar ({err}).', { err: tr(r.error) }) }));
-  }
-  out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://adsb.lol/', 'adsb.lol'), t(' (ADS-B, ODbL) · kaart: '), extLink('https://www.openstreetmap.org/copyright', 'OpenStreetMap'),
-    t(' · elke minuut bijgewerkt zolang dit paneel open is · veel militaire toestellen zenden geen positie uit')));
-  headBox.replaceChildren(...(tabRow ? [tabRow] : []));
-  restBox.replaceChildren(...out);
-}
-
 // ---------------------------------------------------------------- bekendmakingen in je buurt (officielebekendmakingen.nl)
 const addrQuery = () => prefs.waste ? `?postcode=${encodeURIComponent(prefs.waste.postcode)}&number=${prefs.waste.number}` : '';
 let noticesSeq = 0;
@@ -7603,7 +7431,8 @@ function mixSection(r) {
         `${t(MIX_NAMES[s.key])} ${Math.round(s.mw / d.total_mw * 100)}%`))));
       out.push(h('p', { class: 'eline', text: t('Opwekking {g} · verbruik {l}', { g: mw(d.total_mw), l: mw(d.load_mw) }) }));
       const win = d.forecast?.length ? greenestWindow(d.forecast, 3) : null;
-      if (win) out.push(h('p', { class: 'eline' }, t('Groenste 3 uur vandaag: '), h('b', { text: hourSpan(win.from, 3) }), t(' (~{p}% duurzaam)', { p: Math.round(win.avg) })));
+      if (win) out.push(h('p', { class: 'eline' }, t(win.from.toDateString() === new Date().toDateString() ? 'Groenste 3 uur vandaag: ' : 'Groenste 3 uur morgen: '),
+        h('b', { text: hourSpan(win.from, 3) }), t(' (~{p}% duurzaam)', { p: Math.round(win.avg) })));
     }
   }
   const g = r.gas_storage;
@@ -8218,7 +8047,7 @@ async function init() {
   if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
   await Promise.allSettled([loadNews({ replace: true }), loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(),
     loadBreaches(), loadOutages(), loadHealthPanel(), loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadNLThreat(), loadExploits(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(), loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadTrending(), initPush(),
-    loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar(), loadWorld(), loadRecalls(), loadNotices(), loadAircraft(true)]);
+    loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar(), loadWorld(), loadRecalls(), loadNotices()]);
   kioskFit(); // the header and top bar have their final height now
   panelFromHash(); // e.g. a push notification that opens #panel-waste
   awStart();
@@ -8262,7 +8091,6 @@ async function init() {
   every(R('outages', 10), loadOutages);
   every(R('health', 30), loadHealthPanel);
   every(R('recalls', 60), loadRecalls);
-  every(MIN, () => loadAircraft());
   every(R('notices', 60), loadNotices);
   every(R('energy', 30), () => { if (prefs.energyTab === 'grid' && panelData.grid) loadGrid(); });
   setInterval(tick, 15e3);

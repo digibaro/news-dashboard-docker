@@ -56,7 +56,8 @@ const ENERGY = {
   enabled: true, fetched_at: iso(), data: { electricity: Array.from({ length: 24 }, (_, i) => ({ t: new Date(new Date().setHours(i, 0, 0, 0)).toISOString(), p: 0.2 + i / 100 })), gas: [] },
   mix: { fetched_at: iso(), data: { at: new Date(Date.now() - 3 * 36e5).toISOString(), share: 61.4, total_mw: 10000, load_mw: 12000,
     sources: [{ key: 'wind', mw: 5000 }, { key: 'gas', mw: 2500 }, { key: 'coal', mw: 1200 }, { key: 'solar', mw: 800 }, { key: 'nuclear', mw: 500 }],
-    forecast: Array.from({ length: 24 }, (_, i) => ({ t: Math.floor(new Date(new Date().setHours(i, 0, 0, 0)) / 1000), share: i === 22 || i === 23 ? 90 : 40 })) } },
+    // today and tomorrow, as energy-charts sends; greenest around midnight, so late in the evening the window runs into tomorrow
+    forecast: Array.from({ length: 48 }, (_, i) => ({ t: Math.floor(new Date(new Date().setHours(i, 0, 0, 0)) / 1000), share: [22, 23, 24, 25].includes(i) ? 90 : 40 })) } },
   gas_storage: { key: true, fetched_at: iso(), data: { nl: { name: 'Netherlands', day: '2026-10-20', full: 81.2, trend: 0.31, twh: 112.5, year_ago: 90.1 }, eu: { name: 'EU', day: '2026-10-20', full: 88.4, trend: 0.2, twh: 900 } } },
   grid: true,
 };
@@ -97,7 +98,7 @@ const ADDR = { waste: { postcode: '3511AB', number: 1, suffix: '', provider: '' 
   ok(/stroom nu/.test(await p.textContent('#panel-energy')), 'Prijzen tab shows the prices as before');
   await p.click('#panel-energy .sectabs .chip:has-text("Mix & gas")');
   const txt = await p.textContent('#panel-energy');
-  ok(/61%\s*duurzaam/.test(txt) && /wind 50%/.test(txt) && /gas 25%/.test(txt) && /Groenste 3 uur vandaag: \d\d:00–\d\d:00 \(~\d+% duurzaam\)/.test(txt), `mix tab: share, legend and greenest hours`);
+  ok(/61%\s*duurzaam/.test(txt) && /wind 50%/.test(txt) && /gas 25%/.test(txt) && /Groenste 3 uur (vandaag|morgen): \d\d:00–\d\d:00 \(~\d+% duurzaam\)/.test(txt), `mix tab: share, legend and greenest hours`);
   ok(/Nederland 81,2% vol/.test(txt) && /vorig jaar 90,1%/.test(txt) && /EU 88,4% vol/.test(txt), 'gas storage NL and EU');
   ok(/zonnepanelen op daken tellen grotendeels niet mee/.test(txt), 'the mix says rooftop solar is missing');
   const widths = await p.$$eval('#panel-energy .mixbar span', l => l.map(x => parseFloat(x.style.width)));
