@@ -31,6 +31,7 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -330,6 +331,11 @@ type Config struct {
 		OpenPhishURL  string   `yaml:"openphish_url"`
 		Brands        []string `yaml:"brands"` // names to look for; default a list of Dutch banks, government services and shops
 	} `yaml:"breaches"`
+	// ADSB: the panel with ADS-B Exchange's live map in a frame (emergency, military and civil air traffic).
+	ADSB struct {
+		Enabled bool   `yaml:"enabled"`
+		URL     string `yaml:"url"` // the map (a tar1090 globe); the CSP allows its origin as the only frame
+	} `yaml:"adsb"`
 	// Recalls: the Productwaarschuwingen panel (NVWA safety warnings and recalls, RSS).
 	Recalls struct {
 		Enabled  bool     `yaml:"enabled"`
@@ -581,6 +587,7 @@ func defaultConfig() *Config {
 	c.Breaches.Phishing, c.Breaches.PhishingURL = true, "https://www.fraudehelpdesk.nl/feed/?post_type=alert"
 	c.Breaches.PhishingNL, c.Breaches.PhishStatsURL = true, "https://api.phishstats.info/api/phishing"
 	c.Breaches.OpenPhishURL = "https://raw.githubusercontent.com/openphish/public_feed/refs/heads/main/feed.txt"
+	c.ADSB.Enabled, c.ADSB.URL = true, "https://globe.adsbexchange.com/"
 	c.Recalls.Enabled, c.Recalls.Interval = true, Duration(time.Hour)
 	c.Recalls.URL = `https://www.nvwa.nl/api/rss?query={"filters":[{"field":"topic","values":["Veiligheidswaarschuwingen"],"type":"all"}],"resultSearchTerm":""}`
 	c.Notices.Enabled, c.Notices.URL, c.Notices.Days, c.Notices.Radius, c.Notices.TTL = true, "https://repository.overheid.nl/sru", 14, 500, Duration(2*time.Hour)
@@ -907,6 +914,9 @@ func (c *Config) validate() error {
 				fail("breaches.brands: %q must be 3 to 40 characters", b)
 			}
 		}
+	}
+	if c.ADSB.Enabled && frameOrigin(c.ADSB.URL) == "" {
+		fail("adsb.url must be an https URL (http only for localhost)")
 	}
 	if c.Recalls.Enabled && (!httpsURL(c.Recalls.URL) || c.Recalls.Interval.D() < 15*time.Minute) {
 		fail("recalls: url must be an https URL and interval at least 15m")
@@ -1296,6 +1306,11 @@ func (a *App) applyConfig(cfg *Config) {
 	a.cfg = cfg
 	a.mu.Unlock()
 	a.level.Set(*parseLevel(cfg.Server.LogLevel))
+	frame := ""
+	if cfg.ADSB.Enabled {
+		frame = frameOrigin(cfg.ADSB.URL)
+	}
+	cspFrame.Store(&frame)
 	if cfg.Push.Enabled && a.push != nil {
 		if err := a.push.setKey(cfg.Push.VAPIDPrivateKey); err != nil {
 			slog.Error("push disabled", "err", err)
@@ -1594,10 +1609,31 @@ func buildCSP(page []byte) string {
 		"frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'"
 }
 
+// cspFrame: the one origin the page may frame, the ADSB panel's map (adsb.url); set when a config is applied.
+var cspFrame atomic.Pointer[string]
+
+func init() { o := "https://globe.adsbexchange.com"; cspFrame.Store(&o) }
+
+// frameOrigin: the origin of a URL the page may frame, if it is https (or http on localhost, for tests).
+func frameOrigin(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" || u.User != nil || strings.ContainsAny(u.Host, "; '\"") {
+		return ""
+	}
+	if u.Scheme == "https" || u.Scheme == "http" && (u.Hostname() == "127.0.0.1" || u.Hostname() == "localhost") {
+		return u.Scheme + "://" + u.Host
+	}
+	return ""
+}
+
 func securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()
-		h.Set("Content-Security-Policy", csp)
+		policy := csp
+		if o := cspFrame.Load(); o != nil && *o != "" {
+			policy += "; frame-src " + *o
+		}
+		h.Set("Content-Security-Policy", policy)
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("Referrer-Policy", "no-referrer")
 		h.Set("X-Frame-Options", "DENY")
@@ -1928,6 +1964,7 @@ func (a *App) handleCatalog(w http.ResponseWriter, r *http.Request) {
 		"alarms":           map[string]any{"enabled": cfg.Alarms.Enabled, "city": cfg.Alarms.City},
 		"bridges":          cfg.Bridges.Enabled,
 		"recalls":          cfg.Recalls.Enabled,
+		"adsb":             map[string]any{"enabled": cfg.ADSB.Enabled, "url": cfg.ADSB.URL},
 		"notices":          map[string]any{"enabled": cfg.Notices.Enabled, "days": cfg.Notices.Days, "radius": cfg.Notices.Radius},
 		"grid":             cfg.Energy.Enabled && cfg.Energy.Grid,
 		"alerts":           map[string]bool{"nctv": cfg.Alerts.NCTV.Enabled, "knmi": cfg.Alerts.KNMI},

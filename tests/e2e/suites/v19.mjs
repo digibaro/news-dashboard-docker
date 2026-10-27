@@ -20,6 +20,8 @@ const ec = (await (await fetch(URL + 'api/economy')).json()).data;
 // correctly shows three tiles, and the rate checks are skipped with a note
 const hasRate = !!ec.rate;
 if (!hasRate) console.log('NOTE: ECB deposit rate not available from this network; rate checks skipped');
+const hasEurostat = !!(ec.inflation?.length && ec.unemployment?.length);
+if (!hasEurostat) console.log('NOTE: Eurostat not available from this network; inflation and unemployment checks skipped');
 const mk = (await (await fetch(URL + 'api/markets')).json()).data;
 const cat = await (await fetch(URL + 'api/catalog')).json();
 
@@ -41,9 +43,11 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   ok(i('economy') === i('fuel') + 1 && i('markets') === i('economy') + 1 && i('sports') === i('markets') + 1 && i('politics') === i('sports') + 1, `${w} ${scheme}: energy, fuel, economy, markets, sports, politics`);
   ok(t.heads.join() === 'Economie in cijfers,Beurs', 'panel names');
   // 1.34 added Hypotheekrente (ECB), Huizenprijzen and Faillissementen (CBS) after these; each only when its source answered
-  ok(t.tiles.map(x => x.l).filter(l => !['Hypotheekrente', 'Huizenprijzen', 'Faillissementen'].includes(l)).join() === (hasRate ? 'Inflatie,Werkloosheid,ECB-depositorente,Euro in dollar' : 'Inflatie,Werkloosheid,Euro in dollar'), `tiles: ${t.tiles.map(x => x.l + ' ' + x.v).join(', ')}${hasRate ? '' : ' (ECB rate unavailable from this network)'}`);
-  ok(t.tiles[0].v === ec.inflation.at(-1).value.toLocaleString('nl-NL', { minimumFractionDigits: 1 }) + '%' && /eurozone/.test(t.tiles[0].s) && t.tiles[0].spark && t.tiles[1].spark, 'inflation value, euro-area comparison and trend lines');
-  ok(!hasRate || /^sinds \d+ \w+\.? \d{4}$/.test(t.tiles[2].s || ''), hasRate ? `ECB rate since: ${t.tiles[2].s}` : 'ECB rate since: skipped (rate unavailable from this network)');
+  const want = [hasEurostat && 'Inflatie', hasEurostat && 'Werkloosheid', hasRate && 'ECB-depositorente', 'Euro in dollar'].filter(Boolean).join();
+  ok(t.tiles.map(x => x.l).filter(l => !['Hypotheekrente', 'Huizenprijzen', 'Faillissementen'].includes(l)).join() === want,
+    `tiles: ${t.tiles.map(x => x.l + ' ' + x.v).join(', ')}${hasRate ? '' : ' (ECB rate unavailable from this network)'}${hasEurostat ? '' : ' (Eurostat unavailable from this network)'}`);
+  ok(!hasEurostat || t.tiles[0].v === ec.inflation.at(-1).value.toLocaleString('nl-NL', { minimumFractionDigits: 1 }) + '%' && /eurozone/.test(t.tiles[0].s) && t.tiles[0].spark && t.tiles[1].spark, 'inflation value, euro-area comparison and trend lines');
+  ok(!hasRate || /^sinds \d+ \w+\.? \d{4}$/.test(t.tiles.find(x => x.l === 'ECB-depositorente')?.s || ''), hasRate ? `ECB rate since: ${t.tiles.find(x => x.l === 'ECB-depositorente')?.s}` : 'ECB rate since: skipped (rate unavailable from this network)');
   ok(/Eurostat/.test(t.ecFoot) && /ECB/.test(t.ecFoot), 'economy footer names Eurostat and ECB');
   ok(t.idxN === mk.indices.length && t.idx[0].startsWith('AEX'), `indices: ${t.idxN}`);
   ok(t.cols.length === 2 && t.cols[0].h === 'Stijgers (AEX)' && t.cols[1].h === 'Dalers (AEX)', 'top 3 columns');

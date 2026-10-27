@@ -133,6 +133,14 @@ breaches:
   openphish_url: "https://raw.githubusercontent.com/openphish/public_feed/refs/heads/main/feed.txt"
   # brands: [Rabobank, ING, "ABN AMRO", DigiD, Belastingdienst, PostNL, ...]   # default: ~30 Dutch banks, services and shops
 
+# ADSB: ADS-B Exchange's live map in a frame, with three views the visitor picks: emergency air traffic (trauma,
+# police and coastguard helicopters by ICAO address), military air traffic and all (civil) air traffic. The visitor's
+# browser loads the map from ADS-B Exchange while the panel is open (ADS-B Exchange shows ads, and asks visitors with
+# an ad blocker to allow it); the server fetches nothing. The CSP allows this url's origin as the only frame.
+adsb:
+  enabled: true
+  url: "https://globe.adsbexchange.com/"
+
 # Productwaarschuwingen: the NVWA's safety warnings and recalls of food and products (RSS, last 90 days).
 recalls:
   enabled: true

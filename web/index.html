@@ -267,6 +267,7 @@ svg.i { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor;
 .gside .gv.bad { color: var(--sev-high); } .gside .gv.ok { color: var(--sev-low); }
 .gside .gs { font-size: 12px; color: var(--text-2); }
 .glv.bad { color: var(--sev-crit); font-weight: 600; } .glv.warn { color: var(--sev-high); font-weight: 600; }
+.adsbframe iframe { display: block; width: 100%; height: 420px; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 8px; background: var(--surface-2); }
 .phgrp .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; overflow-wrap: anywhere; }
 .rtag { font-size: 11px; padding: 0 5px; border-radius: 4px; background: var(--chip, var(--line)); color: var(--text-2); }
 .brstar { border: 0; background: none; padding: 0; font-size: 17px; line-height: 1; cursor: pointer; color: var(--text-3); min-width: 24px; min-height: 24px; }
@@ -1207,6 +1208,10 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.38.0</h3>
+    <ul>
+      <li>Nieuw paneel ADSB: de live kaart van ADS-B Exchange met hulpdiensten, militair of al het luchtverkeer. Je browser maakt verbinding met ADS-B Exchange zolang het paneel open is; zie je een melding over je adblocker, sta deze site dan toe.</li>
+    </ul>
     <h3>Versie 1.37.0</h3>
     <ul>
       <li>Het paneel Luchtradar (1.35 en 1.36) is weer verwijderd; het dashboard is terug op 1.34.1.</li>
@@ -1497,6 +1502,10 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.38.0</h3>
+    <ul>
+      <li>New panel ADSB: ADS-B Exchange's live map with emergency, military or all air traffic. Your browser connects to ADS-B Exchange while the panel is open; if you see a message about your ad blocker, allow this site.</li>
+    </ul>
     <h3>Version 1.37.0</h3>
     <ul>
       <li>The Air radar panel (1.35 and 1.36) has been removed again; the dashboard is back at 1.34.1.</li>
@@ -1907,7 +1916,7 @@ textarea.json {
       <p class="msg" id="waste-msg" role="status"></p>
     </section>
     <section aria-labelledby="set-sports-h" id="set-sports" hidden>
-      <h3 id="set-sports-h">Sportagenda</h3>
+      <h3 id="set-sports-h">Sporten</h3>
       <p class="hint">Kies welke sporten je in de sportagenda ziet.</p>
       <div id="sports-opts" role="group" aria-labelledby="set-sports-h"></div>
     </section>
@@ -2027,6 +2036,7 @@ const PANELS = {
   sky: 'Vanavond aan de hemel',
   traffic: 'Verkeer',
   trains: 'Treinstoringen',
+  adsb: 'ADSB',
   alarms: 'Alarmeringen',
   nlalert: 'NL-Alert',
   quakes: 'Aardbevingen en natuurrampen',
@@ -2052,7 +2062,7 @@ const MIN = 60e3;
 const DEFAULTS = {
   v: 2, theme: 'auto', sources: null, known: [], pageSize: 60, summaries: true,
   density: 'compact', category: 'all', weather: null, threatTab: 'ips', advTab: 'adv', advFilter: 'all',
-  lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, trending: true, pushTopics: null, waste: null, sports: null, sportsSeen: null, solar: null, saver: 'auto', hazardTab: 'nl', watch: [], mute: [], alarmWatch: [], alarmSound: true, bridges: [], bridgeTab: 'fav', energyTab: 'prices',
+  lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, trending: true, pushTopics: null, waste: null, sports: null, sportsSeen: null, solar: null, saver: 'auto', hazardTab: 'nl', watch: [], mute: [], alarmWatch: [], alarmSound: true, bridges: [], bridgeTab: 'fav', energyTab: 'prices', adsbView: 'emergency',
   panels: { order: PANEL_IDS.slice(), collapsed: {}, hidden: {}, page: {} },
 };
 
@@ -3270,6 +3280,14 @@ const EN = {
   "Geen phishingsites op Nederlandse merken in de openbare lijsten van de afgelopen 90 dagen.": "No phishing sites aimed at Dutch brands in the public lists of the last 90 days.",
   "Alleen de domeinnaam, onschadelijk gemaakt ([.]) en nooit als link. Bron: PhishStats en OpenPhish.": "Only the domain name, defanged ([.]) and never as a link. Source: PhishStats and OpenPhish.",
   "Ook gebruikt voor Bekendmakingen in je buurt en Netcongestie (in Energieprijzen).": "Also used for Official notices near you and Grid congestion (in Energy prices).",
+  // ADSB
+  'Sporten': 'Sports', 'ADSB': 'ADSB', 'Hulpdiensten': 'Emergency air traffic', 'Militair': 'Military air traffic', 'Burgerluchtvaart': 'Civil air traffic', 'Soort luchtverkeer': 'Kind of air traffic',
+  'Luchtverkeer: {view} (ADS-B Exchange)': 'Air traffic: {view} (ADS-B Exchange)',
+  'Traumahelikopters (Lifeliners), politie- en kustwachthelikopters.': 'Trauma helicopters (Lifeliners), police and coastguard helicopters.',
+  'Toestellen met de militaire markering in de database van ADS-B Exchange; veel gevechtsvliegtuigen zenden geen positie uit.': "Aircraft marked military in ADS-B Exchange's database; many fighter jets do not broadcast a position.",
+  'Al het luchtverkeer dat zijn positie uitzendt.': 'All air traffic that broadcasts its position.',
+  'Zie je een melding over je adblocker? ADS-B Exchange toont advertenties; sta deze site toe in je adblocker om de kaart te zien.': 'Seeing a message about your ad blocker? ADS-B Exchange shows ads; allow this site in your ad blocker to see the map.',
+  'Kaart: ': 'Map: ', ' · je browser maakt verbinding met ADS-B Exchange zolang dit paneel open is': ' · your browser connects to ADS-B Exchange while this panel is open',
 };
 
 // Sentences the server composes from parts (rain summary, directions, source names).
@@ -3418,6 +3436,7 @@ function sanitize(p) {
     .slice(0, 20).map(b => ({ id: b.id, name: b.name.slice(0, 80), city: typeof b.city === 'string' ? b.city.slice(0, 60) : '' }));
   if (['fav', 'plan'].includes(p.bridgeTab)) d.bridgeTab = p.bridgeTab;
   if (['prices', 'mix', 'grid'].includes(p.energyTab)) d.energyTab = p.energyTab;
+  if (['emergency', 'military', 'civil'].includes(p.adsbView)) d.adsbView = p.adsbView;
   if (Array.isArray(p.alarmWatch)) d.alarmWatch = p.alarmWatch.filter(r => r && typeof r === 'object' && /^[a-z0-9][a-z0-9-]{1,48}$/.test(r.city) && typeof r.street === 'string' && r.street.trim().length >= 3)
     .slice(0, 10).map(r => ({ city: r.city, cityName: typeof r.cityName === 'string' ? r.cityName.slice(0, 60) : null, street: r.street.trim().slice(0, 60), spoed: r.spoed === true }));
   if (p.waste && typeof p.waste === 'object') {
@@ -3617,7 +3636,7 @@ const PANEL_GROUPS = [
   ['Weer & natuur', ['weather', 'satellite', 'sky', 'quakes']],
   ['Gezondheid', ['air', 'pollen', 'recalls', 'health']],
   ['Thuis & vandaag', ['today', 'waste', 'notices', 'energy', 'fuel']],
-  ['Verkeer & reizen', ['traffic', 'trains']],
+  ['Verkeer & reizen', ['traffic', 'trains', 'adsb']],
   ['Alarmeringen', ['alarms', 'nlalert']],
   ['Storingen', ['utilities', 'outages']],
   ['Economie & politiek', ['economy', 'markets', 'politics']],
@@ -3988,6 +4007,7 @@ function setCollapsed(id, c) {
 function togglePanel(id) {
   setCollapsed(id, !prefs.panels.collapsed[id]);
   savePrefs(); updateAllBtn();
+  if (id === 'adsb') renderPanel('adsb'); // the map frame exists only while the panel is open
 }
 
 // The bar above the panels: jump to a panel, collapse or expand them all. It sticks below the header.
@@ -4125,6 +4145,7 @@ const summaryOf = {
     return bad.length ? bad.map(p => `${p.name}: ${t(OUT_NL[p.data.status])}`).slice(0, 2).join(' · ') : t('alles werkt normaal'); },
   ap: () => { const a = panelData.ap?.items; if (!a) return null; const n = a.filter(isRecent).length;
     return n ? t(n === 1 ? '1 bericht (14 dagen)' : '{n} berichten (14 dagen)', { n }) : t('geen berichten (14 dagen)'); },
+  adsb: () => catalog?.adsb?.enabled ? t(ADSB_VIEWS[prefs.adsbView]?.[0] || ADSB_VIEWS.emergency[0]) : null,
   recalls: () => { const a = panelData.recalls?.data?.items; if (!a) return null; const n = a.filter(x => Date.now() - new Date(x.published) <= 7 * 864e5).length;
     return n ? t(n === 1 ? '1 waarschuwing (7 dagen)' : '{n} waarschuwingen (7 dagen)', { n }) : t('geen nieuwe (7 dagen)'); },
   notices: () => { const d = panelData.notices?.data; if (d?.needs_address) return t('adres instellen'); const a = d?.items; if (!a) return null;
@@ -4196,6 +4217,7 @@ const panelRenderers = {
   health: renderHealth,
   ap: renderAP,
   recalls: renderRecalls,
+  adsb: renderADSB,
   notices: renderBekendmakingen,
 };
 
@@ -7151,7 +7173,7 @@ function wireMobileViews() {
 function refreshView(v) {
   const panels = () => [loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(), loadBreaches(), loadOutages(), loadHealthPanel(),
     loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadNLThreat(), loadExploits(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(),
-    loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar(), loadWorld(), loadRecalls(), loadNotices()];
+    loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar(), loadWorld(), loadRecalls(), loadNotices(), loadADSB()];
   const jobs = v === 'news' ? [loadNews({ replace: true }), loadTrending()] : v === 'panels' || v === 'panels2' ? panels() : [loadNews({ replace: true }), ...panels()];
   return Promise.allSettled(jobs);
 }
@@ -7360,6 +7382,40 @@ function renderRecalls(body) {
   }
   out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://www.nvwa.nl/actueel/veiligheidswaarschuwingen', 'NVWA'), t(' · terugroepacties en waarschuwingen voor voedsel en producten')));
   body.replaceChildren(...out);
+}
+
+// ---------------------------------------------------------------- ADSB (ADS-B Exchange's live map in a frame)
+// The server fetches nothing: the visitor's browser loads the map from catalog.adsb.url (ADS-B Exchange) while the
+// panel is open, in one of three views. The frame is kept across renders and removed while the panel is collapsed.
+const ADSB_VIEWS = {
+  emergency: ['Hulpdiensten', 'icaoFilter=4853F6,4853E2,485E49,486A31,486A30,484B58,48605B,4844C2,4857B3,48605C,48644B,48644A,486449,484A91,484A92,484A93,484A94,484A95,484A96,485B2F,484AC1,484AC0&'],
+  military: ['Militair', 'filterDbFlag=military&'],
+  civil: ['Burgerluchtvaart', ''],
+};
+function loadADSB() { renderPanel('adsb'); }
+function renderADSB(body) {
+  const cfg = catalog?.adsb;
+  if (!cfg?.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (adsb.enabled).' })); return; }
+  const view = ADSB_VIEWS[prefs.adsbView] ? prefs.adsbView : 'emergency';
+  let wrap = body.querySelector(':scope > .adsbwrap');
+  if (!wrap) { wrap = h('div', { class: 'adsbwrap' }, h('div'), h('div', { class: 'adsbframe' }), h('div')); body.replaceChildren(wrap); }
+  const [headBox, frameBox, footBox] = wrap.children;
+  headBox.replaceChildren(h('div', { class: 'sectabs', role: 'group', 'aria-label': t('Soort luchtverkeer') }, Object.entries(ADSB_VIEWS).map(([id, [label]]) =>
+    h('button', { class: 'chip', type: 'button', 'aria-pressed': String(view === id), text: t(label),
+      onclick: () => { prefs.adsbView = id; savePrefs(); renderPanel('adsb'); $('#panel-adsb .sectabs [aria-pressed="true"]')?.focus(); } }))));
+  if (prefs.panels.collapsed.adsb) frameBox.replaceChildren();
+  else {
+    const base = cfg.url || 'https://globe.adsbexchange.com/';
+    const src = base + (base.includes('?') ? '&' : '?') + 'lat=52.15&lon=5.30&zoom=6&' + ADSB_VIEWS[view][1] + 'iconScale=1.25&scale=0.65&noIsolation&hideSidebar&hideButtons&kiosk';
+    const title = t('Luchtverkeer: {view} (ADS-B Exchange)', { view: t(ADSB_VIEWS[view][0]).toLowerCase() });
+    const f = frameBox.querySelector('iframe');
+    if (!f) frameBox.replaceChildren(h('iframe', { title, src, loading: 'lazy', referrerpolicy: 'no-referrer' }));
+    else if (f.getAttribute('src') !== src) { f.setAttribute('src', src); f.setAttribute('title', title); }
+  }
+  footBox.replaceChildren(
+    h('p', { class: 'pnote', text: view === 'emergency' ? t('Traumahelikopters (Lifeliners), politie- en kustwachthelikopters.') : view === 'military' ? t('Toestellen met de militaire markering in de database van ADS-B Exchange; veel gevechtsvliegtuigen zenden geen positie uit.') : t('Al het luchtverkeer dat zijn positie uitzendt.') }),
+    h('p', { class: 'pnote', text: t('Zie je een melding over je adblocker? ADS-B Exchange toont advertenties; sta deze site toe in je adblocker om de kaart te zien.') }),
+    h('p', { class: 'pfoot' }, t('Kaart: '), extLink('https://globe.adsbexchange.com/', 'ADS-B Exchange'), t(' · je browser maakt verbinding met ADS-B Exchange zolang dit paneel open is')));
 }
 
 // ---------------------------------------------------------------- bekendmakingen in je buurt (officielebekendmakingen.nl)
@@ -8047,7 +8103,7 @@ async function init() {
   if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
   await Promise.allSettled([loadNews({ replace: true }), loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(),
     loadBreaches(), loadOutages(), loadHealthPanel(), loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadNLThreat(), loadExploits(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(), loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadTrending(), initPush(),
-    loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar(), loadWorld(), loadRecalls(), loadNotices()]);
+    loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar(), loadWorld(), loadRecalls(), loadNotices(), loadADSB()]);
   kioskFit(); // the header and top bar have their final height now
   panelFromHash(); // e.g. a push notification that opens #panel-waste
   awStart();

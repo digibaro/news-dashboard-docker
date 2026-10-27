@@ -22,19 +22,21 @@ function edit(src, pairs) {
 }
 // Only the main test server fetches ransomware.live (it rate-limits per IP); the others switch it off.
 const noRansomware = ['ransomware:\n  enabled: true\n', 'ransomware:\n  enabled: false\n'];
+// The ADSB panel frames ADS-B Exchange; every test server frames a local stand-in instead.
+const localMap = ['  url: "https://globe.adsbexchange.com/"', `  url: "http://127.0.0.1:${port}/adsbx/"`];
 const push = [['push:\n  enabled: false\n', 'push:\n  enabled: true\n'],
   ['  subject: "mailto:you@example.nl"', '  subject: "mailto:e2e@example.nl"']];
 
 mkdirSync(out, { recursive: true });
 const files = {
-  'main.yaml': base,
-  'push.yaml': edit(base, [...push, noRansomware]),
-  'accent.yaml': edit(base, [...push, noRansomware,
+  'main.yaml': edit(base, [localMap]),
+  'push.yaml': edit(base, [...push, noRansomware, localMap]),
+  'accent.yaml': edit(base, [...push, noRansomware, localMap,
     ['  accent: ""  ', '  accent: "#00a4dc"'],
     ['  sports: [f1, road, mtb, athletics, football]', '  sports: [f1, mtb, athletics]']]),
-  'mock.yaml': edit(base, [noRansomware, ['    nl: "https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-netherlands"',
+  'mock.yaml': edit(base, [noRansomware, localMap, ['    nl: "https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-netherlands"',
     `    nl: "http://127.0.0.1:${port}/mock/nl.xml"`]]),
-  'evil.yaml': edit(base, [noRansomware, ['\nsources:\n', `\nsources:\n  - { id: evil, name: "Evil <b>feed</b>", category: nl, url: "http://127.0.0.1:${port}/evil/evil.xml", lang: nl }\n`]]),
+  'evil.yaml': edit(base, [noRansomware, localMap, ['\nsources:\n', `\nsources:\n  - { id: evil, name: "Evil <b>feed</b>", category: nl, url: "http://127.0.0.1:${port}/evil/evil.xml", lang: nl }\n`]]),
 };
 for (const [name, text] of Object.entries(files)) writeFileSync(`${out}/${name}`, text);
 console.log(`test configs written to ${out}: ${Object.keys(files).join(', ')}`);

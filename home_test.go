@@ -351,3 +351,32 @@ func TestThumbnailDecodeBudget(t *testing.T) {
 		t.Errorf("grey png: %v", err)
 	}
 }
+
+func TestADSBFrame(t *testing.T) {
+	a := newTestApp(t, validConfig)
+	a.applyConfig(a.config())
+	h := a.routes("/")
+	if c := get(h, "GET", "/", nil).Header().Get("Content-Security-Policy"); !strings.HasSuffix(c, "; frame-src https://globe.adsbexchange.com") {
+		t.Errorf("csp: %s", c)
+	}
+	if b := get(h, "GET", "/api/catalog", nil).Body.String(); !strings.Contains(b, `"adsb":{"enabled":true,"url":"https://globe.adsbexchange.com/"}`) {
+		t.Errorf("catalog: %s", b)
+	}
+	for _, u := range []string{"http://example.com/", "ftp://x/", "https://a b/", "https://x.nl;script-src *", "https://u:p@x.nl/"} {
+		if frameOrigin(u) != "" {
+			t.Errorf("frame origin %q accepted", u)
+		}
+	}
+	if frameOrigin("http://127.0.0.1:8099/adsbx/") != "http://127.0.0.1:8099" {
+		t.Error("localhost for tests")
+	}
+	if _, err := parseConfig([]byte(validConfig + "adsb: { url: \"http://example.com/\" }\n")); err == nil {
+		t.Error("an http map was accepted")
+	}
+	off := newTestApp(t, validConfig+"adsb: { enabled: false }\n")
+	off.applyConfig(off.config())
+	if c := get(off.routes("/"), "GET", "/", nil).Header().Get("Content-Security-Policy"); strings.Contains(c, "frame-src") {
+		t.Errorf("disabled: no frame-src (%s)", c)
+	}
+	a.applyConfig(a.config()) // later tests expect the default
+}

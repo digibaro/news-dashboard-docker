@@ -41,6 +41,7 @@ A fast, privacy-friendly **single-page news dashboard in Dutch, with an English 
 - **Alarmeringen:** the latest P2000 alerts for your city from Zwaailicht.nl, grouped as Brandweer, Ambulance, Politie and Lifeliner (at most 2 each). The city is chosen per visitor under Instellingen.
 - **Alarmeringen-wachter:** watch up to 10 specific streets (street + place, optionally only urgent alerts). A new alert in such a street gives a banner, a two-tone sound and a desktop notification while the dashboard is open (also in a background tab), and a push notification that stays on screen when it is closed (topic *Alarmeringen-wachter*). Set under *Instellingen → Alarmeringen-wachter*, with a test button.
 - **Datalekken:** the latest 3 Dutch and 3 other data breaches at organisations, from Have I Been Pwned: number of accounts, leak date, and what data leaked. Below them **Oplichting en phishing**: the latest scam warnings of the Fraudehelpdesk, and **Phishing op Nederlandse merken**: phishing sites posing as a Dutch bank, government service or shop in PhishStats and OpenPhish (domain name only, defanged, never a link; the public lists contain few Dutch targets).
+- **ADSB:** ADS-B Exchange's live map in a frame, with three views: *Hulpdiensten* (the trauma, police and coastguard helicopters by ICAO address), *Militair* (the military flag) and *Burgerluchtvaart* (all traffic). The visitor's browser loads it from ADS-B Exchange while the panel is open; ADS-B Exchange shows ads and asks visitors with an ad blocker to allow it.
 - **Productwaarschuwingen:** the NVWA's recalls and safety warnings of food and products (last 30 days), with a label for allergy warnings.
 - **Bekendmakingen:** permits, traffic decisions and other official notices within 500 m of the visitor's address (the one set for the Afvalkalender), last 14 days, from officielebekendmakingen.nl.
 - **Ransomware:** organisations claimed by ransomware groups on their leak sites (ransomware.live), with counts, the most active groups and the latest claims. No links to leak sites and no descriptions.
@@ -210,6 +211,7 @@ Everything lives in `config.yaml`. The repository ships [`config.yaml.default`](
 | `bridges` | Bruggen in Verkeer: `enabled`, `interval` (open now, default 2m, min. 1m; the `traffic.url` download then runs this often), `planned_url` (NDW planning feed), `planned_interval` (default 15m, min. 5m), `names_url` (Rijkswaterstaat FIS WFS: every movable bridge; empty = only bridges NDW reports, named by ISRS code) |
 | `alarms` | `enabled`, `city` (default city slug, e.g. `den-haag`), `base` (feed URL prefix), `interval` (cache per city, min. 1m); `counts` for the top bar: `label`, `cities` (one or more slugs, e.g. a whole safety region), `interval` (1m–10m) |
 | `breaches` | Datalekken panel: `enabled`, `url` (HIBP breach list), `interval` (min. 1h, default 3h), `include_sensitive` (default `false`), `phishing` (default true) and `phishing_url` (Fraudehelpdesk alerts RSS, read every 2 hours), `phishing_nl` (default true), `phishstats_url`, `openphish_url` (every 2 hours; at least one) and `brands` (names to look for, max. 60; default ~30 Dutch banks, services and shops) |
+| `adsb` | ADSB panel: `enabled`, `url` (the map, default `https://globe.adsbexchange.com/`; the CSP allows its origin as the only frame) |
 | `recalls` | Productwaarschuwingen: `enabled`, `url` (NVWA RSS of the topic Veiligheidswaarschuwingen), `interval` (default 1h, min. 15m) |
 | `notices` | Bekendmakingen: `enabled`, `url` (KOOP SRU endpoint), `days` (1–42, default 14), `radius` (metres, 100–2000, default 500), `ttl` (how long a municipality's notices are kept, default 2h, min. 30m) |
 | `outages` | `enabled`, `interval` (min. 5m), `internet` (`enabled`, `base`, `country`, `networks`: `asn` + `name`, max. 10, `interval` min. 10m), `providers`: `id`, `name`, `url`, `homepage`, `format` (`statuspage` for any Atlassian Statuspage `summary.json` / `rss` / `m365` / `gcp` for Google Cloud's `incidents.json`) |
@@ -632,6 +634,7 @@ The server fetches everything; browsers only talk to the dashboard itself.
 | [Have I Been Pwned](https://haveibeenpwned.com/) | Datalekken | The public breach list (`/api/v3/breaches`): no API key, and no visitor data is sent. Licensed **CC BY 4.0** (attribution shown in the panel). Fetched every 3 h. Left out: unverified, fabricated, retired, spam lists, malware and stealer logs, entries without a domain, and (unless `include_sensitive: true`) sensitive breaches. HIBP has no country field, so "Dutch" means a `.nl` domain or a description mentioning Dutch/the Netherlands. |
 | [Fraudehelpdesk](https://www.fraudehelpdesk.nl/actueel/) | Datalekken: oplichting en phishing | The public RSS feed of warnings (`/feed/?post_type=alert`), read every 2 hours. |
 | [PhishStats](https://phishstats.info/) and [OpenPhish](https://openphish.com/) | Datalekken: phishing op Nederlandse merken | PhishStats' public API (one search by page title and address, every 2 hours) and OpenPhish's free community feed (~300 URLs, via its GitHub mirror). Only the host name is kept, defanged, for 90 days. |
+| [ADS-B Exchange](https://globe.adsbexchange.com/) | ADSB | Its live map in a frame (`icaoFilter` for the emergency helicopters, `filterDbFlag=military`, or everything), loaded by the visitor's browser while the panel is open. The server fetches nothing. |
 | [NVWA](https://www.nvwa.nl/actueel/veiligheidswaarschuwingen) | Productwaarschuwingen | The RSS behind the NVWA's list of safety warnings (`/api/rss` with the topic filter), hourly. |
 | [officielebekendmakingen.nl](https://www.officielebekendmakingen.nl/) (KOOP) | Bekendmakingen | The open SRU repository (`repository.overheid.nl/sru`), no key. It has no distance search, so the server asks for the notices of the address's municipality (last 14 days, pages of 250, ~5 KB per record; a big city ≈ 10 MB and ~10 s the first time) and keeps only located ones compactly (≈ 1 MB for Amsterdam, at most 4 municipalities, 2 h). The address goes to [PDOK Locatieserver](https://www.pdok.nl/) to find the municipality and position. |
 | [Fraunhofer ISE energy-charts](https://www.energy-charts.info/) | Energieprijzen: stroommix | `public_power` and `ren_share_forecast` for NL, every 30 minutes, no key. CC BY 4.0. Based on ENTSO-E transparency data, so generation behind the meter (most rooftop solar) is missing and values are about 3 hours behind. |
@@ -666,7 +669,7 @@ A URL sets the mode for that visit only, without changing the saved choice: `htt
 - **Icons only:** to have the site icons right after a restart without writing the news to disk, set only `cache.icon_cache_path` (e.g. `/var/lib/nieuwsdashboard/icons.json`): one ~85 KB file, written only when the icons change (about weekly), against ~0.5 MB every 30 minutes for the news snapshot.
 - **With Docker:** uncomment `NDB_ICON_CACHE_PATH` and/or `NDB_SNAPSHOT_PATH` and the `./data` volume in `docker-compose.yml`, after `mkdir -p data && sudo chown 65532:65532 data` (the container runs as uid 65532). If a folder is not writable, the log says so at startup.
 - **No cookies, no trackers, no external fonts or scripts.**
-  - The Content-Security-Policy only allows the page's own origin, plus `https:` images when `show_images` is on.
+  - The Content-Security-Policy only allows the page's own origin, plus `https:` images when `show_images` is on, and the ADSB panel's map (`adsb.url`, ADS-B Exchange) as the only frame. That map is loaded only while the panel is open; hide the panel or set `adsb.enabled: false` to keep the browser from contacting ADS-B Exchange.
   - Feed titles and summaries are stripped of all HTML on the server and rendered as text in the browser.
   - Links are limited to `http(s)` and open with `rel="noopener noreferrer"`.
 - **Source icons** are fetched by the server from the news sites' own pages (never by the browser), kept in memory and refreshed weekly; SVG icons are skipped because they can contain scripts, and the fetches refuse private network addresses like the image proxy. For sites that block the server, it asks DuckDuckGo's and then Google's favicon service, sending only the site's name (e.g. `www.nu.nl`); turn that off with `features.icon_services: false`.
@@ -687,7 +690,7 @@ A URL sets the mode for that visit only, without changing the saved choice: `htt
 ## Security
 
 - **Browser:**
-  - The Content-Security-Policy allows only the dashboard's own origin. Its two inline scripts are allowed by **SHA-256 hash**, computed from the embedded page at startup, not by `'unsafe-inline'`.
+  - The Content-Security-Policy allows only the dashboard's own origin (and, as a frame only, the ADSB panel's map). Its two inline scripts are allowed by **SHA-256 hash**, computed from the embedded page at startup, not by `'unsafe-inline'`.
   - It also sends `object-src 'none'`, `frame-ancestors 'none'` and `base-uri 'none'`, plus `nosniff`, `Referrer-Policy: no-referrer`, a restrictive `Permissions-Policy`, `X-Frame-Options: DENY` and `Cross-Origin-Opener/Resource-Policy`.
   - The page never uses `innerHTML`; all feed data is inserted as text.
 - **Feed content:**
@@ -840,6 +843,11 @@ Feeds that were tried and are currently broken are listed in `config.yaml` with 
 ---
 
 ## Changelog
+
+### 1.38.0
+- **New panel ADSB** (Verkeer & reizen): ADS-B Exchange's live map in a frame with three views, *Hulpdiensten* (the 22 trauma, police and coastguard helicopters by ICAO address), *Militair* (`filterDbFlag=military`) and *Burgerluchtvaart* (all traffic); the choice is remembered per browser. The frame is only loaded while the panel is open and is kept across refreshes. A note explains ADS-B Exchange's ad-blocker message. New config section `adsb` (`enabled`, `url`); the CSP allows that origin as the only frame. The server fetches nothing for this panel.
+- Instellingen: the section heading *Sportagenda* is now *Sporten*, so it no longer has the same name as the panel (accessibility).
+- e2e: the economy test no longer fails when Eurostat is unreachable from the test network (as it already allowed for the ECB).
 
 ### 1.37.0
 - **Rolled back to 1.34.1:** the Luchtradar panel of 1.35.0 and 1.36.0 (ADS-B aircraft, the push topic *Lifeliner in de buurt*, the `aircraft` config section, `keys.adsb_api_key` / `ADSB_API_KEY`, `push.lifeliner_km`, `/api/aircraft`, `/api/tile` and the embedded Leaflet) has been removed again. Remove those settings from `config.yaml` before upgrading, otherwise the server refuses the unknown `aircraft` section.

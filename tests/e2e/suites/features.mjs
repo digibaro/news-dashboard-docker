@@ -168,7 +168,7 @@ const chips = p => p.$$eval('#chips .chip', cs => cs.map(c => c.textContent.trim
     const body = e.id.startsWith('p-') && document.querySelector('#' + e.id.replace('-fresh', '-body'));
     return e.id + ': ' + (e.textContent || (body?.querySelector('.pnote') ? '(no data: ' + body.querySelector('.pnote').textContent.slice(0, 50) + ')' : ''));
   }));
-  ok(fr.length === 30 && fr.filter(t => !t.startsWith('p-trains-fresh') && !t.startsWith('p-waste-fresh')).every(t => /bijgewerkt (zojuist|\d+ min geleden)|\(no data: /.test(t)), `G: every panel shows its data age (trains: none without an NS key; waste: none without an address): ${fr.join(' | ')}`);
+  ok(fr.length === 31 && fr.filter(t => !t.startsWith('p-trains-fresh') && !t.startsWith('p-waste-fresh')).every(t => /bijgewerkt (zojuist|\d+ min geleden)|\(no data: /.test(t)), `G: every panel shows its data age (trains: none without an NS key; waste: none without an address): ${fr.join(' | ')}`);
   await ctx.close();
   const s2 = await fresh({}, { onboarded: true });
   await s2.p.route('**/api/weather*', async route => { const r = await route.fetch(); const d = await r.json(); d.updated = new Date(Date.now() - 2 * 3600e3).toISOString(); await route.fulfill({ response: r, json: d }); });
@@ -187,8 +187,10 @@ const chips = p => p.$$eval('#chips .chip', cs => cs.map(c => c.textContent.trim
   const loaded = imgs.filter(i => i.w > 0);
   ok(imgs.length > 0 && imgs.every(i => i.src.startsWith('api/img?u=')), `H: ${imgs.length} thumbnails, all via the proxy`);
   ok(loaded.length >= 3, `H: ${loaded.length} thumbnails loaded (lazy: only those near the viewport)`);
-  const ext = await p.evaluate(() => performance.getEntriesByType('resource').map(r => new URL(r.name).host).filter(h => h !== location.host));
-  ok(ext.length === 0, `H: browser made no third-party requests (${ext.join(',') || 'none'})`);
+  // the only exception: the ADSB panel's map frame (on the test servers a local stand-in)
+  const ext = await p.evaluate(() => { const map = document.querySelector('#panel-adsb iframe')?.src;
+    return performance.getEntriesByType('resource').map(r => new URL(r.name).host).filter(h => h !== location.host && (!map || h !== new URL(map).host)); });
+  ok(ext.length === 0, `H: browser made no third-party requests apart from the ADSB map (${ext.join(',') || 'none'})`);
   await p.screenshot({ path: `${OUT}/thumbs.png`, clip: { x: 0, y: 90, width: 880, height: 520 } });
   const axe = await new AxeBuilder({ page: p }).include('#stream').analyze();
   ok(axe.violations.length === 0, `H: axe on stream with thumbnails: ${axe.violations.map(v => v.id).join(',') || '0 violations'}`);

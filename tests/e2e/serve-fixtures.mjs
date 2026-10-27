@@ -22,6 +22,10 @@ function evilXml() {
 }
 const routes = { '/mock/nl.xml': nlXml, '/evil/evil.xml': evilXml };
 createServer((req, res) => {
+  if (req.url.startsWith('/adsbx/')) { // stand-in for the ADSB panel's map (ADS-B Exchange)
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }).end('<!doctype html><title>map</title><p>map</p>');
+    return;
+  }
   const f = routes[req.url.split('?')[0]];
   if (!f) { res.writeHead(404).end(); return; }
   res.writeHead(200, { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'no-store' }).end(f());
