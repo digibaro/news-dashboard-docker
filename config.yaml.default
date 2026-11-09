@@ -713,7 +713,8 @@ sources:
   # --- Financiën & economie ---
   # BNR blocks feed readers (Cloudflare challenge); its headlines come via Google News, and the links open through news.google.com.
   - { id: bnr,            name: "BNR (via Google News)", category: finance, url: "https://news.google.com/rss/search?q=site:bnr.nl+when:2d&hl=nl&gl=NL&ceid=NL:nl", homepage: "https://www.bnr.nl", lang: nl }
-  - { id: yahoo-finance,  name: "Yahoo Finance",  category: finance, url: "https://finance.yahoo.com/news/rssindex", homepage: "https://finance.yahoo.com", lang: en }
+  # Yahoo Finance dropped its RSS index (404 since Nov 2026); its headlines come via Google News.
+  - { id: yahoo-finance,  name: "Yahoo Finance (via Google News)", category: finance, url: "https://news.google.com/rss/search?q=site:finance.yahoo.com+-%22Seasonal+Returns%22+when:1d&hl=en-US&gl=US&ceid=US:en", homepage: "https://finance.yahoo.com", lang: en }
   # TODO: Yahoo ticker headline feed for ^AEX is stale (last item May 2026); no working AEX-specific feed found.
   - { id: yahoo-aex,      name: "Yahoo Finance · AEX", category: finance, url: "https://feeds.finance.yahoo.com/rss/2.0/headline?s=^AEX&region=US&lang=en-US", homepage: "https://finance.yahoo.com", lang: en, enabled: false }
   - { id: forbes,         name: "Forbes",         category: finance, url: "https://www.forbes.com/business/feed/", homepage: "https://www.forbes.com", lang: en }
