@@ -125,7 +125,6 @@ func parseRunEvents(body []byte, origin string) []RunEvent {
 	return out
 }
 
-
 type runPlace struct {
 	Name     string
 	Lat, Lon float64
