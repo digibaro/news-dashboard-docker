@@ -2,6 +2,7 @@
 // Before serving, the dates in the fixtures are moved to "now", so they never age out:
 //   mock/nl.xml   Limburg's warning expired an hour ago, all others active now
 //   evil/evil.xml items published in the last half hour
+//   /waarneming/feed/N/  waarneming.nl's rarities: 1 the Go tests' bird feed on today/yesterday, 2 a wolf, 3 none
 //   /hardlopen/   page 1: the Go tests' hardlopen.nl list page, event i on day i+1 from today; later pages empty
 // Usage: node serve-fixtures.mjs <port>
 import { createServer } from 'node:http';
@@ -30,12 +31,22 @@ function runPage() {
     .replace(/(__date__day">)\d+/g, (_, a) => a + day(++i).getDate())
     .replace(/(__date__month hide-sm-down">)[a-z]{3} \d{4}/g, (_, a) => { const d = day(++j); return `${a}${MON[d.getMonth()]} ${d.getFullYear()}`; });
 }
+const amsDay = n => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Amsterdam' }).format(new Date(Date.now() - n * 864e5));
+function sightFeed(g) {
+  const head = '<?xml version="1.0" encoding="utf-8"?><rss version="2.0"><channel><title>Recente zeldzaamheden</title>';
+  if (g === '1') return ['2026-11-09', '2026-11-08', '2026-11-07'].reduce((s, d, i) => s.replaceAll(d, amsDay(i)),
+    readFileSync(new URL('../../testdata/waarneming.xml', import.meta.url), 'utf8').replaceAll('https://waarneming.nl/', `http://127.0.0.1:${port}/`));
+  if (g === '2') return head + `<item><title>${amsDay(0)}: Wolf - Canis lupus</title><link>http://127.0.0.1:${port}/observation/1/</link><description>Zeldzaamheid: zeer zeldzaam&lt;br&gt;Locatie: GE</description></item></channel></rss>`;
+  return head + '</channel></rss>';
+}
 const routes = { '/mock/nl.xml': nlXml, '/evil/evil.xml': evilXml };
 createServer((req, res) => {
   if (req.url.startsWith('/adsbx/')) { // stand-in for the ADSB panel's map (ADS-B Exchange)
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }).end('<!doctype html><title>map</title><p>map</p>');
     return;
   }
+  const sm = req.url.match(/^\/waarneming\/feed\/(\d)\/$/);
+  if (sm) { res.writeHead(200, { 'Content-Type': 'application/rss+xml; charset=utf-8', 'Cache-Control': 'no-store' }).end(sightFeed(sm[1])); return; }
   if (req.url.startsWith('/hardlopen/')) {
     const body = new URL(req.url, 'http://x').searchParams.get('page') === '1' ? runPage() : '<!doctype html><div class="events"></div>';
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }).end(body);

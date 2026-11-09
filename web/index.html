@@ -408,6 +408,11 @@ kbd.k { display: inline-block; min-width: 1.7em; padding: 1px 6px; border: 1px s
 .runctl select { flex: 1 1 9rem; min-width: 0; }
 .plist.run .m { flex-wrap: wrap; gap: 2px 8px; }
 .plist.run .runtag { margin-left: 6px; vertical-align: 1px; font-size: 11px; }
+.sightctl { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; }
+.sightctl select { flex: 1 1 9rem; min-width: 0; }
+.plist.sight .tag { margin-left: 6px; vertical-align: 1px; }
+.plist.sight .latin { font-style: italic; }
+.plist.sight .notes { margin-top: 2px; font-size: 12px; color: var(--text-2); }
 .pfoot { margin-top: 10px; font-size: 12px; color: var(--text-3); }
 .pfoot a { color: var(--text-2); }
 
@@ -1214,6 +1219,10 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.40.0</h3>
+    <ul>
+      <li>Nieuw paneel Zeldzame waarnemingen: de zeldzame en zeer zeldzame vogels, zoogdieren, reptielen en amfibieën die vandaag en gisteren in Nederland zijn gezien, van waarneming.nl. Met het aantal waarnemingen, de plaats en de notitie van de waarnemer. Kies de soortgroepen en of je alleen zeer zeldzame soorten wilt zien.</li>
+    </ul>
     <h3>Versie 1.39.0</h3>
     <ul>
       <li>Nieuw paneel Hardloopagenda: wegwedstrijden, parklopen en funruns uit de loopagenda van hardlopen.nl (Atletiekunie) rond je plaats. Achter de naam staat de soort loop (weg, fun, park). Kies hoe ver je wilt reizen (10 tot 100 km) en welke afstand je wilt lopen; de agenda wordt dagelijks bijgewerkt. De plaats stel je in onder Instellingen → Plaats voor de hardloopagenda.</li>
@@ -1518,6 +1527,10 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.40.0</h3>
+    <ul>
+      <li>New panel Rare sightings: the rare and very rare birds, mammals, reptiles and amphibians seen in the Netherlands today and yesterday, from waarneming.nl. With the number of observations, the place and the observer's note. Choose the species groups and whether you only want very rare species.</li>
+    </ul>
     <h3>Version 1.39.0</h3>
     <ul>
       <li>New panel Running calendar: road races, park runs and fun runs from hardlopen.nl's running calendar (Dutch athletics union) around your place. The kind of run (road, fun, park) follows the name. Choose how far you want to travel (10 to 100 km) and which distance you want to run; the calendar is updated daily. Set the place under Settings → Place for the running calendar.</li>
@@ -2071,6 +2084,7 @@ const PANELS = {
   pollen: 'Gezondheid',
   recalls: 'Productwaarschuwingen',
   sky: 'Vanavond aan de hemel',
+  sightings: 'Zeldzame waarnemingen',
   traffic: 'Verkeer',
   trains: 'Treinstoringen',
   adsb: 'ADSB',
@@ -2097,6 +2111,7 @@ const PANELS = {
 const PANEL_IDS = Object.keys(PANELS);
 const SPORT_IDS = ['f1', 'road', 'mtb', 'athletics', 'football']; // before sanitize() runs on the stored prefs
 const RUN_RADII = [10, 25, 50, 100]; // km around the chosen place
+const SIGHT_GROUPS = { 1: 'Vogels', 2: 'Zoogdieren', 3: 'Reptielen en amfibieën' }; // waarneming.nl's recent-rarities feeds
 const RUN_DISTS = { // race distance: [label, more than, at most] in km
   all: ['Alle afstanden', 0, Infinity], k5: ['Tot 5 km', 0, 5.5], k10: ['5 tot 10 km', 5.5, 10.5],
   half: ['10 tot 21 km (halve marathon)', 10.5, 21.2], full: ['21 tot 42 km (marathon)', 21.2, 42.3], ultra: ['Meer dan 42 km (ultra)', 42.3, Infinity],
@@ -2105,7 +2120,7 @@ const MIN = 60e3;
 const DEFAULTS = {
   v: 2, theme: 'auto', sources: null, known: [], pageSize: 60, summaries: true,
   density: 'compact', category: 'all', weather: null, threatTab: 'ips', advTab: 'adv', advFilter: 'all',
-  lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, trending: true, pushTopics: null, waste: null, sports: null, sportsSeen: null, solar: null, saver: 'auto', hazardTab: 'nl', watch: [], mute: [], alarmWatch: [], alarmSound: true, bridges: [], bridgeTab: 'fav', energyTab: 'prices', adsbView: 'emergency', run: null, runRadius: 25, runDist: 'all',
+  lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, trending: true, pushTopics: null, waste: null, sports: null, sportsSeen: null, solar: null, saver: 'auto', hazardTab: 'nl', watch: [], mute: [], alarmWatch: [], alarmSound: true, bridges: [], bridgeTab: 'fav', energyTab: 'prices', adsbView: 'emergency', run: null, runRadius: 25, runDist: 'all', sightGroups: [1, 2, 3], sightRare: 'all',
   panels: { order: PANEL_IDS.slice(), collapsed: {}, hidden: {}, page: {} },
 };
 
@@ -3324,6 +3339,15 @@ const EN = {
   "Alleen de domeinnaam, onschadelijk gemaakt ([.]) en nooit als link. Bron: PhishStats en OpenPhish.": "Only the domain name, defanged ([.]) and never as a link. Source: PhishStats and OpenPhish.",
   "Ook gebruikt voor Bekendmakingen in je buurt en Netcongestie (in Energieprijzen).": "Also used for Official notices near you and Grid congestion (in Energy prices).",
   // Hardloopagenda
+  'Zeldzame waarnemingen': 'Rare sightings', 'Vogels': 'Birds', 'Zoogdieren': 'Mammals', 'Reptielen en amfibieën': 'Reptiles and amphibians',
+  'Soortgroepen': 'Species groups', 'Zeldzaamheid': 'Rarity', 'Zeldzaam en zeer zeldzaam': 'Rare and very rare', 'Alleen zeer zeldzaam': 'Very rare only',
+  'zeer zeldzaam': 'very rare', 'gisteren': 'yesterday', '{n} waarnemingen': '{n} observations', 'Toon alle {n} soorten': 'Show all {n} species',
+  '1 soort': '1 species', '{n} soorten': '{n} species', '{n} zeer zeldzaam': '{n} very rare', 'Geen zeldzame waarnemingen': 'No rare sightings',
+  'Vandaag en gisteren geen zeldzame waarnemingen in deze groepen.': 'No rare sightings in these groups today or yesterday.',
+  ' · vandaag en gisteren · nog niet alle waarnemingen zijn gecontroleerd': ' · today and yesterday · not all sightings have been checked yet',
+  'De waarnemingen konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.': 'The sightings could not be fetched ({err}). It will be retried automatically.',
+  'waarneming.nl is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.': 'waarneming.nl cannot be reached ({err}); it will be retried automatically.',
+  'De waarnemingen worden voor het eerst opgehaald.': 'The sightings are being fetched for the first time.',
   'Hardloopagenda': 'Running calendar', 'Plaats voor de hardloopagenda': 'Place for the running calendar', 'Zoek een plaats voor de hardloopagenda': 'Search a place for the running calendar',
   'Plaats voor de hardloopagenda wijzigen (nu {name})': 'Change the place for the running calendar (now {name})',
   'De hardloopagenda kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.': 'The running calendar could not be fetched ({err}). It will be retried automatically.',
@@ -3501,6 +3525,8 @@ function sanitize(p) {
   if (['emergency', 'military', 'civil'].includes(p.adsbView)) d.adsbView = p.adsbView;
   if (RUN_RADII.includes(p.runRadius)) d.runRadius = p.runRadius;
   if (Object.hasOwn(RUN_DISTS, p.runDist)) d.runDist = p.runDist;
+  if (Array.isArray(p.sightGroups)) { const g = [1, 2, 3].filter(n => p.sightGroups.includes(n)); if (g.length) d.sightGroups = g; }
+  if (['all', 'very'].includes(p.sightRare)) d.sightRare = p.sightRare;
   if (Array.isArray(p.alarmWatch)) d.alarmWatch = p.alarmWatch.filter(r => r && typeof r === 'object' && /^[a-z0-9][a-z0-9-]{1,48}$/.test(r.city) && typeof r.street === 'string' && r.street.trim().length >= 3)
     .slice(0, 10).map(r => ({ city: r.city, cityName: typeof r.cityName === 'string' ? r.cityName.slice(0, 60) : null, street: r.street.trim().slice(0, 60), spoed: r.spoed === true }));
   if (p.waste && typeof p.waste === 'object') {
@@ -3698,7 +3724,7 @@ const presetSources = p => p.region ? regionSources() : (p.sources || []).filter
 // First visit: panel groups next to the news topics. Only the everyday groups start switched on; Overslaan keeps every panel.
 const PANEL_GROUPS_ON = new Set(['Weer & natuur', 'Thuis & vandaag', 'Verkeer & reizen']);
 const PANEL_GROUPS = [
-  ['Weer & natuur', ['weather', 'satellite', 'sky', 'quakes']],
+  ['Weer & natuur', ['weather', 'satellite', 'sky', 'sightings', 'quakes']],
   ['Gezondheid', ['air', 'pollen', 'recalls', 'health']],
   ['Thuis & vandaag', ['today', 'waste', 'notices', 'energy', 'fuel']],
   ['Verkeer & reizen', ['traffic', 'trains', 'adsb']],
@@ -4190,6 +4216,8 @@ const summaryOf = {
   economy: () => { const e = panelData.economy?.data?.data; if (!e) return null;
     return [e.inflation?.at(-1) ? t('inflatie {v}', { v: pct1(e.inflation.at(-1).value) }) : null, e.rate ? t('ECB {v}', { v: e.rate.value.toLocaleString(locale(), { minimumFractionDigits: 2 }) + '%' }) : null].filter(Boolean).join(' · ') || null; },
   markets: () => { const aex = panelData.markets?.data?.data?.indices?.find(q => q.symbol === '^AEX'); return aex ? `AEX ${price2(aex.price)} ${pctSigned(aex.change_pct)}` : null; },
+  sightings: () => { if (!panelData.sightings?.data?.data) return null; const l = sightMatches(), very = l.filter(x => x.very_rare).length;
+    return !l.length ? t('Geen zeldzame waarnemingen') : (l.length === 1 ? t('1 soort') : t('{n} soorten', { n: l.length })) + (very ? ' · ' + t('{n} zeer zeldzaam', { n: very }) : '') + ' · ' + l[0].name; },
   running: () => { if (!panelData.running?.data?.data) return null; const { list } = runMatches();
     return list.length ? t(list.length === 1 ? '1 loop binnen {km} km · eerstvolgende {date}' : '{n} lopen binnen {km} km · eerstvolgende {date}', { n: list.length, km: prefs.runRadius, date: fmt.wdmUTC.format(dateOnly(list[0].e.date)) }) : t('Geen lopen binnen {km} km', { km: prefs.runRadius }); },
   sports: () => { const ev = (panelData.sports?.data?.events || []).filter(e => chosenSports().includes(e.sport));
@@ -4235,6 +4263,7 @@ const freshOf = {
   nlalert: () => { const d = panelData.nlalert?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 12, stale: !!d.error }; },
   fuel: () => { const d = panelData.fuel?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 400, stale: !!d.error }; },
   running: () => { const d = panelData.running?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 2900, stale: !!d.error }; },
+  sightings: () => { const d = panelData.sightings?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 150, stale: !!d.error }; },
   waste: () => { const d = panelData.waste?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 780, stale: !!d.error }; },
   economy: () => { const d = panelData.economy?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 780, stale: !!d.error }; },
   markets: () => { const d = panelData.markets?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 40, stale: !!d.error }; },
@@ -4276,6 +4305,7 @@ const panelRenderers = {
   sky: renderSky,
   sports: renderSports,
   running: renderRunning,
+  sightings: renderSightings,
   fuel: renderFuel,
   waste: renderWaste,
   markets: renderMarkets,
@@ -6145,6 +6175,48 @@ function renderRunning(body, extra) {
     noPlace ? t(noPlace === 1 ? ' · 1 loop zonder bekende plaats niet getoond' : ' · {n} lopen zonder bekende plaats niet getoond', { n: noPlace }) : ''));
   body.replaceChildren(...out);
 }
+// Rare species of the chosen groups seen today or yesterday (the feeds give a date, no time).
+function sightMatches() {
+  const now = new Date(), since = dayKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 12));
+  return (panelData.sightings?.data?.data?.items || []).filter(x => x.date >= since && prefs.sightGroups.includes(x.group) && (prefs.sightRare === 'all' || x.very_rare));
+}
+async function loadSightings() {
+  try { panelData.sightings = { data: await api('api/sightings') }; }
+  catch (e) { panelData.sightings = { ...(panelData.sightings || {}), error: e }; }
+  renderPanel('sightings');
+}
+let sightAll = false;
+function renderSightings(body, extra) {
+  extra.replaceChildren();
+  const st = panelData.sightings;
+  if (!st) { body.replaceChildren(h('div', { class: 'tsk', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:85%' }))); return; }
+  const r = st.data;
+  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('De waarnemingen konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
+  if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (sightings.enabled).' })); return; }
+  if (!r.data) { body.replaceChildren(h('p', { class: 'pnote', text: r.error ? t('waarneming.nl is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: r.error }) : t('De waarnemingen worden voor het eerst opgehaald.') })); return; }
+  const redraw = () => { savePrefs(); sightAll = false; renderPanel('sightings'); };
+  const out = [h('div', { class: 'sightctl', role: 'group', 'aria-label': t('Soortgroepen') },
+    Object.entries(SIGHT_GROUPS).map(([g, label]) => { const n = Number(g), on = prefs.sightGroups.includes(n);
+      return h('button', { class: 'chip', type: 'button', 'aria-pressed': String(on), text: t(label),
+        onclick: () => { if (on && prefs.sightGroups.length === 1) return; prefs.sightGroups = on ? prefs.sightGroups.filter(x => x !== n) : [...prefs.sightGroups, n].sort(); redraw(); } }); }),
+    h('select', { class: 'field', 'aria-label': t('Zeldzaamheid'), onchange: e => { prefs.sightRare = e.target.value; redraw(); } },
+      [['all', t('Zeldzaam en zeer zeldzaam')], ['very', t('Alleen zeer zeldzaam')]].map(([v, text]) => h('option', { value: v, selected: v === prefs.sightRare, text }))))];
+  const list = sightMatches(), today = dayKey(new Date());
+  if (!list.length) out.push(h('p', { class: 'pnote', text: t('Vandaag en gisteren geen zeldzame waarnemingen in deze groepen.') }));
+  else {
+    const shown = sightAll ? list : list.slice(0, 8);
+    out.push(h('ul', { class: 'plist sight', 'aria-label': t('Zeldzame waarnemingen') }, shown.map(x => h('li', null,
+      h('span', { translate: 'no' }, extLink(x.url, x.name)), x.very_rare ? h('span', { class: 'tag warn', text: t('zeer zeldzaam') }) : null,
+      h('div', { class: 'm' }, x.latin ? h('span', { class: 'latin', translate: 'no', text: x.latin }) : null,
+        h('span', { text: x.date === today ? t('vandaag') : t('gisteren') }),
+        x.count > 1 ? h('span', { text: t('{n} waarnemingen', { n: x.count }) }) : null,
+        x.place ? h('span', { translate: 'no', text: x.place }) : null),
+      x.notes ? h('div', { class: 'notes', translate: 'no', text: '“' + x.notes + '”' }) : null))));
+    if (list.length > shown.length) out.push(h('button', { class: 'linkbtn', type: 'button', onclick: () => { sightAll = true; renderPanel('sightings'); }, text: t('Toon alle {n} soorten', { n: list.length }) }));
+  }
+  out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://waarneming.nl/recent-rarities/', 'waarneming.nl'), t(' · vandaag en gisteren · nog niet alle waarnemingen zijn gecontroleerd')));
+  body.replaceChildren(...out);
+}
 function updateRunHint() {
   const el = $('#run-now'); if (!el) return;
   el.textContent = prefs.run ? t('Nu: {name}.', { name: tr(prefs.run.name) }) : t('Nu: zelfde als je weerlocatie ({name}).', { name: runLocName() });
@@ -7347,7 +7419,7 @@ function wireMobileViews() {
 function refreshView(v) {
   const panels = () => [loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(), loadBreaches(), loadOutages(), loadHealthPanel(),
     loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadNLThreat(), loadExploits(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(),
-    loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar(), loadWorld(), loadRecalls(), loadNotices(), loadADSB(), loadRunning()];
+    loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar(), loadWorld(), loadRecalls(), loadNotices(), loadADSB(), loadRunning(), loadSightings()];
   const jobs = v === 'news' ? [loadNews({ replace: true }), loadTrending()] : v === 'panels' || v === 'panels2' ? panels() : [loadNews({ replace: true }), ...panels()];
   return Promise.allSettled(jobs);
 }
@@ -8286,7 +8358,7 @@ async function init() {
   if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
   await Promise.allSettled([loadNews({ replace: true }), loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(),
     loadBreaches(), loadOutages(), loadHealthPanel(), loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadNLThreat(), loadExploits(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(), loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadTrending(), initPush(),
-    loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar(), loadWorld(), loadRecalls(), loadNotices(), loadADSB(), loadRunning()]);
+    loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar(), loadWorld(), loadRecalls(), loadNotices(), loadADSB(), loadRunning(), loadSightings()]);
   kioskFit(); // the header and top bar have their final height now
   panelFromHash(); // e.g. a push notification that opens #panel-waste
   awStart();
@@ -8318,6 +8390,7 @@ async function init() {
   every(R('nlalert', 2), loadNLAlert);
   every(R('fuel', 60), loadFuel);
   every(R('running', 60), loadRunning);
+  every(R('sightings', 60), loadSightings);
   every(R('waste', 60), loadWaste);
   every(R('trending', 10), loadTrending);
   every(R('insects', 60), loadInsects);

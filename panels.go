@@ -1844,6 +1844,9 @@ func (a *App) threatJobs(cfg *Config) []Job {
 	if r := cfg.Running; r.Enabled {
 		jobs = append(jobs, Job{Key: "hardlopen:events", Sig: fmt.Sprint(r.URL, r.Types), Interval: r.Interval.D(), Run: a.runRunning})
 	}
+	if r := cfg.Sightings; r.Enabled {
+		jobs = append(jobs, Job{Key: "waarneming:rarities", Sig: r.URL, Interval: r.Interval.D(), Run: a.runSightings})
+	}
 	if w := cfg.Waste; w.Enabled && hasWasteDefault(cfg) {
 		jobs = append(jobs, Job{Key: "waste:calendar", Sig: fmt.Sprint(w.Provider, w.Providers, w.Postcode, w.Number, w.Suffix, w.ICSURL, w.HomeAssistant.URL, w.HomeAssistant.Entities),
 			Interval: w.Interval.D(), Run: a.runWaste})

@@ -26,19 +26,21 @@ const noRansomware = ['ransomware:\n  enabled: true\n', 'ransomware:\n  enabled:
 const localMap = ['  url: "https://globe.adsbexchange.com/"', `  url: "http://127.0.0.1:${port}/adsbx/"`];
 // The Hardloopagenda reads a local copy of a hardlopen.nl list page (events in the coming days).
 const localRun = ['  url: "https://www.hardlopen.nl/evenementen/"', `  url: "http://127.0.0.1:${port}/hardlopen/"`];
+// Zeldzame waarnemingen reads local copies of waarneming.nl's feeds (today's and yesterday's species).
+const localSight = ['  url: "https://waarneming.nl/recent-rarities/feed/"', `  url: "http://127.0.0.1:${port}/waarneming/feed/"`];
 const push = [['push:\n  enabled: false\n', 'push:\n  enabled: true\n'],
   ['  subject: "mailto:you@example.nl"', '  subject: "mailto:e2e@example.nl"']];
 
 mkdirSync(out, { recursive: true });
 const files = {
-  'main.yaml': edit(base, [localMap, localRun]),
-  'push.yaml': edit(base, [...push, noRansomware, localMap, localRun]),
-  'accent.yaml': edit(base, [...push, noRansomware, localMap, localRun,
+  'main.yaml': edit(base, [localMap, localRun, localSight]),
+  'push.yaml': edit(base, [...push, noRansomware, localMap, localRun, localSight]),
+  'accent.yaml': edit(base, [...push, noRansomware, localMap, localRun, localSight,
     ['  accent: ""  ', '  accent: "#00a4dc"'],
     ['  sports: [f1, road, mtb, athletics, football]', '  sports: [f1, mtb, athletics]']]),
-  'mock.yaml': edit(base, [noRansomware, localMap, localRun, ['    nl: "https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-netherlands"',
+  'mock.yaml': edit(base, [noRansomware, localMap, localRun, localSight, ['    nl: "https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-netherlands"',
     `    nl: "http://127.0.0.1:${port}/mock/nl.xml"`]]),
-  'evil.yaml': edit(base, [noRansomware, localMap, localRun, ['\nsources:\n', `\nsources:\n  - { id: evil, name: "Evil <b>feed</b>", category: nl, url: "http://127.0.0.1:${port}/evil/evil.xml", lang: nl }\n`]]),
+  'evil.yaml': edit(base, [noRansomware, localMap, localRun, localSight, ['\nsources:\n', `\nsources:\n  - { id: evil, name: "Evil <b>feed</b>", category: nl, url: "http://127.0.0.1:${port}/evil/evil.xml", lang: nl }\n`]]),
 };
 for (const [name, text] of Object.entries(files)) writeFileSync(`${out}/${name}`, text);
 console.log(`test configs written to ${out}: ${Object.keys(files).join(', ')}`);

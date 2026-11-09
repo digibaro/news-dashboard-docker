@@ -459,3 +459,78 @@ func TestRunningCalendar(t *testing.T) {
 		}
 	}
 }
+
+func TestRareSightings(t *testing.T) {
+	fixture, err := os.ReadFile("testdata/waarneming.xml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// the fixture's days become today, yesterday and the day before
+	now := time.Now().In(amsterdam)
+	for i, d := range []string{"2026-11-09", "2026-11-08", "2026-11-07"} {
+		fixture = bytes.ReplaceAll(fixture, []byte(d), []byte(now.AddDate(0, 0, -i).Format("2006-01-02")))
+	}
+	var paths []string
+	var site *httptest.Server
+	site = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		paths = append(paths, r.URL.Path)
+		switch r.URL.Path {
+		case "/feed/1/":
+			w.Write(bytes.ReplaceAll(fixture, []byte("https://waarneming.nl/"), []byte(site.URL+"/")))
+		case "/feed/2/":
+			io.WriteString(w, `<?xml version="1.0"?><rss version="2.0"><channel><title>Zoogdieren</title><item><title>`+now.Format("2006-01-02")+
+				`: Wolf - Canis lupus</title><link>`+site.URL+`/observation/1/</link><description>Zeldzaamheid: zeer zeldzaam&lt;br&gt;Locatie: GE</description></item></channel></rss>`)
+		default:
+			io.WriteString(w, `<?xml version="1.0"?><rss version="2.0"><channel><title>Reptielen</title></channel></rss>`)
+		}
+	}))
+	defer site.Close()
+	defer func(g time.Duration) { sightGap = g }(sightGap)
+	sightGap = 0
+	a := newTestApp(t, validConfig)
+	a.cfg.Sightings.URL = site.URL + "/feed/"
+	if err := a.runSightings(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(paths, " ") != "/feed/1/ /feed/2/ /feed/3/" {
+		t.Errorf("feeds: %v", paths)
+	}
+	var r struct {
+		Enabled bool
+		Data    SightData
+	}
+	b := get(a.routes("/"), "GET", "/api/sightings", nil).Body.String()
+	if json.Unmarshal([]byte(b), &r); !r.Enabled || len(r.Data.Items) != 6 {
+		t.Fatalf("sightings (today and yesterday, no off-site link): %s", b)
+	}
+	names := []string{}
+	for _, s := range r.Data.Items {
+		names = append(names, s.Name)
+	}
+	// today first: the very rare by number of observations, then the rare; then yesterday
+	if got := strings.Join(names, ","); got != "Notenkraker,Woestijntapuit,Rotszwaluw,Wolf,Flamingo,Notenkraker" {
+		t.Errorf("order: %s", got)
+	}
+	s0 := r.Data.Items[0]
+	if s0.Latin != "Nucifraga caryocatactes" || s0.Count != 21 || !s0.VeryRare || s0.Group != 1 || s0.Place != "FR, GE, NB, OV, UT, ZH" || s0.Notes != "trek naar zuid" {
+		t.Errorf("item: %+v", s0)
+	}
+	if w := r.Data.Items[3]; w.Group != 2 || w.Count != 0 || w.Place != "GE" {
+		t.Errorf("mammal: %+v", w)
+	}
+	if f := r.Data.Items[4]; f.VeryRare || f.Place != "Grevelingen - Grevelingendam oost (ZH)" {
+		t.Errorf("rare: %+v", f)
+	}
+	if n := r.Data.Items[2].Notes; len([]rune(n)) > 161 || !strings.HasPrefix(n, "Mijn aandacht") {
+		t.Errorf("notes are cut: %q", n)
+	}
+	// the bot check's HTML page is an error
+	if _, err := parseSightings([]byte("<!doctype html><title>Checking if you are not a bot</title>"), 1, site.URL, "2000-01-01"); err == nil {
+		t.Error("HTML accepted as a feed")
+	}
+	for _, c := range []string{"sightings: { interval: 5m }", "sightings: { url: \"http://example.com/\" }", "sightings: { url: \"https://x.nl/feed\" }"} {
+		if _, err := parseConfig([]byte(validConfig + c + "\n")); err == nil {
+			t.Errorf("accepted: %s", c)
+		}
+	}
+}

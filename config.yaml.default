@@ -326,6 +326,14 @@ running:
   types: [wegevenement, parkloop, funrun]  # also: trailrun, cross, estafette, ultrarun, trainingsloop, ...
   interval: 24h                   # min. 6h
 
+# Zeldzame waarnemingen: rare birds, mammals, reptiles and amphibians seen in the Netherlands today
+# and yesterday, from waarneming.nl's recent-rarities RSS feeds (no key; url + 1/, 2/, 3/, one
+# second apart). The site's bot check blocks browser-like user agents; fetch.user_agent passes.
+sightings:
+  enabled: true
+  url: "https://waarneming.nl/recent-rarities/feed/"
+  interval: 60m                   # min. 15m
+
 # Afvalkalender: the next waste collection days. Like the places for weather and air quality,
 # every visitor sets an own address under Instellingen (postcode and house number, kept in the
 # browser); the server finds the municipal waste calendar that knows it.
