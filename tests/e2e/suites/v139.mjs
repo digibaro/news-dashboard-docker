@@ -36,6 +36,8 @@ const titles = p => p.$$eval('#panel-running .plist li a', l => l.map(a => a.tex
   ok(t.length === 1 && t[0] === 'Amersfoort Night Run', `within 25 km of Utrecht: ${t.join(' | ')}`);
   const a = await p.$eval('#panel-running .plist a', a => [a.target, a.rel, a.href]);
   ok(a[0] === '_blank' && /noopener/.test(a[1]) && a[2].startsWith('http://127.0.0.1:8099/evenementen/'), 'the event opens on hardlopen.nl in a new tab');
+  const tags = await p.$$eval('#panel-running .plist li:first-child .runtag', l => l.map(x => x.textContent));
+  ok(tags.join() === 'weg,fun', `categories after the name: ${tags}`);
   const meta = await p.textContent('#panel-running .plist .m');
   ok(/Amersfoort/.test(meta) && /\d+ km/.test(meta) && /0,8 · 1,5 · 5 · 10 · 15 km/.test(meta), `meta: ${meta}`);
   await p.selectOption('#panel-running .runctl select >> nth=0', '100');
@@ -82,7 +84,7 @@ const titles = p => p.$$eval('#panel-running .plist li a', l => l.map(a => a.tex
   const p = await c.newPage(); await p.goto(BASEURL);
   await p.click('#mv-panels'); await p.waitForSelector('#panel-running .plist');
   const txt = await p.textContent('#panel-running');
-  ok(/Running calendar/.test(txt) && /Within 25 km/.test(txt) && /All distances/.test(txt) && /Dutch athletics union/.test(txt), 'English texts');
+  ok(/Running calendar/.test(txt) && /Within 25 km/.test(txt) && /All distances/.test(txt) && /Dutch athletics union/.test(txt) && /road/.test(txt), 'English texts');
   const w = await p.evaluate(() => [document.documentElement.scrollWidth, innerWidth]);
   ok(w[0] <= w[1], `phone: no horizontal scroll (${w})`);
   await p.locator('#panel-running').screenshot({ path: `${OUT}/running-phone-en.png` });

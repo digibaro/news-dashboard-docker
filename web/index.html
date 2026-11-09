@@ -407,6 +407,7 @@ kbd.k { display: inline-block; min-width: 1.7em; padding: 1px 6px; border: 1px s
 .runctl { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
 .runctl select { flex: 1 1 9rem; min-width: 0; }
 .plist.run .m { flex-wrap: wrap; gap: 2px 8px; }
+.plist.run .runtag { margin-left: 6px; vertical-align: 1px; font-size: 11px; }
 .pfoot { margin-top: 10px; font-size: 12px; color: var(--text-3); }
 .pfoot a { color: var(--text-2); }
 
@@ -1215,7 +1216,7 @@ textarea.json {
   <div class="dlg-body changes" id="changes-nl">
     <h3>Versie 1.39.0</h3>
     <ul>
-      <li>Nieuw paneel Hardloopagenda: wegwedstrijden, parklopen en funruns uit de loopagenda van hardlopen.nl (Atletiekunie) rond je plaats. Kies hoe ver je wilt reizen (10 tot 100 km) en welke afstand je wilt lopen; de agenda wordt dagelijks bijgewerkt. De plaats stel je in onder Instellingen → Plaats voor de hardloopagenda.</li>
+      <li>Nieuw paneel Hardloopagenda: wegwedstrijden, parklopen en funruns uit de loopagenda van hardlopen.nl (Atletiekunie) rond je plaats. Achter de naam staat de soort loop (weg, fun, park). Kies hoe ver je wilt reizen (10 tot 100 km) en welke afstand je wilt lopen; de agenda wordt dagelijks bijgewerkt. De plaats stel je in onder Instellingen → Plaats voor de hardloopagenda.</li>
       <li>Instellingen: de knop Standaardplaats heet nu Standaardlocatie, en de plaats voor alarmeringen zoek je net als de andere plaatsen met “Zoek een plaats”.</li>
       <li>De nieuwsbron Yahoo Finance komt nu via Google News, omdat Yahoo zijn RSS-overzicht heeft opgeheven.</li>
     </ul>
@@ -1519,7 +1520,7 @@ textarea.json {
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
     <h3>Version 1.39.0</h3>
     <ul>
-      <li>New panel Running calendar: road races, park runs and fun runs from hardlopen.nl's running calendar (Dutch athletics union) around your place. Choose how far you want to travel (10 to 100 km) and which distance you want to run; the calendar is updated daily. Set the place under Settings → Place for the running calendar.</li>
+      <li>New panel Running calendar: road races, park runs and fun runs from hardlopen.nl's running calendar (Dutch athletics union) around your place. The kind of run (road, fun, park) follows the name. Choose how far you want to travel (10 to 100 km) and which distance you want to run; the calendar is updated daily. Set the place under Settings → Place for the running calendar.</li>
       <li>Settings: the button Default place is now called Default location, and you search the place for emergency alerts with “Search a place”, like the other places.</li>
       <li>The news source Yahoo Finance now comes via Google News, since Yahoo closed its RSS index.</li>
     </ul>
@@ -3332,6 +3333,7 @@ const EN = {
   'Alle afstanden': 'All distances', 'Tot 5 km': 'Up to 5 km', '5 tot 10 km': '5 to 10 km', '10 tot 21 km (halve marathon)': '10 to 21 km (half marathon)',
   '21 tot 42 km (marathon)': '21 to 42 km (marathon)', 'Meer dan 42 km (ultra)': 'More than 42 km (ultra)',
   'Geen lopen binnen {km} km van {name} met deze afstand.': 'No runs within {km} km of {name} at this distance.', 'Hardloopevenementen': 'Running events',
+  'weg': 'road', 'fun': 'fun', 'park': 'park', 'trailrun': 'trail', 'sportief wandelen': 'race walking',
   'Gecertificeerd parcours': 'Certified course', 'gecertificeerd': 'certified', 'Toon alle {n} lopen': 'Show all {n} runs',
   ' (Atletiekunie) · plaatsen: PDOK · afstand hemelsbreed': ' (Dutch athletics union) · places: PDOK · distance as the crow flies',
   ' · {n} lopen zonder bekende plaats niet getoond': ' · {n} runs without a known place not shown',
@@ -6091,6 +6093,9 @@ const kmBetween = (a, b) => {
   return 12742 * Math.asin(Math.sqrt(x * x + Math.cos(a.lat * r) * Math.cos(b.lat * r) * y * y));
 };
 const kmText = v => v.toLocaleString(locale(), { maximumFractionDigits: 1 });
+// The calendar's categories as short tags after the name: Wegevenement → weg, Funrun → fun, Parkloop → park.
+const RUN_TYPE_TAG = { wegevenement: 'weg', funrun: 'fun', parkloop: 'park' };
+const runTypeTags = types => (types || []).map(x => h('span', { class: 'tag plain runtag', text: t(RUN_TYPE_TAG[x.toLowerCase()] || x.toLowerCase()) }));
 // Upcoming events that fit the visitor's place, radius and race distance; noPlace counts those PDOK couldn't place.
 function runMatches() {
   const evs = panelData.running?.data?.data?.events || [], loc = runLoc(), today = dayKey(new Date());
@@ -6129,7 +6134,7 @@ function renderRunning(body, extra) {
   else {
     const shown = runAll ? list : list.slice(0, 8);
     out.push(h('ul', { class: 'plist run', 'aria-label': t('Hardloopevenementen') }, shown.map(({ e, km }) => h('li', null,
-      h('span', { translate: 'no' }, extLink(e.url, e.title)),
+      h('span', { translate: 'no' }, extLink(e.url, e.title)), runTypeTags(e.types),
       h('div', { class: 'm' }, h('span', { text: fmt.wdmUTC.format(dateOnly(e.date)) + (e.date.slice(0, 4) !== dayKey(new Date()).slice(0, 4) ? ' ' + e.date.slice(0, 4) : '') }),
         h('span', { translate: 'no', text: e.place }), km != null ? h('span', { text: t('{km} km', { km: Math.round(km) }) }) : null,
         e.dist?.length ? h('span', { text: e.dist.map(kmText).join(' · ') + ' km' }) : null,
