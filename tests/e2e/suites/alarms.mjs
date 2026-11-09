@@ -73,14 +73,14 @@ const state = p => p.evaluate(() => ({
   await p.waitForFunction(() => /Utrecht/.test(document.querySelector('#alarm-msg').textContent));
   ok(await p.evaluate(() => JSON.parse(localStorage.getItem('ndb:prefs')).alarmCity === 'utrecht'), '"Zelfde als weerlocatie" uses the weather place (Utrecht)');
   await p.click('#alarm-default');
-  ok(await p.evaluate(() => JSON.parse(localStorage.getItem('ndb:prefs')).alarmCity === null), '"Standaardplaats" returns to the server default');
+  ok(await p.evaluate(() => JSON.parse(localStorage.getItem('ndb:prefs')).alarmCity === null), '"Standaardlocatie" returns to the server default');
   await ctx.close();
 }
 { // existing user (order saved by 1.2.1): new panel lands after Verkeer
   const ctx = await ctxFor({ v: 2, onboarded: true, panels: { order: ['weather', 'traffic', 'threats', 'advisories', 'outages', 'ap', 'health'], collapsed: {}, hidden: {} } });
   const p = await ctx.newPage(); await p.goto(URL); await p.waitForSelector('#panel-alarms');
   const order = await p.$$eval('.panel', ps => ps.map(x => x.id.replace('panel-', '')));
-  ok(order.join(',') === 'weather,satellite,today,waste,notices,air,pollen,recalls,sky,traffic,trains,adsb,alarms,nlalert,quakes,energy,fuel,economy,markets,sports,politics,threats,nlthreat,advisories,breaches,ransomware,utilities,outages,ap,health', `saved 1.2.1 order gets Alarmeringen after Verkeer (${order.join(', ')})`);
+  ok(order.join(',') === 'weather,satellite,today,waste,notices,air,pollen,recalls,sky,traffic,trains,adsb,alarms,nlalert,quakes,energy,fuel,economy,markets,sports,running,politics,threats,nlthreat,advisories,breaches,ransomware,utilities,outages,ap,health', `saved 1.2.1 order gets Alarmeringen after Verkeer (${order.join(', ')})`);
   await ctx.close();
 }
 {

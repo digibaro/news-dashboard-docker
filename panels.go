@@ -1841,6 +1841,9 @@ func (a *App) threatJobs(cfg *Config) []Job {
 			Run: a.fetchJob("fuel:gla", func() string { return a.config().Fuel.URL }, "text/html", nil,
 				func(b []byte) (any, error) { return parseFuelPrices(b) }, nil)})
 	}
+	if r := cfg.Running; r.Enabled {
+		jobs = append(jobs, Job{Key: "hardlopen:events", Sig: fmt.Sprint(r.URL, r.Types), Interval: r.Interval.D(), Run: a.runRunning})
+	}
 	if w := cfg.Waste; w.Enabled && hasWasteDefault(cfg) {
 		jobs = append(jobs, Job{Key: "waste:calendar", Sig: fmt.Sprint(w.Provider, w.Providers, w.Postcode, w.Number, w.Suffix, w.ICSURL, w.HomeAssistant.URL, w.HomeAssistant.Entities),
 			Interval: w.Interval.D(), Run: a.runWaste})

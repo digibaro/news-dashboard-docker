@@ -40,7 +40,7 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   }));
   if (w === 1440 && scheme === 'light') console.log(JSON.stringify(t, null, 1));
   const i = n => t.order.indexOf(n);
-  ok(i('economy') === i('fuel') + 1 && i('markets') === i('economy') + 1 && i('sports') === i('markets') + 1 && i('politics') === i('sports') + 1, `${w} ${scheme}: energy, fuel, economy, markets, sports, politics`);
+  ok(i('economy') === i('fuel') + 1 && i('markets') === i('economy') + 1 && i('sports') === i('markets') + 1 && i('running') === i('sports') + 1 && i('politics') === i('running') + 1, `${w} ${scheme}: energy, fuel, economy, markets, sports, politics`);
   ok(t.heads.join() === 'Economie in cijfers,Beurs', 'panel names');
   // 1.34 added Hypotheekrente (ECB), Huizenprijzen and Faillissementen (CBS) after these; each only when its source answered
   const want = [hasEurostat && 'Inflatie', hasEurostat && 'Werkloosheid', hasRate && 'ECB-depositorente', 'Euro in dollar'].filter(Boolean).join();

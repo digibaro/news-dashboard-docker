@@ -413,6 +413,13 @@ type Config struct {
 		URL      string   `yaml:"url"`
 		Interval Duration `yaml:"interval"`
 	} `yaml:"fuel"`
+	// Running: Hardloopagenda panel (hardlopen.nl, the Atletiekunie's running calendar; places via PDOK).
+	Running struct {
+		Enabled  bool     `yaml:"enabled"`
+		URL      string   `yaml:"url"`
+		Types    []string `yaml:"types"`
+		Interval Duration `yaml:"interval"`
+	} `yaml:"running"`
 	// Waste: Afvalkalender panel. Visitors set their own address; the server's default
 	// address (optional) can use the opzet calendars, an iCal link or Home Assistant.
 	Waste struct {
@@ -629,6 +636,7 @@ func defaultConfig() *Config {
 	c.Quakes.Enabled, c.Quakes.URL, c.Quakes.Days, c.Quakes.Interval = true, "https://rdsa.knmi.nl/fdsnws/event/1/query", 14, Duration(15*time.Minute)
 	c.NLAlert.Enabled, c.NLAlert.URL, c.NLAlert.Interval = true, "https://api.public-warning.app/api/v1/providers/nl-alert/alerts", Duration(2*time.Minute)
 	c.Fuel.Enabled, c.Fuel.URL, c.Fuel.Interval = true, "https://www.unitedconsumers.com/tanken/brandstofprijzen", Duration(3*time.Hour)
+	c.Running.Enabled, c.Running.URL, c.Running.Types, c.Running.Interval = true, "https://www.hardlopen.nl/evenementen/", []string{"wegevenement", "parkloop", "funrun"}, Duration(24*time.Hour)
 	c.Waste.Enabled, c.Waste.Provider, c.Waste.Interval = true, "auto", Duration(24*time.Hour)
 	c.Trending.Enabled = true
 	c.Trending.Wikipedia.Enabled, c.Trending.Wikipedia.URL = true, "https://nl.wikipedia.org"
@@ -753,7 +761,7 @@ var defaultRefresh = map[string]time.Duration{
 	"economy": 60 * time.Minute, "markets": 5 * time.Minute,
 	"nlalert": 2 * time.Minute, "fuel": 60 * time.Minute, "waste": 60 * time.Minute, "trending": 10 * time.Minute,
 	"insects": 60 * time.Minute, "sky": 30 * time.Minute, "sports": 30 * time.Minute, "amber": 5 * time.Minute, "satellite": 10 * time.Minute, "radiation": 30 * time.Minute, "solar": 60 * time.Minute, "world": 30 * time.Minute,
-	"health": 30 * time.Minute, "recalls": 60 * time.Minute, "notices": 60 * time.Minute,
+	"health": 30 * time.Minute, "recalls": 60 * time.Minute, "notices": 60 * time.Minute, "running": 60 * time.Minute,
 }
 
 func (c *Config) validate() error {
@@ -762,7 +770,7 @@ func (c *Config) validate() error {
 			continue // a removed panel: ignored, configWarnings mentions it
 		}
 		if _, ok := defaultRefresh[k]; !ok {
-			return fmt.Errorf("refresh.%s: unknown panel (known: news, weather, alerts, traffic, alarms, energy, air, trains, politics, today, ransomware, pollen, utilities, quakes, economy, markets, nlalert, fuel, waste, trending, insects, sky, sports, amber, satellite, radiation, solar, world, threats, advisories, breaches, outages, ap, health, recalls, notices)", k)
+			return fmt.Errorf("refresh.%s: unknown panel (known: news, weather, alerts, traffic, alarms, energy, air, trains, politics, today, ransomware, pollen, utilities, quakes, economy, markets, nlalert, fuel, waste, trending, insects, sky, sports, amber, satellite, radiation, solar, world, threats, advisories, breaches, outages, ap, health, recalls, notices, running)", k)
 		}
 		if v.D() < time.Minute || v.D() > 24*time.Hour {
 			return fmt.Errorf("refresh.%s: %s is outside 1m..24h", k, v.D())
@@ -948,6 +956,15 @@ func (c *Config) validate() error {
 	}
 	if c.NLAlert.Enabled && (c.NLAlert.Interval.D() < time.Minute || !httpsURL(c.NLAlert.URL)) {
 		fail("nlalert: interval must be at least 1m and url https")
+	}
+	if r := c.Running; r.Enabled {
+		ok := frameOrigin(r.URL) != "" && !strings.Contains(r.URL, "?") && r.Interval.D() >= 6*time.Hour && len(r.Types) >= 1 && len(r.Types) <= 5
+		for _, t := range r.Types {
+			ok = ok && runTypes[t]
+		}
+		if !ok {
+			fail("running: url must be an https URL without a query (http only for localhost), interval at least 6h, types 1–5 of: wegevenement, trailrun, cross, estafette, ultrarun, trainingsloop, funrun, parkloop, studentenevenement, coopertest, survivalrun")
+		}
 	}
 	if c.Fuel.Enabled && (c.Fuel.Interval.D() < time.Hour || !httpsURL(c.Fuel.URL)) {
 		fail("fuel: interval must be at least 1h and url https")
@@ -1697,6 +1714,7 @@ func (a *App) routes(basePath string) http.Handler {
 	handle("GET /api/alarms", a.handleAlarms)
 	handle("GET /api/nlalert", a.handleNLAlert)
 	handle("GET /api/fuel", a.handleFuel)
+	handle("GET /api/running", a.handleRunning)
 	handle("GET /api/waste", a.handleWaste)
 	handle("GET /api/trending", a.handleTrending)
 	handle("GET /api/insects", a.handleInsects)
@@ -1943,6 +1961,7 @@ func (a *App) handleCatalog(w http.ResponseWriter, r *http.Request) {
 		"markets":          cfg.Markets.Enabled,
 		"nlalert":          cfg.NLAlert.Enabled,
 		"fuel":             cfg.Fuel.Enabled,
+		"running":          cfg.Running.Enabled,
 		"waste":            cfg.Waste.Enabled,
 		"waste_default":    cfg.Waste.Enabled && hasWasteDefault(cfg),
 		"waste_providers":  wasteProviderList(cfg),
@@ -2207,6 +2226,9 @@ func (a *App) otherFeeds(cfg *Config) []FeedStatus {
 	}
 	if cfg.Fuel.Enabled {
 		add("fuel:gla", "UnitedConsumers · brandstofprijzen", "daily")
+	}
+	if cfg.Running.Enabled {
+		add("hardlopen:events", "hardlopen.nl · hardloopagenda", "daily")
 	}
 	if cfg.Waste.Enabled && hasWasteDefault(cfg) {
 		add("waste:calendar", "Afvalkalender (standaardadres)", "daily")

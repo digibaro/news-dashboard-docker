@@ -404,6 +404,9 @@ kbd.k { display: inline-block; min-width: 1.7em; padding: 1px 6px; border: 1px s
 .pbody { padding-top: 6px; }
 .pbody[hidden] { display: none; }
 .pnote { margin: 0; color: var(--text-3); font-size: 13px; }
+.runctl { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.runctl select { flex: 1 1 9rem; min-width: 0; }
+.plist.run .m { flex-wrap: wrap; gap: 2px 8px; }
 .pfoot { margin-top: 10px; font-size: 12px; color: var(--text-3); }
 .pfoot a { color: var(--text-2); }
 
@@ -1210,6 +1213,12 @@ textarea.json {
     <button class="icon-btn" type="button" data-close aria-label="Sluiten"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
   <div class="dlg-body changes" id="changes-nl">
+    <h3>Versie 1.39.0</h3>
+    <ul>
+      <li>Nieuw paneel Hardloopagenda: wegwedstrijden, parklopen en funruns uit de loopagenda van hardlopen.nl (Atletiekunie) rond je plaats. Kies hoe ver je wilt reizen (10 tot 100 km) en welke afstand je wilt lopen; de agenda wordt dagelijks bijgewerkt. De plaats stel je in onder Instellingen → Plaats voor de hardloopagenda.</li>
+      <li>Instellingen: de knop Standaardplaats heet nu Standaardlocatie, en de plaats voor alarmeringen zoek je net als de andere plaatsen met “Zoek een plaats”.</li>
+      <li>De nieuwsbron Yahoo Finance komt nu via Google News, omdat Yahoo zijn RSS-overzicht heeft opgeheven.</li>
+    </ul>
     <h3>Versie 1.38.1</h3>
     <ul>
       <li>ADSB: bij het wisselen tussen hulpdiensten, militair en burgerluchtvaart flitsen de knoppen van ADS-B Exchange niet meer even in beeld.</li>
@@ -1508,6 +1517,12 @@ textarea.json {
     </ul>
   </div>
   <div class="dlg-body changes" id="changes-en" hidden translate="no">
+    <h3>Version 1.39.0</h3>
+    <ul>
+      <li>New panel Running calendar: road races, park runs and fun runs from hardlopen.nl's running calendar (Dutch athletics union) around your place. Choose how far you want to travel (10 to 100 km) and which distance you want to run; the calendar is updated daily. Set the place under Settings → Place for the running calendar.</li>
+      <li>Settings: the button Default place is now called Default location, and you search the place for emergency alerts with “Search a place”, like the other places.</li>
+      <li>The news source Yahoo Finance now comes via Google News, since Yahoo closed its RSS index.</li>
+    </ul>
     <h3>Version 1.38.1</h3>
     <ul>
       <li>ADSB: switching between emergency, military and civil air traffic no longer briefly shows ADS-B Exchange's buttons.</li>
@@ -1868,12 +1883,12 @@ textarea.json {
       <h3 id="set-alarm-h">Plaats voor alarmeringen</h3>
       <p class="hint" id="alarm-now"></p>
       <div class="row" style="margin-top:0">
-        <input class="field" style="flex:1;min-width:12rem" id="alarm-city" placeholder="bijv. Den Haag of Alphen aan den Rijn" autocomplete="off" aria-label="Plaats voor alarmeringen">
+        <input class="field" style="flex:1;min-width:12rem" id="alarm-city" placeholder="Zoek een plaats" autocomplete="off" aria-label="Plaats voor alarmeringen">
         <button class="btn" type="button" id="alarm-save">Opslaan</button>
       </div>
       <div class="row">
         <button class="btn" type="button" id="alarm-wx">Zelfde als weerlocatie</button>
-        <button class="btn" type="button" id="alarm-default">Standaardplaats</button>
+        <button class="btn" type="button" id="alarm-default">Standaardlocatie</button>
       </div>
       <p class="msg" id="alarm-msg" role="status"></p>
     </section>
@@ -1907,8 +1922,19 @@ textarea.json {
         <button class="btn" type="button" id="air-save">Opslaan</button>
       </div>
       <ul class="georesults" id="air-results" aria-label="Gevonden plaatsen"></ul>
-      <div class="row"><button class="btn" type="button" id="air-wx">Zelfde als weerlocatie</button><button class="btn" type="button" id="air-default">Standaardplaats</button></div>
+      <div class="row"><button class="btn" type="button" id="air-wx">Zelfde als weerlocatie</button><button class="btn" type="button" id="air-default">Standaardlocatie</button></div>
       <p class="msg" id="air-msg" role="status"></p>
+    </section>
+    <section aria-labelledby="set-run-h" id="set-run">
+      <h3 id="set-run-h">Plaats voor de hardloopagenda</h3>
+      <p class="hint" id="run-now"></p>
+      <div class="row" style="margin-top:0">
+        <input class="field" style="flex:1;min-width:12rem" type="search" id="run-search" placeholder="Zoek een plaats" aria-label="Zoek een plaats voor de hardloopagenda" autocomplete="off">
+        <button class="btn" type="button" id="run-save">Opslaan</button>
+      </div>
+      <ul class="georesults" id="run-results" aria-label="Gevonden plaatsen"></ul>
+      <div class="row"><button class="btn" type="button" id="run-wx">Zelfde als weerlocatie</button><button class="btn" type="button" id="run-default">Standaardlocatie</button></div>
+      <p class="msg" id="run-msg" role="status"></p>
     </section>
     <section aria-labelledby="set-waste-h" id="set-waste">
       <h3 id="set-waste-h">Adres voor de afvalkalender</h3>
@@ -2055,6 +2081,7 @@ const PANELS = {
   economy: 'Economie in cijfers',
   markets: 'Beurs',
   sports: 'Sportagenda',
+  running: 'Hardloopagenda',
   politics: 'Politiek vandaag',
   threats: 'Cyberdreigingen',
   nlthreat: 'Dreigingsbeeld NL',
@@ -2068,11 +2095,16 @@ const PANELS = {
 };
 const PANEL_IDS = Object.keys(PANELS);
 const SPORT_IDS = ['f1', 'road', 'mtb', 'athletics', 'football']; // before sanitize() runs on the stored prefs
+const RUN_RADII = [10, 25, 50, 100]; // km around the chosen place
+const RUN_DISTS = { // race distance: [label, more than, at most] in km
+  all: ['Alle afstanden', 0, Infinity], k5: ['Tot 5 km', 0, 5.5], k10: ['5 tot 10 km', 5.5, 10.5],
+  half: ['10 tot 21 km (halve marathon)', 10.5, 21.2], full: ['21 tot 42 km (marathon)', 21.2, 42.3], ultra: ['Meer dan 42 km (ultra)', 42.3, Infinity],
+};
 const MIN = 60e3;
 const DEFAULTS = {
   v: 2, theme: 'auto', sources: null, known: [], pageSize: 60, summaries: true,
   density: 'compact', category: 'all', weather: null, threatTab: 'ips', advTab: 'adv', advFilter: 'all',
-  lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, trending: true, pushTopics: null, waste: null, sports: null, sportsSeen: null, solar: null, saver: 'auto', hazardTab: 'nl', watch: [], mute: [], alarmWatch: [], alarmSound: true, bridges: [], bridgeTab: 'fav', energyTab: 'prices', adsbView: 'emergency',
+  lang: 'nl', mode: 'normal', air: null, alarmCity: null, alarmCityName: null, onboarded: false, group: true, hideRead: false, images: false, trending: true, pushTopics: null, waste: null, sports: null, sportsSeen: null, solar: null, saver: 'auto', hazardTab: 'nl', watch: [], mute: [], alarmWatch: [], alarmSound: true, bridges: [], bridgeTab: 'fav', energyTab: 'prices', adsbView: 'emergency', run: null, runRadius: 25, runDist: 'all',
   panels: { order: PANEL_IDS.slice(), collapsed: {}, hidden: {}, page: {} },
 };
 
@@ -2255,8 +2287,8 @@ const EN = {
   ' · huisnummers worden niet getoond': ' · house numbers are not shown', 'Zwaailicht.nl (P2000)': 'Zwaailicht.nl (P2000)',
   'Dit paneel staat uit in config.yaml (alarms.enabled).': 'This panel is disabled in config.yaml (alarms.enabled).',
   'plaats niet gevonden bij Zwaailicht.nl': 'place not found on Zwaailicht.nl', 'Zwaailicht.nl is niet bereikbaar': 'Zwaailicht.nl is unreachable', 'ongeldige plaatsnaam': 'invalid place name',
-  'Plaats voor alarmeringen': 'Place for emergency alerts', 'bijv. Den Haag of Alphen aan den Rijn': 'e.g. Den Haag or Alphen aan den Rijn', 'Opslaan': 'Save',
-  'Zelfde als weerlocatie': 'Same as weather location', 'Standaardplaats': 'Default place', 'Controleren…': 'Checking…', 'Vul een plaatsnaam in.': 'Enter a place name.',
+  'Plaats voor alarmeringen': 'Place for emergency alerts', 'Opslaan': 'Save',
+  'Zelfde als weerlocatie': 'Same as weather location', 'Standaardlocatie': 'Default location', 'Controleren…': 'Checking…', 'Vul een plaatsnaam in.': 'Enter a place name.',
   'Je weerlocatie heeft geen plaatsnaam; vul de plaats hier zelf in.': 'Your weather location has no place name; enter the place here.',
   // threats
   'Infocon van het SANS Internet Storm Center: dreigingsniveau voor het internet als geheel': 'SANS Internet Storm Center Infocon: threat level for the internet as a whole',
@@ -2390,7 +2422,7 @@ const EN = {
   'Meer files ({n})': 'More traffic jams ({n})', ' · wegnamen: VILD {v}': ' · road names: VILD {v}', '{n} uur': '{n} h',
   'Plaats voor alarmeringen wijzigen (nu {name})': 'Change place for emergency alerts (now {name})',
   'Alarmeringen konden niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.': 'Emergency alerts could not be loaded ({err}). Retrying automatically.',
-  'Geen recente melding in {name}.': 'No recent alert in {name}.', 'Nu: {name}.': 'Now: {name}.', 'Nu: de standaardplaats van deze server ({name}).': 'Now: the default place of this server ({name}).',
+  'Geen recente melding in {name}.': 'No recent alert in {name}.', 'Nu: {name}.': 'Now: {name}.', 'Nu: de standaardlocatie van deze server ({name}).': 'Now: the default location of this server ({name}).',
   'Alarmeringen worden nu getoond voor {name}.': 'Emergency alerts are now shown for {name}.', 'Alarmeringen worden weer getoond voor {name}.': 'Emergency alerts are shown for {name} again.',
   'Zwaailicht.nl kent geen plaats “{q}”. Gebruik de officiële plaatsnaam, bijvoorbeeld “Den Haag” of “Alphen aan den Rijn”.': 'Zwaailicht.nl does not know a place “{q}”. Use the official place name, for example “Den Haag” or “Alphen aan den Rijn”.',
   'Controleren lukt nu niet: {err}.': 'Checking is not possible right now: {err}.',
@@ -3124,7 +3156,7 @@ const EN = {
   "Er is een nieuwe versie van Nieuws Hub.": "A new version of Nieuws Hub is available.", "Vernieuwen": "Reload",
   "Welke panelen wil je zien?": "Which panels do you want to see?", "Zet aan wat je wilt zien. Later aan te passen onder Instellingen → Panelen.": "Switch on what you want to see. You can change this later under Settings → Panels.",
   "Weer & natuur": "Weather & nature", "Thuis & vandaag": "Home & today", "Verkeer & reizen": "Traffic & travel", "Economie & politiek": "Economy & politics", "Security & privacy": "Security & privacy",
-  "Luchtkwaliteit en hooikoorts gebruiken nu de standaardplaats van deze server ({name}).": "Air quality and hay fever now use this server's default place ({name}).",
+  "Luchtkwaliteit en hooikoorts gebruiken nu de standaardlocatie van deze server ({name}).": "Air quality and hay fever now use this server's default location ({name}).",
   "Alarmeringen-wachter": "Emergency alert watch", "Straat, bijv. Koningskade": "Street, e.g. Koningskade", "Straat": "Street", "Plaats": "Place", "Toevoegen": "Add",
   "Een melding met geluid bij een alarmering (P2000) in een straat die je volgt. Werkt terwijl het dashboard open is, ook in een tabblad op de achtergrond; met Meldingen aan (hieronder) ook als het dicht is. Bron: Zwaailicht.nl, meestal binnen enkele minuten. Geen vervanging van officiële alarmering.": "A notification with sound for an emergency alert (P2000) in a street you watch. Works while the dashboard is open, also in a background tab; with Notifications on (below) also when it is closed. Source: Zwaailicht.nl, usually within a few minutes. Not a replacement for official alerting.",
   "Alleen bij spoed": "Urgent only", "Geluid": "Sound", "Test geluid en melding": "Test sound and notification", "Alarmering: {street}": "Emergency alert: {street}", "Details": "Details", "OK": "OK",
@@ -3290,6 +3322,24 @@ const EN = {
   "Geen phishingsites op Nederlandse merken in de openbare lijsten van de afgelopen 90 dagen.": "No phishing sites aimed at Dutch brands in the public lists of the last 90 days.",
   "Alleen de domeinnaam, onschadelijk gemaakt ([.]) en nooit als link. Bron: PhishStats en OpenPhish.": "Only the domain name, defanged ([.]) and never as a link. Source: PhishStats and OpenPhish.",
   "Ook gebruikt voor Bekendmakingen in je buurt en Netcongestie (in Energieprijzen).": "Also used for Official notices near you and Grid congestion (in Energy prices).",
+  // Hardloopagenda
+  'Hardloopagenda': 'Running calendar', 'Plaats voor de hardloopagenda': 'Place for the running calendar', 'Zoek een plaats voor de hardloopagenda': 'Search a place for the running calendar',
+  'Plaats voor de hardloopagenda wijzigen (nu {name})': 'Change the place for the running calendar (now {name})',
+  'De hardloopagenda kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.': 'The running calendar could not be fetched ({err}). It will be retried automatically.',
+  'hardlopen.nl is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.': 'hardlopen.nl is unreachable ({err}); it will be retried automatically.',
+  'De hardloopagenda wordt voor het eerst opgehaald.': 'The running calendar is being fetched for the first time.',
+  'Afstand vanaf je plaats': 'Distance from your place', 'Afstand van de loop': 'Race distance', 'Binnen {km} km': 'Within {km} km',
+  'Alle afstanden': 'All distances', 'Tot 5 km': 'Up to 5 km', '5 tot 10 km': '5 to 10 km', '10 tot 21 km (halve marathon)': '10 to 21 km (half marathon)',
+  '21 tot 42 km (marathon)': '21 to 42 km (marathon)', 'Meer dan 42 km (ultra)': 'More than 42 km (ultra)',
+  'Geen lopen binnen {km} km van {name} met deze afstand.': 'No runs within {km} km of {name} at this distance.', 'Hardloopevenementen': 'Running events',
+  'Gecertificeerd parcours': 'Certified course', 'gecertificeerd': 'certified', 'Toon alle {n} lopen': 'Show all {n} runs',
+  ' (Atletiekunie) · plaatsen: PDOK · afstand hemelsbreed': ' (Dutch athletics union) · places: PDOK · distance as the crow flies',
+  ' · {n} lopen zonder bekende plaats niet getoond': ' · {n} runs without a known place not shown',
+  'De hardloopagenda toont nu lopen rond {name}.': 'The running calendar now shows runs around {name}.',
+  'De hardloopagenda volgt weer je weerlocatie.': 'The running calendar follows your weather location again.',
+  "De hardloopagenda gebruikt nu de standaardlocatie van deze server ({name}).": "The running calendar now uses this server's default location ({name}).",
+  '{n} lopen binnen {km} km · eerstvolgende {date}': '{n} runs within {km} km · next {date}', '1 loop binnen {km} km · eerstvolgende {date}': '1 run within {km} km · next {date}',
+  ' · 1 loop zonder bekende plaats niet getoond': ' · 1 run without a known place not shown', 'Geen lopen binnen {km} km': 'No runs within {km} km',
   // ADSB
   'Sporten': 'Sports', 'ADSB': 'ADSB', 'Hulpdiensten': 'Emergency air traffic', 'Militair': 'Military air traffic', 'Burgerluchtvaart': 'Civil air traffic', 'Soort luchtverkeer': 'Kind of air traffic',
   'Luchtverkeer: {view} (ADS-B Exchange)': 'Air traffic: {view} (ADS-B Exchange)',
@@ -3447,6 +3497,8 @@ function sanitize(p) {
   if (['fav', 'plan'].includes(p.bridgeTab)) d.bridgeTab = p.bridgeTab;
   if (['prices', 'mix', 'grid'].includes(p.energyTab)) d.energyTab = p.energyTab;
   if (['emergency', 'military', 'civil'].includes(p.adsbView)) d.adsbView = p.adsbView;
+  if (RUN_RADII.includes(p.runRadius)) d.runRadius = p.runRadius;
+  if (Object.hasOwn(RUN_DISTS, p.runDist)) d.runDist = p.runDist;
   if (Array.isArray(p.alarmWatch)) d.alarmWatch = p.alarmWatch.filter(r => r && typeof r === 'object' && /^[a-z0-9][a-z0-9-]{1,48}$/.test(r.city) && typeof r.street === 'string' && r.street.trim().length >= 3)
     .slice(0, 10).map(r => ({ city: r.city, cityName: typeof r.cityName === 'string' ? r.cityName.slice(0, 60) : null, street: r.street.trim().slice(0, 60), spoed: r.spoed === true }));
   if (p.waste && typeof p.waste === 'object') {
@@ -3474,6 +3526,7 @@ function sanitize(p) {
   };
   d.weather = loc(p.weather);
   d.air = loc(p.air);
+  d.run = loc(p.run);
   if (['normal', 'digest', 'kiosk'].includes(p.mode)) d.mode = p.mode;
   const pp = p.panels;
   if (pp && typeof pp === 'object') {
@@ -3650,7 +3703,7 @@ const PANEL_GROUPS = [
   ['Alarmeringen', ['alarms', 'nlalert']],
   ['Storingen', ['utilities', 'outages']],
   ['Economie & politiek', ['economy', 'markets', 'politics']],
-  ['Sport', ['sports']],
+  ['Sport', ['sports', 'running']],
   ['Security & privacy', ['threats', 'nlthreat', 'advisories', 'breaches', 'ransomware', 'ap']],
 ];
 function renderWelcome() {
@@ -4135,6 +4188,8 @@ const summaryOf = {
   economy: () => { const e = panelData.economy?.data?.data; if (!e) return null;
     return [e.inflation?.at(-1) ? t('inflatie {v}', { v: pct1(e.inflation.at(-1).value) }) : null, e.rate ? t('ECB {v}', { v: e.rate.value.toLocaleString(locale(), { minimumFractionDigits: 2 }) + '%' }) : null].filter(Boolean).join(' · ') || null; },
   markets: () => { const aex = panelData.markets?.data?.data?.indices?.find(q => q.symbol === '^AEX'); return aex ? `AEX ${price2(aex.price)} ${pctSigned(aex.change_pct)}` : null; },
+  running: () => { if (!panelData.running?.data?.data) return null; const { list } = runMatches();
+    return list.length ? t(list.length === 1 ? '1 loop binnen {km} km · eerstvolgende {date}' : '{n} lopen binnen {km} km · eerstvolgende {date}', { n: list.length, km: prefs.runRadius, date: fmt.wdmUTC.format(dateOnly(list[0].e.date)) }) : t('Geen lopen binnen {km} km', { km: prefs.runRadius }); },
   sports: () => { const ev = (panelData.sports?.data?.events || []).filter(e => chosenSports().includes(e.sport));
     const live = ev.find(e => e.status === 'live'), next = ev.find(e => e.status === 'upcoming');
     return live ? t('nu: {name}', { name: live.name }) : next ? t('volgende: {name}', { name: next.name }) : null; },
@@ -4177,6 +4232,7 @@ const freshOf = {
   sports: () => { const d = panelData.sports?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 130, stale: !!d.f1?.error }; },
   nlalert: () => { const d = panelData.nlalert?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 12, stale: !!d.error }; },
   fuel: () => { const d = panelData.fuel?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 400, stale: !!d.error }; },
+  running: () => { const d = panelData.running?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 2900, stale: !!d.error }; },
   waste: () => { const d = panelData.waste?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 780, stale: !!d.error }; },
   economy: () => { const d = panelData.economy?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 780, stale: !!d.error }; },
   markets: () => { const d = panelData.markets?.data; return d?.enabled && d.fetched_at && { ts: d.fetched_at, max: 40, stale: !!d.error }; },
@@ -4217,6 +4273,7 @@ const panelRenderers = {
   satellite: renderSatellite,
   sky: renderSky,
   sports: renderSports,
+  running: renderRunning,
   fuel: renderFuel,
   waste: renderWaste,
   markets: renderMarkets,
@@ -4430,6 +4487,7 @@ function setWeatherLocation(loc, msg) {
   prefs.weather = loc ? sanitize({ weather: loc }).weather : null;
   savePrefs();
   updateWxLocHint();
+  if (!prefs.run) renderPanel('running');
   $('#wx-results').replaceChildren();
   $('#wx-msg').classList.remove('err');
   $('#wx-msg').textContent = msg;
@@ -5051,7 +5109,7 @@ function renderAlarms(body, extra) {
     h('p', { class: 'pfoot' }, 'Bron: ', extLink(d.source.url, d.source.name), ' · huisnummers worden niet getoond'));
 }
 function updateAlarmHint() {
-  $('#alarm-now').textContent = prefs.alarmCity ? t('Nu: {name}.', { name: alarmCityName() }) : t('Nu: de standaardplaats van deze server ({name}).', { name: alarmCityName() });
+  $('#alarm-now').textContent = prefs.alarmCity ? t('Nu: {name}.', { name: alarmCityName() }) : t('Nu: de standaardlocatie van deze server ({name}).', { name: alarmCityName() });
 }
 async function setAlarmCity(input) {
   const msg = $('#alarm-msg');
@@ -5472,7 +5530,7 @@ function wireAirSettings() {
   $('#air-default').addEventListener('click', () => { // the server's default place from config.yaml, whatever the weather location
     const d = catalog?.weather_location;
     if (!d || !Number.isFinite(d.lat)) { setAirLocation(null, t('Luchtkwaliteit volgt weer je weerlocatie.')); return; }
-    setAirLocation({ name: d.name || t('standaardlocatie'), lat: d.lat, lon: d.lon, region: d.region }, t('Luchtkwaliteit en hooikoorts gebruiken nu de standaardplaats van deze server ({name}).', { name: d.name || t('standaardlocatie') }));
+    setAirLocation({ name: d.name || t('standaardlocatie'), lat: d.lat, lon: d.lon, region: d.region }, t('Luchtkwaliteit en hooikoorts gebruiken nu de standaardlocatie van deze server ({name}).', { name: d.name || t('standaardlocatie') }));
   });
 }
 
@@ -6018,6 +6076,107 @@ function renderFuel(body) {
   out.push(h('p', { class: 'pfoot' }, d.date ? t('Adviesprijs van {date}, verschil met gisteren · ', { date: fmt.date.format(dateOnly(d.date)) }) : '',
     t('aan de pomp is het vaak goedkoper · Bron: '), extLink('https://www.unitedconsumers.com/tanken/brandstofprijzen', 'UnitedConsumers')));
   body.replaceChildren(...out);
+}
+
+// ---------------------------------------------------------------- hardloopagenda (hardlopen.nl)
+// The server keeps the calendar's road races, park runs and fun runs with PDOK coordinates; the browser picks the ones within
+// prefs.runRadius km (as the crow flies) of the chosen place and with a race distance in prefs.runDist.
+const runLoc = () => {
+  const l = prefs.run || prefs.weather, d = catalog?.weather_location;
+  return l || (d && Number.isFinite(d.lat) ? { name: d.name, lat: d.lat, lon: d.lon } : null);
+};
+const runLocName = () => tr(runLoc()?.name || 'standaardlocatie');
+const kmBetween = (a, b) => {
+  const r = Math.PI / 180, x = Math.sin((b.lat - a.lat) * r / 2), y = Math.sin((b.lon - a.lon) * r / 2);
+  return 12742 * Math.asin(Math.sqrt(x * x + Math.cos(a.lat * r) * Math.cos(b.lat * r) * y * y));
+};
+const kmText = v => v.toLocaleString(locale(), { maximumFractionDigits: 1 });
+// Upcoming events that fit the visitor's place, radius and race distance; noPlace counts those PDOK couldn't place.
+function runMatches() {
+  const evs = panelData.running?.data?.data?.events || [], loc = runLoc(), today = dayKey(new Date());
+  const [, lo, hi] = RUN_DISTS[prefs.runDist] || RUN_DISTS.all;
+  const out = []; let noPlace = 0;
+  for (const e of evs) {
+    if (e.date < today || (prefs.runDist !== 'all' && !e.dist?.some(k => k > lo && k <= hi))) continue;
+    if (!e.lat || !e.lon) { noPlace++; continue; }
+    const km = loc ? kmBetween(loc, e) : null;
+    if (km == null || km <= prefs.runRadius) out.push({ e, km });
+  }
+  return { list: out, noPlace };
+}
+async function loadRunning() {
+  try { panelData.running = { data: await api('api/running') }; }
+  catch (e) { panelData.running = { ...(panelData.running || {}), error: e }; }
+  renderPanel('running');
+}
+let runAll = false;
+function renderRunning(body, extra) {
+  extra.replaceChildren(h('span', { translate: 'no', text: runLocName() + ' · ' }), h('button', { class: 'linkbtn', type: 'button', onclick: () => openSettings('run'),
+    'aria-label': t('Plaats voor de hardloopagenda wijzigen (nu {name})', { name: runLocName() }), text: t('wijzigen') }));
+  const st = panelData.running;
+  if (!st) { body.replaceChildren(h('div', { class: 'tsk', 'aria-hidden': 'true' }, h('span', { class: 'sk', style: 'height:85%' }))); return; }
+  const r = st.data;
+  if (!r) { body.replaceChildren(h('p', { class: 'pnote', text: t('De hardloopagenda kon niet worden opgehaald ({err}). Er wordt automatisch opnieuw geprobeerd.', { err: tr(st.error?.message) }) })); return; }
+  if (!r.enabled) { body.replaceChildren(h('p', { class: 'pnote', text: 'Dit paneel staat uit in config.yaml (running.enabled).' })); return; }
+  if (!r.data) { body.replaceChildren(h('p', { class: 'pnote', text: r.error ? t('hardlopen.nl is niet bereikbaar ({err}); er wordt automatisch opnieuw geprobeerd.', { err: r.error }) : t('De hardloopagenda wordt voor het eerst opgehaald.') })); return; }
+  const sel = (label, value, opts, set) => h('select', { class: 'field', 'aria-label': t(label), onchange: e => { set(e.target.value); savePrefs(); runAll = false; renderPanel('running'); } },
+    opts.map(([v, text]) => h('option', { value: String(v), selected: String(v) === String(value), text })));
+  const out = [h('div', { class: 'runctl' },
+    sel('Afstand vanaf je plaats', prefs.runRadius, RUN_RADII.map(k => [k, t('Binnen {km} km', { km: k })]), v => { prefs.runRadius = Number(v); }),
+    sel('Afstand van de loop', prefs.runDist, Object.entries(RUN_DISTS).map(([k, [label]]) => [k, t(label)]), v => { prefs.runDist = v; }))];
+  const { list, noPlace } = runMatches();
+  if (!list.length) out.push(h('p', { class: 'pnote', text: t('Geen lopen binnen {km} km van {name} met deze afstand.', { km: prefs.runRadius, name: runLocName() }) }));
+  else {
+    const shown = runAll ? list : list.slice(0, 8);
+    out.push(h('ul', { class: 'plist run', 'aria-label': t('Hardloopevenementen') }, shown.map(({ e, km }) => h('li', null,
+      h('span', { translate: 'no' }, extLink(e.url, e.title)),
+      h('div', { class: 'm' }, h('span', { text: fmt.wdmUTC.format(dateOnly(e.date)) + (e.date.slice(0, 4) !== dayKey(new Date()).slice(0, 4) ? ' ' + e.date.slice(0, 4) : '') }),
+        h('span', { translate: 'no', text: e.place }), km != null ? h('span', { text: t('{km} km', { km: Math.round(km) }) }) : null,
+        e.dist?.length ? h('span', { text: e.dist.map(kmText).join(' · ') + ' km' }) : null,
+        e.certified ? h('span', { title: t('Gecertificeerd parcours'), text: '✓ ' + t('gecertificeerd') }) : null)))));
+    if (list.length > shown.length) out.push(h('button', { class: 'linkbtn', type: 'button', onclick: () => { runAll = true; renderPanel('running'); }, text: t('Toon alle {n} lopen', { n: list.length }) }));
+  }
+  out.push(h('p', { class: 'pfoot' }, t('Bron: '), extLink('https://www.hardlopen.nl/evenementen/', 'hardlopen.nl'), t(' (Atletiekunie) · plaatsen: PDOK · afstand hemelsbreed'),
+    noPlace ? t(noPlace === 1 ? ' · 1 loop zonder bekende plaats niet getoond' : ' · {n} lopen zonder bekende plaats niet getoond', { n: noPlace }) : ''));
+  body.replaceChildren(...out);
+}
+function updateRunHint() {
+  const el = $('#run-now'); if (!el) return;
+  el.textContent = prefs.run ? t('Nu: {name}.', { name: tr(prefs.run.name) }) : t('Nu: zelfde als je weerlocatie ({name}).', { name: runLocName() });
+}
+function setRunLocation(loc, msg) {
+  prefs.run = loc ? sanitize({ run: loc }).run : null;
+  savePrefs(); updateRunHint();
+  $('#run-results').replaceChildren();
+  $('#run-msg').classList.remove('err'); $('#run-msg').textContent = msg;
+  renderPanel('running');
+}
+function wireRunSettings() {
+  let timer, seq = 0;
+  const input = $('#run-search'), list = $('#run-results'), msg = $('#run-msg');
+  const pick = r => setRunLocation({ name: r.name, lat: r.lat, lon: r.lon, region: r.region, cc: r.cc }, t('De hardloopagenda toont nu lopen rond {name}.', { name: [r.name, r.region].filter(Boolean).join(', ') }));
+  const search = async (q, best) => {
+    const n = ++seq;
+    try {
+      const d = await api('api/geocode?q=' + encodeURIComponent(q));
+      if (n !== seq) return;
+      msg.classList.remove('err');
+      if (best) { if (d.results[0]) pick(d.results[0]); else { msg.textContent = t('Geen plaats gevonden voor “{q}”.', { q }); msg.classList.add('err'); } return; }
+      msg.textContent = d.results.length ? t('{n} plaatsen gevonden.', { n: d.results.length }) : t('Geen plaats gevonden voor “{q}”.', { q });
+      list.replaceChildren(...d.results.map(r => h('li', null, h('button', { type: 'button', onclick: () => pick(r) },
+        r.name, ' ', h('small', { text: [r.region, r.country].filter(Boolean).join(', ') })))));
+    } catch (e) { if (n === seq) { msg.textContent = t('Zoeken lukt nu niet: {err}.', { err: tr(e.message) }); msg.classList.add('err'); } }
+  };
+  input.addEventListener('input', () => { clearTimeout(timer); const q = input.value.trim(); if (q.length < 2) { list.replaceChildren(); return; } timer = setTimeout(() => search(q), 300); });
+  const save = () => { clearTimeout(timer); const q = input.value.trim(); if (q.length < 2) { msg.textContent = t('Zoek een plaats en druk op Opslaan, of kies een plaats uit de lijst.'); return; } search(q, true); };
+  $('#run-save').addEventListener('click', save);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); save(); } });
+  $('#run-wx').addEventListener('click', () => setRunLocation(null, t('De hardloopagenda volgt weer je weerlocatie.')));
+  $('#run-default').addEventListener('click', () => {
+    const d = catalog?.weather_location;
+    if (!d || !Number.isFinite(d.lat)) { setRunLocation(null, t('De hardloopagenda volgt weer je weerlocatie.')); return; }
+    setRunLocation({ name: d.name || t('standaardlocatie'), lat: d.lat, lon: d.lon, region: d.region }, t('De hardloopagenda gebruikt nu de standaardlocatie van deze server ({name}).', { name: d.name || t('standaardlocatie') }));
+  });
 }
 
 // ---------------------------------------------------------------- afvalkalender
@@ -7183,7 +7342,7 @@ function wireMobileViews() {
 function refreshView(v) {
   const panels = () => [loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(), loadBreaches(), loadOutages(), loadHealthPanel(),
     loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadNLThreat(), loadExploits(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(),
-    loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar(), loadWorld(), loadRecalls(), loadNotices(), loadADSB()];
+    loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar(), loadWorld(), loadRecalls(), loadNotices(), loadADSB(), loadRunning()];
   const jobs = v === 'news' ? [loadNews({ replace: true }), loadTrending()] : v === 'panels' || v === 'panels2' ? panels() : [loadNews({ replace: true }), ...panels()];
   return Promise.allSettled(jobs);
 }
@@ -7656,7 +7815,9 @@ function openSettings(target) {
   updateWxLocHint();
   updateAlarmHint();
   updateAirHint();
+  updateRunHint();
   $('#set-air').hidden = !catalog.air;
+  $('#set-run').hidden = !catalog.running;
   $('#set-waste').hidden = !catalog.waste;
   $('#set-sports').hidden = !catalog.sports?.enabled;
   $('#set-solar').hidden = !catalog.solar?.enabled;
@@ -7680,9 +7841,9 @@ function openSettings(target) {
   if (!dlg.open) dlg.showModal();
   loadHealth();
   if (typeof target === 'string') { // called from a button with a section or category to show
-    const el = target === 'watch' ? $('#set-watch') : target === 'presets' ? $('#set-src-h') : target === 'air' ? $('#set-air') : target === 'waste' ? $('#set-waste') : target === 'sports' ? $('#set-sports') : target === 'solar' ? $('#set-solar') : $(`#src-groups [data-cat="${target}"]`);
+    const el = target === 'watch' ? $('#set-watch') : target === 'presets' ? $('#set-src-h') : target === 'air' ? $('#set-air') : target === 'run' ? $('#set-run') : target === 'waste' ? $('#set-waste') : target === 'sports' ? $('#set-sports') : target === 'solar' ? $('#set-solar') : $(`#src-groups [data-cat="${target}"]`);
     el?.scrollIntoView({ block: 'start' });
-    (target === 'watch' ? $('#watch-in') : target === 'presets' ? $('#qpresets button:not([disabled])') : target === 'air' ? $('#air-search') : target === 'waste' ? $('#waste-pc') : target === 'sports' ? $('#sports-opts input') : target === 'solar' ? $('#solar-kwp') : el?.querySelector('input'))?.focus({ preventScroll: true });
+    (target === 'watch' ? $('#watch-in') : target === 'presets' ? $('#qpresets button:not([disabled])') : target === 'air' ? $('#air-search') : target === 'run' ? $('#run-search') : target === 'waste' ? $('#waste-pc') : target === 'sports' ? $('#sports-opts input') : target === 'solar' ? $('#solar-kwp') : el?.querySelector('input'))?.focus({ preventScroll: true });
   }
 }
 function buildQuickPresets() {
@@ -8044,6 +8205,7 @@ function wire() {
   });
   $('#wx-geo').addEventListener('click', useMyLocation);
   wireAirSettings();
+  wireRunSettings();
   wireAwSettings();
   $('#br-q').addEventListener('input', renderBridgeSettings);
   wireWasteSettings();
@@ -8119,7 +8281,7 @@ async function init() {
   if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
   await Promise.allSettled([loadNews({ replace: true }), loadAlerts(), loadWeather(), loadTraffic(), loadAlarms(), loadThreats(), loadAdvisories(),
     loadBreaches(), loadOutages(), loadHealthPanel(), loadAP(), loadEnergy(), loadAir(), loadTrains(), loadPolitics(), loadToday(), loadRansomware(), loadNLThreat(), loadExploits(), loadPollen(), loadUtilities(), loadQuakes(), loadEconomy(), loadMarkets(), loadNLAlert(), loadFuel(), loadWaste(), loadTrending(), initPush(),
-    loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar(), loadWorld(), loadRecalls(), loadNotices(), loadADSB()]);
+    loadInsects(), loadSky(), loadSports(), loadAmber(), loadSatellite(), loadRadiation(), loadSolar(), loadWorld(), loadRecalls(), loadNotices(), loadADSB(), loadRunning()]);
   kioskFit(); // the header and top bar have their final height now
   panelFromHash(); // e.g. a push notification that opens #panel-waste
   awStart();
@@ -8150,6 +8312,7 @@ async function init() {
   every(R('markets', 5), loadMarkets);
   every(R('nlalert', 2), loadNLAlert);
   every(R('fuel', 60), loadFuel);
+  every(R('running', 60), loadRunning);
   every(R('waste', 60), loadWaste);
   every(R('trending', 10), loadTrending);
   every(R('insects', 60), loadInsects);

@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"testing/iotest"
@@ -379,4 +380,82 @@ func TestADSBFrame(t *testing.T) {
 		t.Errorf("disabled: no frame-src (%s)", c)
 	}
 	a.applyConfig(a.config()) // later tests expect the default
+}
+
+func TestRunningCalendar(t *testing.T) {
+	fixture, err := os.ReadFile("testdata/hardlopen.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var pages, pdokCalls int
+	var site *httptest.Server
+	site = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		pages++
+		if strings.Join(r.URL.Query()["type[]"], ",") != "wegevenement,parkloop,funrun" {
+			t.Errorf("query: %s", r.URL.RawQuery)
+		}
+		if r.URL.Query().Get("page") == "1" {
+			w.Write(bytes.ReplaceAll(fixture, []byte("https://www.hardlopen.nl/evenementen/"), []byte(site.URL+"/evenementen/")))
+		}
+	}))
+	defer site.Close()
+	pdok := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		pdokCalls++
+		q := r.URL.Query()
+		switch {
+		case strings.Contains(q.Get("q"), "Amersfoort") && strings.Contains(q.Get("fq"), "gemeente"):
+			io.WriteString(w, `{"response":{"docs":[{"type":"gemeente","gemeentenaam":"Amersfoort","centroide_ll":"POINT(5.38 52.17)"}]}}`)
+		case q.Get("q") == "Zaandam":
+			io.WriteString(w, `{"response":{"docs":[{"type":"woonplaats","woonplaatsnaam":"Zaandam","centroide_ll":"POINT(4.82 52.44)"}]}}`)
+		default:
+			io.WriteString(w, `{"response":{"docs":[]}}`)
+		}
+	}))
+	defer pdok.Close()
+	defer func(u string, g time.Duration) { pdokURL, runPageGap = u, g }(pdokURL, runPageGap)
+	pdokURL, runPageGap = pdok.URL, 0
+	a := newTestApp(t, validConfig)
+	a.cfg.Running.URL = site.URL + "/evenementen/"
+	if err := a.runRunning(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	if pages != 2 {
+		t.Errorf("stops after the first empty page: %d pages", pages)
+	}
+	var r struct {
+		Enabled bool
+		Data    RunData
+	}
+	b := get(a.routes("/"), "GET", "/api/running", nil).Body.String()
+	if json.Unmarshal([]byte(b), &r); !r.Enabled || len(r.Data.Events) != 5 {
+		t.Fatalf("running: %s", b)
+	}
+	e0, e1 := r.Data.Events[0], r.Data.Events[1]
+	if e0.Title != "Amersfoort Night Run" || e0.Date != "2026-11-13" || e0.Place != "Amersfoort" || e0.Lat != 52.17 ||
+		len(e0.Dist) != 5 || e0.Dist[0] != 0.8 || e0.Dist[4] != 15 || strings.Join(e0.Types, "|") != "Wegevenement|Funrun" || e0.Price != "€ 5,00 - € 27,50" {
+		t.Errorf("place from the title: %+v", e0)
+	}
+	if e1.Place != "Zaandam" || e1.Lon != 4.82 || !strings.HasPrefix(e1.URL, site.URL+"/evenementen/") {
+		t.Errorf("place: %+v", e1)
+	}
+	for _, e := range r.Data.Events {
+		if strings.Contains(e.URL, "evil") {
+			t.Errorf("off-site link kept: %s", e.URL)
+		}
+	}
+	n := pdokCalls
+	if err := a.runRunning(t.Context()); err != nil || pdokCalls != n {
+		t.Errorf("places are cached: %d -> %d PDOK calls (%v)", n, pdokCalls, err)
+	}
+	if p := titlePlace("Wim van Beek Crossloop", []runPlace{{Name: "Beek"}}); p != nil {
+		t.Errorf("short names are surnames: %+v", p)
+	}
+	if p := titlePlace("NN CPC Loop Den Haag", []runPlace{{Name: "'s-Gravenhage", Lat: 52.07}}); p == nil || p.Name != "Den Haag" {
+		t.Errorf("alias: %+v", p)
+	}
+	for _, c := range []string{"running: { types: [marathon] }", "running: { interval: 1h }", "running: { url: \"http://example.com/\" }", "running: { url: \"https://x.nl/?a=1\" }"} {
+		if _, err := parseConfig([]byte(validConfig + c + "\n")); err == nil {
+			t.Errorf("accepted: %s", c)
+		}
+	}
 }

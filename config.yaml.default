@@ -317,6 +317,15 @@ fuel:
   url: "https://www.unitedconsumers.com/tanken/brandstofprijzen"
   interval: 3h                    # the GLA changes once a day; min. 1h
 
+# Hardloopagenda: upcoming running events from hardlopen.nl, the Atletiekunie's running calendar
+# (no key; read once a day, about 25 list pages one second apart). Places come from PDOK. Every
+# visitor picks a place, a radius and a race distance; the browser does the filtering.
+running:
+  enabled: true
+  url: "https://www.hardlopen.nl/evenementen/"
+  types: [wegevenement, parkloop, funrun]  # also: trailrun, cross, estafette, ultrarun, trainingsloop, ...
+  interval: 24h                   # min. 6h
+
 # Afvalkalender: the next waste collection days. Like the places for weather and air quality,
 # every visitor sets an own address under Instellingen (postcode and house number, kept in the
 # browser); the server finds the municipal waste calendar that knows it.

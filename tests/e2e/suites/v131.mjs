@@ -232,18 +232,18 @@ for (const w of [1440, 360]) { // first visit: panel groups (all on); unchecked 
     await p.click('#welcome .btn.primary'); await p.waitForTimeout(800);
     const st = await p.evaluate(() => ({ hidden: JSON.parse(localStorage.getItem('ndb:prefs')).panels.hidden, shown: [...document.querySelectorAll('#side .panel')].map(x => x.id.replace('panel-', '')) }));
     const on = ['weather', 'satellite', 'sky', 'quakes', 'today', 'waste', 'notices', 'energy', 'fuel', 'traffic', 'trains', 'adsb', 'threats', 'nlthreat', 'advisories', 'breaches', 'ransomware', 'ap'];
-    ok(st.shown.slice().sort().join() === on.slice().sort().join() && ['sports', 'economy', 'alarms', 'pollen', 'outages'].every(id => st.hidden[id]), `default groups plus Security & privacy shown (${st.shown.length} panels), the rest hidden`);
+    ok(st.shown.slice().sort().join() === on.slice().sort().join() && ['sports', 'running', 'economy', 'alarms', 'pollen', 'outages'].every(id => st.hidden[id]), `default groups plus Security & privacy shown (${st.shown.length} panels), the rest hidden`);
   }
   await c.close();
 }
-{ // Instellingen: Standaardplaats for air quality and hay fever
+{ // Instellingen: Standaardlocatie for air quality and hay fever
   const c = await b.newContext({ viewport: { width: 1440, height: 1000 }, serviceWorkers: 'block' });
   await c.addInitScript(() => { if (!sessionStorage.getItem('t-init')) { sessionStorage.setItem('t-init', '1'); localStorage.setItem('ndb:prefs', JSON.stringify({ v: 2, onboarded: true, air: { name: 'Groningen', lat: 53.22, lon: 6.57 } })); } });
   const p = await c.newPage(); await p.goto(BASEURL); await p.waitForSelector('#stream .item', { state: 'attached' }); await p.waitForTimeout(800);
   const def = (await (await fetch(BASEURL + 'api/catalog')).json()).weather_location;
   await p.click('#open-settings'); await p.click('#air-default'); await p.waitForTimeout(400);
   const air = await p.evaluate(() => JSON.parse(localStorage.getItem('ndb:prefs')).air);
-  ok(air && air.name === def.name && air.lat === Math.round(def.lat * 100) / 100 && /standaardplaats van deze server/.test(await p.textContent('#air-msg')), `Standaardplaats sets the air place to the server default (${air?.name})`);
+  ok(air && air.name === def.name && air.lat === Math.round(def.lat * 100) / 100 && /standaardlocatie van deze server/.test(await p.textContent('#air-msg')), `Standaardlocatie sets the air place to the server default (${air?.name})`);
   await c.close();
 }
 await b.close();

@@ -44,8 +44,8 @@ for (const [w, scheme] of [[1440, 'light'], [1440, 'dark'], [360, 'light']]) {
   ok(t.ops.length === 2 && t.ops[0].name === 'Liander' && t.ops[1].name === 'Stedin' && t.ops.every(o => /liander\.nl|stedin\.net/.test(o.href)), `grid operators: ${t.ops.map(o => `${o.name} (${o.st})`).join(', ')}`);
   ok(t.ops[0].items === Math.min(4, ut.operators[0].active.length) && t.ops[1].items === Math.min(4, ut.operators[1].active.length), 'up to 4 active outages per operator');
   ok(!/Enexis/.test(t.utNotes) && !/Drinkwater/.test(t.utNotes) && /0800-9009/.test(t.utNotes), 'only the 0800-9009 note; no Enexis or drinking-water note');
-  const recent = qk.quakes.filter(q => Date.now() - new Date(q.time) <= 31 * 864e5);
-  ok(recent.length ? new RegExp(`^${recent.length} bevingen? in de afgelopen 14 dagen · sterkste: M`).test(t.qSum || '') : !t.qSum, `quakes summary (14 days): ${t.qSum}`);
+  const recent = qk.quakes.filter(q => Date.now() - new Date(q.time) <= 14 * 864e5);
+  ok(recent.length ? new RegExp(`^${recent.length} beving(en)? in de afgelopen 14 dagen · sterkste: M`).test(t.qSum || '') : !t.qSum, `quakes summary (14 days): ${t.qSum}`);
   ok(t.qItems.length === Math.min(6, recent.length) && t.qItems.every(q => /^M(\d|\?)/.test(q.mag) && q.href.startsWith('https://www.knmi.nl/nederland-nu/seismologie/aardbevingen/')), 'quakes: magnitude + KNMI link each');
   ok(t.qItems.filter(q => q.induced).length === recent.slice(0, 6).filter(q => q.induced).length, 'induced quakes are tagged');
   const evs = (out.internet.entities || []).reduce((n, e) => n + e.events.length, 0);
